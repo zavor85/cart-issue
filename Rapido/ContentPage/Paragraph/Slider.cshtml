@@ -1,0 +1,972 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Content
+@using Dynamicweb.Content.Items
+@using Dynamicweb
+@using Dynamicweb.Ecommerce.Frontend;
+@using System.Linq;
+
+@Include("ParagraphBase.cshtml")
+
+
+
+
+@functions {
+    public string GenerateRgba(string color, string opacity)
+    {
+        color = color.Replace("#", "");
+        if (color.Length == 6) {
+            return "rgba(" + Convert.ToInt32(color.Substring(0, 2), 16) + ", " + Convert.ToInt32(color.Substring(2, 2), 16) + ", " + Convert.ToInt32(color.Substring(4, 2), 16) + ", " + opacity + ");";
+        } else {
+            return Convert.ToInt16(color).ToString();
+        }
+    }
+}
+
+@{
+    string columnSize = "12";
+
+    bool showTitle = true;
+    var productColumnSize = 3;
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+
+    bool gridViewShowCartButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToCartButton");
+    bool gridViewShowViewButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowViewButton");
+    bool promotionShowStock = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowStockAndShipping");
+    string promotionMoreText = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("ViewMoreText")) ? Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("ViewMoreText") : "View";
+    bool promotionShowNumber = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowProductNumber");
+    bool promotionShowAddToDownloadButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToDownloadButton");
+    bool promotionSecondaryImage = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("HoverAlternatineImage") != null ? Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("HoverAlternatineImage") : false;
+    string promotionImageZoomOnHover = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("HoverImageZoom") ? "image-hover--zoom" : "";
+
+    bool hideStockState = Pageview.AreaSettings.GetItem("ProductPage").GetBoolean("HideStockState");
+    bool hideprice = Pageview.AreaSettings.GetItem("ProductPage").GetBoolean("HidePrice");
+
+    int paragraphId = Model.ID;
+    string paragraphName = "paragraph" + paragraphId;
+    int productCatalogId = GetPageIdByNavigationTag("PromotionFeed");
+    string feedFullUrl = "";
+
+     if (Model.Item.GetBoolean("ProductSlider")) {
+       if (!string.IsNullOrEmpty(Model.Item.GetString("ProductFeedUrl"))) {
+         feedFullUrl = Model.Item.GetString("ProductFeedUrl");
+       } else {
+         feedFullUrl = "/Default.aspx?ID=" + productCatalogId;
+        feedFullUrl += "&Combinations=";
+
+        var products = new List<ProductViewModel>();
+
+        if (Model.Item.GetValue("Products") != null) {
+            products = Model.Item.GetValue("Products") as List<ProductViewModel>;
+        }
+
+        if (products != null) {
+            for (var i = 0; i < products.Count; i++)
+            {
+                feedFullUrl += products[i].Id;
+                feedFullUrl += products[i].VariantId != "" ? "%20" + products[i].VariantId : "";
+                feedFullUrl += ",";
+            }
+        } else {
+            feedFullUrl = "";
+        }
+       }
+     }
+
+    
+
+}
+
+
+
+@{
+
+
+  String Height = "";
+  String Width = "";
+
+  String ContainerDisplay = "";
+
+   if (Model.Item.GetString("SlideEffect")=="cube"){
+          ContainerDisplay = "block";
+        } else {
+          ContainerDisplay = "grid";
+        }
+
+  if (!string.IsNullOrEmpty(Model.Item.GetString("SliderHeight"))) {
+     Height = Model.Item.GetString("SliderHeight");
+  } else {
+     Height = "600px";
+  }
+
+  if (!string.IsNullOrEmpty(Model.Item.GetString("SliderWidth"))) {
+     Width = Model.Item.GetString("SliderWidth");
+  } else {
+     Width = "100%";
+  }
+
+  String Script = "";
+ 
+
+    if (Model.Item.GetString("SlideEffect")=="fade"){
+      Script += "effect: 'fade',";
+        if (Model.Item.GetBoolean("Crossfade")) {
+          Script += "fadeEffect: {crossFade: true},";
+        }
+    } else if (Model.Item.GetString("SlideEffect")=="cube"){
+       Script += "effect: 'cube',";
+       Script += " cubeEffect: {shadow: "+(Model.Item.GetBoolean("CubeShadow") ? "true" : "false")+",shadowOffset: "+Model.Item.GetString("CubeShadowOffset")+",shadowScale: "+Model.Item.GetString("CubeShadowScale")+",slideShadows: "+(Model.Item.GetBoolean("CubeSlideShadows") ? "true" : "false")+",},";
+
+
+    } else if (Model.Item.GetString("SlideEffect")=="coverflow"){
+       Script += "effect: 'coverflow',";
+       Script += "coverflowEffect: {rotate: "+Model.Item.GetString("CoverflowRotate")+",stretch: "+Model.Item.GetString("CoverflowStretch")+",depth: "+Model.Item.GetString("CoverflowDepth")+",modifier: "+Model.Item.GetString("CoverflowModifier")+",slideShadows: "+(Model.Item.GetBoolean("CoverflowSlideShadows") ? "true" : "false")+",},";
+       
+    } else if (Model.Item.GetString("SlideEffect")=="flip"){
+       Script += "effect: 'flip',";
+       Script += " flipEffect: {slideShadows: true,},";
+    }
+
+    if (int.Parse(Model.Item.GetString("TransitionSpeed"))> 100){
+      Script += "speed: " + Model.Item.GetString("TransitionSpeed") + ",";
+    }
+
+
+    if (int.Parse(Model.Item.GetString("SlidesPerView"))> 0){
+      Script += "slidesPerView: " + Model.Item.GetString("SlidesPerView") + ",";
+    }
+
+     if (int.Parse(Model.Item.GetString("SlidesPerColumn"))> 0){
+      Script += "slidesPerColumn: " + Model.Item.GetString("SlidesPerColumn") + ",";
+    }
+
+    if (int.Parse(Model.Item.GetString("SpaceBetweenSlides"))> 0){
+      Script += "spaceBetween: " + Model.Item.GetString("SpaceBetweenSlides") + ",";
+    }
+
+
+  
+  
+   if (Model.Item.GetBoolean("LazyLoadImages")) {
+      Script += "lazy: true,";
+   }
+
+   if (Model.Item.GetBoolean("Autoplay")) {
+      Script += "autoplay: {delay: "+Model.Item.GetString("AutoplayDelay")+", disableOnInteraction: "+(Model.Item.GetBoolean("DisableOnInteractions") ? 1 : 0)+", },";
+   }
+
+     if (!Model.Item.GetBoolean("HideArrows")) {
+      Script += "navigation: {nextEl: '.swiper-button-next-"+ paragraphId+ "',prevEl: '.swiper-button-prev-"+paragraphId+"',},";
+   }
+
+    if (Model.Item.GetBoolean("GrabCursor")) {
+      Script += "grabCursor: true, ";
+   }
+
+    if (Model.Item.GetBoolean("InfiniteLoop")) {
+      Script += "loop: true, ";
+   }
+
+   if (Model.Item.GetBoolean("CenteredSlides")) {
+      Script += "centeredSlides: true,";
+   }
+
+   if (Model.Item.GetBoolean("MousewheelControl")) {
+      Script += "mousewheel: true,";
+   }
+
+    if (Model.Item.GetString("PaginationType")=="Bullets") {
+      Script += "pagination: {el: '.swiper-pagination-"+paragraphId+"',},";
+    } 
+
+     if (Model.Item.GetString("PaginationType")=="Dynamic bullets") {
+      Script += "pagination: {el: '.swiper-pagination-"+paragraphId+"',dynamicBullets: true,},";
+    }
+     if (Model.Item.GetString("PaginationType")=="Progress pagination") {
+      Script += "pagination: {el: '.swiper-pagination-"+paragraphId+"',type: 'progressbar',},";
+    }
+     if (Model.Item.GetString("PaginationType")=="Fraction pagination") {
+      Script += "pagination: {el: '.swiper-pagination-"+paragraphId+"',type: 'fraction',},";
+    }
+
+     if (!string.IsNullOrEmpty(Model.Item.GetString("BreakPoints"))) {
+       Script += "breakpoints: {"+ Model.Item.GetString("BreakPoints").Replace("<p>", "").Replace("</p>", "") +"},";
+     }
+
+    if (Model.Item.GetBoolean("DisableSimulateTouch")) {
+      Script += "simulateTouch:false,";
+   }
+
+
+
+}
+
+
+
+
+  <style>
+
+.rowItemContent-@paragraphId{
+    --swiper-navigation-size: @Model.Item.GetString("SliderNavigationSize")px;
+    --swiper-pagination-color: @Model.Item.GetString("SliderPaginationColor");
+    --swiper-navigation-color: @Model.Item.GetString("SliderNavigationColor");
+}
+
+ 
+
+   
+
+    .swiper-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    .swiper-slide {
+      text-align: center;
+      font-size: 18px;
+      background: #000;
+      display:flex;
+
+    }
+
+    .rowItemContent-@paragraphId .slider-cont{
+        height:@Height;
+        width:@Width;
+        margin: 0 auto;
+        display: @ContainerDisplay;
+        
+    }
+
+    .content-row:not(.content-row--stretch) .slider-cont{
+      max-width: 1440px;
+    }
+
+    .video-slider.slider-video-background iframe {
+       border: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+
+    }
+
+    
+    .video-slider .wrapper{
+      height: 100%;
+      width: 100%;
+    }
+    .video-slider {
+      overflow: hidden;
+    }
+
+      
+
+    .video-slider.slider-video-background .wrapper{
+      width: 100%;
+      height: 0;
+      padding-bottom: 56.25%;/* Aspect ratio */
+      position: absolute;
+      top: 50%;
+      -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+      transform: translateY(-50%);
+    }
+
+    .video-slider iframe{
+      pointer-events:none;
+    }
+
+    .product-slider .swiper-slide{
+      background:transparent;
+    }
+
+    @@media(max-width: 992px) {
+      .rowItemContent-@Model.ID{
+        max-width:100vw;
+      }
+    }
+
+
+   
+  </style>
+
+
+
+
+
+@if (!string.IsNullOrEmpty(Model.Item.GetString("Title")) && !Model.Item.GetBoolean("HideTitle")) {
+    @Render(new Heading { Title = Model.Item.GetString("Title"), Level = 2 })
+}
+
+
+
+
+
+ <!-- Swiper -->
+
+ <div class="slider-cont">
+ 
+
+         @if (Model.Item.GetBoolean("ProductSlider")) {
+
+
+         
+            
+         
+
+
+
+           <div class="u-full-height product-slider swiper-container" id="swiper-container-@paragraphId">
+        <div class="swiper-wrapper js-handlebars-root" id="PromotionProductList_@paragraphId" data-template="PromotionProducts_@paragraphId" data-pre-render-template="ProductPreRenderContainer_@paragraphId" data-json-feed="@feedFullUrl" data-preloader="minimal"></div>
+
+           @if (!Model.Item.GetBoolean("HideArrows")) {
+     <!-- Add Arrows -->
+    <div class="swiper-button-next swiper-button-next-@paragraphId"></div>
+    <div class="swiper-button-prev swiper-button-prev-@paragraphId"></div>
+ }
+
+ @if (!string.IsNullOrEmpty(Model.Item.GetString("PaginationType"))) {
+   <div class="swiper-pagination swiper-pagination-@paragraphId"></div>
+ }
+
+        </div>
+
+        <script id="ProductPreRenderContainer_@paragraphId" type="text/x-template">
+            <div class="">
+                <div class="pre-render-element pre-render-element--md"></div>
+            </div>
+            <div class="">
+                <div class="pre-render-element pre-render-element--md"></div>
+            </div>
+            <div class="">
+                <div class="pre-render-element pre-render-element--md"></div>
+            </div>
+            <div class="">
+                <div class="pre-render-element pre-render-element--md"></div>
+            </div>
+        </script>
+
+
+
+@* Grid view *@
+
+<script id="PromotionProducts_@paragraphId" type="text/x-template">
+    {{#.}}
+        <div class="swiper-slide product-list__grid-item @promotionImageZoomOnHover dw-mod">
+            <div class="js-product-scroll-trigger u-no-padding u-full-height" data-params="{{googleImpression}}">
+                <div class="grid__cell product-list__grid-item__image dw-mod {{noImage}}">
+
+
+                      <text>{{#if energyClass}}</text>
+                      
+                    <div class="class-{{energyClassClass}} type-{{energyClassType}} link-to-datablad">
+                     <a href="{{link}}#Block__CustomFields">
+                        <span class="class">{{energyClass}}</span>
+                   
+        {{#ifCond energyClassType '==' "1"}}
+             <div class="label-left">
+                A <br>
+                ↑ <br>
+                G
+            </div>
+          {{/ifCond}}
+            </a>
+          {{#if databladLink}}
+            <a target="_blank" href="{{databladLink}}"><span class="datablad">@Translate("Datablad")</span></a>
+          {{else}}
+            <a href="{{link}}#Block__Specifikationer"><span class="datablad">@Translate("Datablad")</span></a>
+          {{/if}}
+
+           </div>
+         
+      <text>{{/if}}</text>
+
+                    <a href="{{link}}" 
+                       onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" 
+                       title="{{name}}" 
+                       class="u-block u-position-relative image-hover__wrapper dw-mod">
+                        <img class="grid__cell-img grid__cell-img--centered u-padding b-lazy" src="/Files/Images/placeholder.gif" 
+                             data-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{image}}"
+                             @if (promotionSecondaryImage) {
+                                <text>
+                                 {{#if secondaryImage}}
+                                    data-secondary-image-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{secondaryImage}}"
+                                 {{/if}} 
+                                </text>
+                             }
+                             alt="{{name}}" />
+                        {{#StickersContainers}}
+                            {{>StickersContainer_@paragraphId}}
+                        {{/StickersContainers}}
+                    </a>
+                </div>
+
+                <div class="grid__cell product-list__grid-item__price-info dw-mod">
+                    <a href="{{link}}" onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" title="{{name}}"><h6 class="">{{name}}</h6></a>
+
+                    @if (promotionShowNumber)
+                    {
+                        <div class="item-number dw-mod">{{number}}</div>
+                    }
+
+                    @if (Dynamicweb.Rapido.Services.User.IsPricesAllowed())
+                    {
+                        if (pointShopOnly)
+                        {
+                            <text>
+                                {{#if havePointPrice}}
+                                    <div class="price price--product-list dw-mod">{{points}} @Translate("points")</div>
+                                {{else}}
+                                    @Translate("Not available")
+                                {{/if}}
+                            </text>
+                        }
+                        else
+                        {
+                            if (!hideprice){
+                                <div class="price price--product-list dw-mod">{{price}}</div>
+                                <div class="before-price {{onSale}} dw-mod">{{discount}}</div>
+                            }
+                            
+                        }
+                    }
+                </div>
+
+                <div class="product-list__grid-item__footer dw-mod">
+                    @if (gridViewShowViewButton)
+                    {
+                       <div class="u-ta-center">
+                            <a href="{{link}}" 
+                               id="CartButton_{{id}}" 
+                               class="btn btn--secondary btn--full u-no-margin dw-mod" 
+                               onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" 
+                               title="@Translate(promotionMoreText)">@Translate(promotionMoreText)</a>
+                        </div>
+                    }
+    
+                    @if (Dynamicweb.Rapido.Services.User.IsStockInfoAllowed() && promotionShowStock && !hideStockState)
+                    {
+                        <div class="u-margin-top">
+                            <span class="stock-icon {{stockState}} u-no-margin dw-mod" title="{{stockText}}"></span>
+                            <span class="u-no-margin dw-mod" title="{{stockText}}">{{stockStateText}}</span> {{stockText}}{{deliveryText}}
+                        </div>
+                    }
+
+                    @if (promotionShowAddToDownloadButton && Pageview.User != null)
+                    {
+                        <button type="button" class="btn btn--primary u-no-margin u-margin-top btn--condensed dw-mod js-add-to-downloads" title="@Translate("Add")" data-product-id="{{productId}}">
+                            <i class="fas fa-plus js-button-icon"></i>
+                            <span class="js-button-text">@Translate("Add")</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    {{/.}}
+
+    {{^.}}
+        <div class="grid__col-12">
+            <h2>@Translate("No products found")</h2>
+        </div>
+    {{/.}}
+
+</script>
+
+
+
+<script>
+    @{
+        bool promotionUseGoogleTagManager = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleTagManagerID"));
+
+        if (promotionUseGoogleTagManager)
+        {
+            <text>
+                document.addEventListener("DOMContentLoaded", function (event) {
+                    Scroll.AddIsInViewportListener(".js-product-scroll-trigger", function (elem) {
+                        let googleImpression = JSON.parse(elem.getAttribute("data-params"));
+                        googleEnchantImpression(googleImpression);
+                        elem.classList.remove("js-product-scroll-trigger");
+                    });
+                });
+            </text>
+        }
+    }
+</script>
+
+<script id="StickersContainer_@paragraphId" type="text/x-template">
+    <div class="stickers-container stickers-container--{{position}} dw-mod">
+        {{#Stickers}}
+            {{>Sticker_@paragraphId}}
+        {{/Stickers}}
+    </div>
+</script>
+
+<script id="Sticker_@paragraphId" type="text/x-template">
+    <div class="{{className}}">{{text}}</div>
+</script>
+
+
+        } else {
+
+ <div class="swiper-container" id="swiper-container-@paragraphId">
+    <div class="swiper-wrapper">
+
+          @foreach (var slide in Model.Item.GetItems("Slides"))
+        {
+
+            if (!string.IsNullOrEmpty(slide.GetString("VideoType"))){
+
+              @RenderTheVideoSlide(slide);
+
+            } else {
+
+              @RenderTheSlide(slide);
+              
+            }
+            
+        }
+        
+
+        
+     
+    </div>
+ @if (!Model.Item.GetBoolean("HideArrows")) {
+     <!-- Add Arrows -->
+    <div class="swiper-button-next swiper-button-next-@paragraphId"></div>
+    <div class="swiper-button-prev swiper-button-prev-@paragraphId"></div>
+ }
+
+ @if (!string.IsNullOrEmpty(Model.Item.GetString("PaginationType"))) {
+   <div class="swiper-pagination swiper-pagination-@paragraphId"></div>
+ }
+ 
+  </div>
+  
+  }
+
+ 
+ @if (!string.IsNullOrEmpty(Model.Item.GetItem("Button").GetString("Title"))){ 
+   
+   <div class="padding-size-sm padding-position-around u-full-width u-align-center  u-align-self-center dw-mod">
+	
+   @ParagraphButton(Model.Item.GetItem("Button"))
+	
+  </div>
+
+}
+
+
+
+</div>
+
+
+
+
+
+ <!-- Initialize Swiper -->
+
+  @{
+      bool isYoutube = false;
+    }
+
+    @foreach (var slide in Model.Item.GetItems("Slides"))
+        {
+          if (slide.GetString("VideoType")=="Youtube"){
+            isYoutube = true;
+          }
+
+        }
+
+        @if (isYoutube){
+          <script async>
+
+     // Inject YouTube API script
+      var tag = document.createElement('script');
+      tag.src = "//www.youtube.com/player_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      var player;
+
+      function onYouTubePlayerAPIReady() {
+        // create the global player from the specific iframe (#video)
+        player = new YT.Player('video', {
+          events: {
+            // call this function when player is ready to use
+            'onReady': onPlayerReady
+          }
+        });
+      }
+
+          </script>
+        }
+
+
+  <script>
+
+  
+
+     
+   
+
+
+
+
+let runFunctionOnce@(paragraphId) = true;
+
+function startSlider@(paragraphName)(){
+    
+   
+    
+    
+    let ignoreFirstSlide = false;
+
+     
+     
+
+    if (runFunctionOnce@(paragraphId)){
+
+     
+
+    var @paragraphName = new Swiper('#swiper-container-@paragraphId', {
+
+      
+
+      @Script
+      on: {
+
+    
+
+      slideChange: function (el) {
+
+      
+      
+      if (ignoreFirstSlide){
+
+      bLazy.revalidate();  
+
+      var videos = document.getElementById("swiper-container-@paragraphId").getElementsByClassName('video-slider');
+
+
+  
+      for (var i = 0; i < videos.length; i++) {
+
+          //videos[i].pause();
+          let vidcontrol = "pauseVideo";
+
+          let iframe = videos[i].getElementsByTagName("iframe")[0].contentWindow;
+          iframe.postMessage('{"event":"command","func":"' + vidcontrol + '","args":""}', '*');
+      
+      
+         
+      }
+
+     
+          let index_currentSlide = el.activeIndex;
+         
+          currentSlide = @(paragraphName).slides[index_currentSlide];
+
+      if (typeof currentSlide !== 'undefined'){
+         if (currentSlide.classList.contains("video-slider")){
+
+          let iframe = currentSlide.getElementsByTagName("iframe")[0].contentWindow;  
+          let vidcontrol = "playVideo";
+          
+          
+          iframe.postMessage('{"event":"command","func":"' + vidcontrol + '","args":""}', '*');
+          
+       
+        }
+      }
+
+       
+      }
+
+      ignoreFirstSlide = true;
+      
+
+      }
+    },
+     
+    })
+
+    }
+
+    runFunctionOnce@(paragraphId) = false;
+        
+}
+
+//startSlider@(paragraphName)();
+
+
+//var @(paragraphName)checkYT = setInterval(function () {
+  //  if(YT.loaded){
+  //    clearInterval(@(paragraphName)checkYT)
+  //  }
+//}, 100);
+
+
+
+
+function refreshSlider@(paragraphName)() {
+  
+  
+
+  if (typeof @(paragraphName) !== 'undefined'){
+    @(paragraphName).update();
+  } else {
+    startSlider@(paragraphName)();
+  }
+
+}
+
+
+  </script>
+
+
+
+ @if (Model.Item.GetBoolean("ProductSlider")) {
+
+ <script>
+  document.getElementById("PromotionProductList_@paragraphId").addEventListener("contentLoaded", refreshSlider@(paragraphName));
+   </script>
+   
+ } else {
+    <script>
+ startSlider@(paragraphName)();
+   </script>
+ }
+
+
+
+
+@helper RenderTheSlide(ItemViewModel slide) {
+
+
+    String autoplaySlideDelay = "";
+
+      if (int.Parse(slide.GetString("AutoplayDelay")) > 0){
+        autoplaySlideDelay = "data-swiper-autoplay='" + slide.GetString("AutoplayDelay") + "'";
+      }
+
+     
+     if (!string.IsNullOrEmpty(slide.GetString("Image"))) {
+        int cropMode = !string.IsNullOrEmpty(Convert.ToString(slide.GetList("ImageCrop"))) ? Convert.ToInt32(slide.GetList("ImageCrop").SelectedValue) : 0;
+
+        Image image = new Image
+        {
+            Path = slide.GetFile("Image").Path,
+            Title = slide.GetString("Title"),
+            CssClass = "background-image__cover",
+            ImageDefault = new ImageSettings
+            {
+                Crop = cropMode,
+                Height = 845,
+                Width = 1920
+            },
+            ImageMedium = new ImageSettings
+            {
+                Crop = cropMode,
+                Height = 450,
+                Width = 1024
+            },
+            ImageSmall = new ImageSettings
+            {
+                Crop = cropMode,
+                Height = 544,
+                Width = 640
+            }
+        };
+
+        image.FilterPrimary = !string.IsNullOrEmpty(slide.GetList("ImageFilterPrimary").SelectedValue) ? (ImageFilter) Enum.Parse(typeof(ImageFilter), slide.GetList("ImageFilterPrimary").SelectedValue.Replace("-", ""), true) : ImageFilter.None;
+        image.FilterSecondary = !string.IsNullOrEmpty(slide.GetList("ImageFilterSecondary").SelectedValue) ? (ImageFilter) Enum.Parse(typeof(ImageFilter), slide.GetList("ImageFilterSecondary").SelectedValue.Replace("-", ""), true) : ImageFilter.None;
+
+        image.DisableLazyLoad = true;
+
+        if (!string.IsNullOrEmpty(slide.GetString("ColorForTheFilter"))) {
+            image.FilterColor = slide.GetString("ColorForTheFilter").StartsWith("#") ? GenerateRgba(slide.GetString("ColorForTheFilter"), "0.3") : "";
+        }
+
+
+        
+        if (Model.Item.GetBoolean("LazyLoadImages")) {
+
+          <div @autoplaySlideDelay class="swiper-slide swiper-lazy">
+            <div class="background-image dw-mod">
+              <div class="background-image__wrapper dw-mod">
+                        
+                <div class="swiper-lazy-preloader"></div>
+                  @Render(image)
+            
+              </div>
+            </div> 
+            @RenderTheContent(slide)
+          </div>
+
+          } else {
+
+            <div class="swiper-slide" @autoplaySlideDelay>
+                <div class="background-image dw-mod">
+                  <div class="background-image__wrapper dw-mod">
+                    @Render(image)
+                  </div>
+                </div>
+                @RenderTheContent(slide)
+            </div>
+
+          }
+            
+    } 
+
+    
+
+
+}
+
+
+
+
+@helper RenderTheVideoSlide(ItemViewModel slide) {
+
+  String autoplaySlideDelay = "";
+
+  String videoID = slide.GetString("Video_ID");
+  String customIframe = "";
+
+  if (slide.GetBoolean("AutoplayVideoOnLoad")) {
+      customIframe += "&autoplay=1" ;
+  }
+
+  if (slide.GetBoolean("LoopVideo")) {
+      customIframe += "&loop=1&playlist=" + videoID ;
+  }
+
+
+
+      if (int.Parse(slide.GetString("AutoplayDelay")) > 0){
+        autoplaySlideDelay = "data-swiper-autoplay='" + slide.GetString("AutoplayDelay") + "'";
+      }
+
+  
+
+     
+        
+      
+
+      if (slide.GetString("VideoType")=="Youtube"){
+        
+        if (slide.GetBoolean("BackgroundVideo")){
+
+        <div class="swiper-slide video-slider slider-video-background" @autoplaySlideDelay>
+          <div>
+            <div class="wrapper">
+                    <iframe class="video-slider-iframe" id="player1" width="612" height="345" src="https://www.youtube.com/embed/@(videoID)?enablejsapi=1&playsinline=1&html5=1&rel=0&mute=1@(customIframe)" frameborder="0" allowfullscreen iframe-video></iframe>
+                    
+            </div>
+          </div>
+            @RenderTheContent(slide)        
+              
+        </div>
+
+        } else {
+
+            <div class="swiper-slide video-slider" @autoplaySlideDelay>
+        
+              <div class="wrapper">
+                      <iframe class="video-slider-iframe" id="player1" width="612" height="345" src="https://www.youtube.com/embed/@(videoID)?enablejsapi=1&html5=1&rel=0&mute=1" frameborder="0" allowfullscreen iframe-video></iframe>
+              </div>
+           
+              
+        </div>
+
+        }
+        
+      }
+
+}
+
+@helper RenderTheContent(ItemViewModel slide) {
+
+    var colorService = new ColorSwatchService();
+    string backgroundColor = slide.GetString("BackgroundColor") != null ? slide.GetString("BackgroundColor") : "";
+    backgroundColor = !backgroundColor.Contains("#") ? "background-color: " + colorService.GetHexColor(Pageview.AreaID, backgroundColor) : backgroundColor;
+    string textColor = slide.GetString("TextColor") != null ? slide.GetString("TextColor") : "";
+    textColor = !textColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, textColor) : textColor;
+    string fontSize = slide.GetString("TitleSize") + "px"; 
+    string fontSizeMobile = slide.GetString("TitleSizeMobile")+ "px"; 
+    string styles = backgroundColor + "; color: " + textColor;
+
+    string horizontalAlign = slide.GetString("HorizontalAlignment") != null ? "u-ta-" + slide.GetList("HorizontalAlignment").SelectedValue.ToString().ToLower() : "";
+    string verticalAlign = slide.GetString("VerticalAlignment") != null ? "u-align-self-" + slide.GetList("VerticalAlignment").SelectedValue.ToString().ToLower() : "";
+    string alignmentCssClasses = horizontalAlign + " " + verticalAlign;
+
+   
+        <style>
+            .slideContent-@slide.Id h1, .slideContent-@slide.Id h2, .slideContent-@slide.Id h3 {
+                color: @textColor;
+                font-size:@fontSize;
+            }
+
+            @@media(max-width: 992px) {
+               .slideContent-@slide.Id h1, .slideContent-@slide.Id h2, .slideContent-@slide.Id h3 {
+                font-size:@fontSizeMobile;
+            }
+            }
+        </style>
+    
+
+    string link = !string.IsNullOrEmpty(slide.GetString("Link")) ? slide.GetString("Link") : "";
+    string linkTarget = link.Contains("http") ? "_blank" : "_self";
+    
+    if (!string.IsNullOrEmpty(link)) {
+        <a href="@link" target="@linkTarget" class="u-full-width u-full-height u-position-absolute">&nbsp;</a>
+    }
+
+    <div class="content-row__item__body @alignmentCssClasses slideContent-@slide.Id dw-mod">
+        @if (!string.IsNullOrEmpty(slide.GetString("Title")) || !string.IsNullOrEmpty(slide.GetString("Content"))) {
+            <div class="grid__cell">
+
+                @if (!slide.GetBoolean("HideTitle")) {
+                   @Render(new Heading { Title = slide.GetString("Title"), Level = 2 })
+                }
+
+               
+                @Render(new Text { Content = slide.GetString("Content") })
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(slide.GetItem("ButtonOne").GetString("Title")) || !string.IsNullOrEmpty(slide.GetItem("ButtonTwo").GetString("Title"))) {
+            <div class="grid__cell">
+                @ParagraphButton(slide.GetItem("ButtonOne")) 
+                @ParagraphButton(slide.GetItem("ButtonTwo")) 
+            </div>
+        }
+    </div>  
+
+
+}
+
+@helper ParagraphButton(ItemViewModel item) { 
+    if (item != null) {
+        if (!string.IsNullOrEmpty(item.GetString("Title"))) {
+            Button button = new Button {
+                Title = item.GetString("Title"),
+                Href = item.GetString("Link"),
+                CssClass = "u-no-margin",
+                ButtonLayout = (ButtonLayout)System.Enum.Parse(typeof(ButtonLayout), char.ToUpper(item.GetList("Layout").SelectedValue[0]) + item.GetList("Layout").SelectedValue.Substring(1))
+            };
+
+            if (!string.IsNullOrEmpty(item.GetString("Icon"))) {
+                button.Icon = new Icon { 
+                    CssClass = item.GetString("Icon")
+                };
+            }
+
+            @Render(button)
+        }    
+    }
+}
+

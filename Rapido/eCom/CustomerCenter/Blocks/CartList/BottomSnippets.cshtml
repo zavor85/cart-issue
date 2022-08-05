@@ -1,0 +1,54 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage bottomSnippetsPage = BlocksPage.GetBlockPage("CartList");
+}
+
+@{
+    if (string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.Carts.EmptyList")))
+    {
+        bottomSnippetsPage.Add("BottomSnippets", new Block
+        {
+            Id = "CartScripts",
+            SortId = 40,
+            Template = RenderCartScripts()
+        });
+    }
+}
+
+@helper RenderCartScripts()
+{
+    string deleteUrl = "Default.aspx?ID=" + Pageview.Page.ID + "&cartcmd=emptycart";
+    string activateUrl = "Default.aspx?ID=" + Pageview.Page.ID + "&cartcmd=setcart";
+
+    <script>
+        function deleteDraft(id) {
+            Request.Fetch().post(
+                "@deleteUrl",
+                { CartId: id },
+                function () {
+                    location.reload();
+                },
+                null,
+                false
+            );
+        }
+
+        function activateDraft(id) {
+            Request.Fetch().post(
+                "@activateUrl",
+                { CartId: id },
+                function () {
+                    location.reload();
+                },
+                null,
+                false
+            );
+        }
+    </script>
+}

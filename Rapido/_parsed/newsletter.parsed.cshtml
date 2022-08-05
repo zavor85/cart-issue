@@ -1,0 +1,1554 @@
+﻿@inherits RazorTemplateBase<RazorTemplateModel<Template>>
+@using Dynamicweb.Rendering;
+
+@using Dynamicweb.Security.UserManagement
+
+@functions {
+    public class Text
+    {
+        public string content {
+            get {
+                return string.Join("<br>", this.Lines.ToArray());
+            }
+            set {}
+        }
+        public List<string> Lines { get; set; }
+
+        public Text()
+        {
+            Lines = new List<string>();
+        }
+
+        public void Add(string textString)
+        {
+            Lines.Add(textString);
+        }
+    }
+
+    public class RowSettings
+    {
+        public string backgroundColor { get; set; }
+        public string smallScreenTable { get; set; }
+        public string background { get; set; }
+        public string padding { get; set; }
+
+        //Defaults
+        public RowSettings()
+        {
+            backgroundColor = "#FFFFFF";
+            background = "";
+            padding = "25";
+        }
+    }
+
+    public class Column
+    {
+        public string image { get; set; }
+        public string icon { get; set; }
+        public string imageSize { get; set; }
+        public string preheader { get; set; }
+        public string introheader { get; set; }
+        public string header { get; set; }
+        public string subheader { get; set; }
+        public Text text { get; set; }
+        public string textColor { get; set; }
+        public string introheaderTextColor { get; set; }
+        public string align { get; set; }
+        public string link { get; set; }
+        public string altText { get; set; }
+        public string linkText { get; set; }
+        public string buttonColor { get; set; }
+        public string buttonType { get; set; }
+        public string buttonAlign { get; set; }
+        public string width { get; set; }
+
+        //Defaults
+        public Column()
+        {
+            textColor = "#333";
+            introheaderTextColor = "#333";
+            align = "left";
+            buttonColor = "#EC683B";
+            buttonType = "Primary";
+            buttonAlign = "left";
+
+            //Initialize the text object
+            this.text = new Text();
+        }
+
+        public bool isEmpty()
+        {
+            return string.IsNullOrEmpty(this.image) &&
+                   string.IsNullOrEmpty(this.preheader) &&
+                   string.IsNullOrEmpty(this.introheader) &&
+                   string.IsNullOrEmpty(this.header) &&
+                   string.IsNullOrEmpty(this.subheader) &&
+                   string.IsNullOrEmpty(this.text.content) &&
+                   string.IsNullOrEmpty(this.link) &&
+                   string.IsNullOrEmpty(this.linkText);
+        }
+    }
+
+    string emailBgColor = "#d3d3d3";
+    string emailTextColor = "color:#828282;";
+    string emailTableBorder = "border-top:1px solid #a8a8a8;";
+    string emailText = "font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#828282;text-align:center;line-height:120%;";
+    string emailTextLarge = "font-family:Helvetica,Arial,sans-serif;font-size:15px;margin-bottom:0;line-height:135%;word-break: break-word;";
+    string emailTextSmall = "line-height:125%;font-family:Helvetica,Arial,sans-serif;font-size:10px;font-weight:normal;margin-top:0;margin-bottom:3px;";
+    string emailHeaderOneStyle = "text-transform:uppercase;line-height:135%;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:normal;margin-bottom:5px;";
+    string emailHeaderTwoStyle = "font-weight:normal;font-family:Helvetica,Arial,sans-serif;font-size:23px;margin-bottom:10px;line-height:135%;";
+    string emailHeaderThreeStyle = "line-height:125%;font-family:Helvetica,Arial,sans-serif;font-size:20px;font-weight:normal;margin-top:0;margin-bottom:3px;";
+    string emailTableFixedStyle = "table-layout: fixed;max-width:100% !important;width: 100% !important;min-width: 100% !important;";
+    string emailLinkStyle = "text-decoration:none;color:#828282;";
+    string emailLinkUnderlineStyle = "text-decoration:underline;color:#828282;";
+    string emailTableWidth = "500";
+    string emailTableMaxWidth = "max-width:100%;";
+    string emailFlexibleImage = "height: auto !important;max-width: 100% !important;display: block;";
+    string emailHiddenBlock = "display:none !important; mso-hide:all;";
+    string emailNoTopBottomInnerSpace = "padding-top:0px;padding-bottom:0px;";
+    string emailContent = "height:100% !important;margin:0;padding:0;width:100% !important;font-family:Helvetica, Arial,'Lucida Grande',sans-serif;";
+}
+
+@helper CreatePreheader(string viewInBrowserLink = "#")
+{
+    <!-- EMAIL HEADER // -->
+    <!--
+        The table "emailBody" is the email's container.
+        Its width can be set to 100% for a color band
+        that spans the width of the page.
+    -->
+    <table class="content--bg" bgcolor="@emailBgColor" border="0" cellpadding="0" cellspacing="0" width="@emailTableWidth" id="emailHeader">
+
+        <!-- HEADER ROW // -->
+        <tr>
+            <td align="center" valign="top">
+                <!-- CENTERING TABLE // -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="center" valign="top">
+                            <!-- FLEXIBLE CONTAINER // -->
+                            <table border="0" cellpadding="10" cellspacing="0" width="@emailTableWidth">
+                                <tr>
+                                    <td valign="top" width="@emailTableWidth">
+
+                                        <!-- CONTENT TABLE // -->
+                                        <table align="left" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <!--
+                                                    The "invisibleIntroduction" is the text used for short preview
+                                                    of the email before the user opens it (50 characters max). Sometimes,
+                                                    you do not want to show this message depending on your design but this
+                                                    text is highly recommended.
+
+                                                    You do not have to worry if it is hidden, the next <td> will automatically
+                                                    center and apply to the width 100% and also shrink to 50% if the first <td>
+                                                    is visible.
+                                                -->
+                                                <td class="content--hidden" align="left" valign="middle" id="invisibleIntroduction" style="@emailHiddenBlock">
+                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="@emailTableMaxWidth">
+                                                        <tr>
+                                                            <td align="left">
+                                                                <div class="text" style="@emailText">
+
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                                <td align="right" valign="middle">
+                                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="@emailTableMaxWidth">
+                                                        <tr>
+                                                            <td align="left">
+                                                                <!-- CONTENT // -->
+                                                                <div class="text" style="@emailText">
+                                                                    @Translate("If you can't see this message")
+                                                                    @{
+                                                                        string title = Translate("View it in your browser");
+                                                                    }
+                                                                    <a href="@viewInBrowserLink" class="link" target="_blank" style="@emailLinkUnderlineStyle;" title="@title">
+                                                                        <span class="label" style="@emailTextColor">@Translate("view it in your browser")</span>
+                                                                    </a>.
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- // FLEXIBLE CONTAINER -->
+                        </td>
+                    </tr>
+                </table>
+                <!-- // CENTERING TABLE -->
+            </td>
+        </tr>
+        <!-- // END -->
+
+    </table>
+    <!-- // END -->
+}
+
+@helper CreateSubscriptionFooter(string subscriptionLink = "#")
+{
+    <!-- EMAIL FOOTER // -->
+    <!--
+        The table "emailBody" is the email's container.
+        Its width can be set to 100% for a color band
+        that spans the width of the page.
+    -->
+    <table class="content--bg" bgcolor="@emailBgColor" border="0" cellpadding="0" cellspacing="0" width="@emailTableWidth" id="emailFooter">
+
+        <!-- FOOTER ROW // -->
+        <!--
+            To move or duplicate any of the design patterns
+            in this email, simply move or copy the entire
+            MODULE ROW section for each content block.
+        -->
+        <tr>
+            <td align="center" valign="top">
+                <!-- CENTERING TABLE // -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td align="center" valign="top">
+                            <!-- FLEXIBLE CONTAINER // -->
+                            <table border="0" cellpadding="0" cellspacing="0" width="@emailTableWidth">
+                                <tr>
+                                    <td align="center" valign="top" width="@emailTableWidth">
+                                        <table border="0" cellpadding="30" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td class="content--bg" valign="top" bgcolor="@emailBgColor">
+
+                                                    <div class="text" style="@emailText">
+                                                        <div>@Translate("Click here if you wish to") <a href="@subscriptionLink" class="link link--no-decoration" target="_blank" style="@emailLinkStyle;" title="@Translate(" unsubscribe")"=""><span class="label" style="@emailTextColor">@Translate("unsubscribe")</span></a>.</div>
+                                                    </div>
+
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- // FLEXIBLE CONTAINER -->
+                        </td>
+                    </tr>
+                </table>
+                <!-- // CENTERING TABLE -->
+            </td>
+        </tr>
+    </table>
+    <!-- // END -->
+}
+
+@helper CreateRow(Column columnObjectOne, RowSettings rowSettings = null)
+{
+    if (rowSettings == null)
+    {
+        rowSettings = new RowSettings();
+    }
+
+    if (string.IsNullOrEmpty(columnObjectOne.imageSize))
+    {
+        columnObjectOne.imageSize = "500";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectOne.width))
+    {
+        columnObjectOne.width = "500";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectOne.align))
+    {
+        columnObjectOne.align = "center";
+    }
+
+    @CreateOneColumn(columnObjectOne, rowSettings);
+}
+
+@helper CreateRow(Column columnObjectOne, Column columnObjectTwo, RowSettings rowSettings = null)
+{
+    if (rowSettings == null)
+    {
+        rowSettings = new RowSettings();
+    }
+
+    if (string.IsNullOrEmpty(columnObjectOne.imageSize))
+    {
+        columnObjectOne.imageSize = "210";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectTwo.imageSize))
+    {
+        columnObjectTwo.imageSize = "210";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectOne.width))
+    {
+        columnObjectOne.width = "210";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectTwo.width))
+    {
+        columnObjectTwo.width = "210";
+    }
+
+    @CreateTwoColumns(columnObjectOne, columnObjectTwo, rowSettings);
+}
+
+@helper CreateRow(Column columnObjectOne, Column columnObjectTwo, Column columnObjectThree, RowSettings rowSettings = null)
+{
+    if (rowSettings == null)
+    {
+        rowSettings = new RowSettings();
+    }
+
+    if (string.IsNullOrEmpty(columnObjectOne.imageSize))
+    {
+        columnObjectOne.imageSize = "126";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectTwo.imageSize))
+    {
+        columnObjectTwo.imageSize = "126";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectThree.imageSize))
+    {
+        columnObjectThree.imageSize = "126";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectOne.width))
+    {
+        columnObjectOne.width = "126";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectTwo.width))
+    {
+        columnObjectTwo.width = "126";
+    }
+
+    if (string.IsNullOrEmpty(columnObjectThree.width))
+    {
+        columnObjectThree.width = "126";
+    }
+
+    @CreateThreeColumns(columnObjectOne, columnObjectTwo, columnObjectThree, rowSettings);
+}
+
+@helper CreateRowDivider()
+{
+    <tr>
+        <td align="center" valign="top">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td align="center" valign="top">
+                        <table border="0" cellpadding="0" cellspacing="0" width="@emailTableWidth">
+                            <tr>
+                                <td class="no-top-bottom-inner-space" align="center" valign="top" style="@emailNoTopBottomInnerSpace">
+                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td class="table-content-border--top" align="center" valign="top" style="@emailTableBorder"></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+}
+
+@helper CreateOneColumn(Column columnObject, RowSettings rowSettings)
+{
+    <tr>
+        <td align="center" valign="top">
+            <table border="0" cellpadding="0" cellspacing="0" width="500" style="color:@columnObject.textColor; background: @rowSettings.background;" bgcolor="@rowSettings.backgroundColor">
+                <tr>
+                    <td align="center" valign="top">
+                        <table border="0" cellpadding="0" cellspacing="0" width="@columnObject.width">
+                            <tr>
+                                <td align="@columnObject.align" valign="top" width="@emailTableWidth">
+                                    <table border="0" cellpadding="@rowSettings.padding" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td align="@columnObject.align" style="text-align: @columnObject.align" valign="top">
+                                                @CreateColumnBlock(columnObject)
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+}
+
+@helper CreateTwoColumns(Column columnObjectOne, Column columnObjectTwo, RowSettings rowSettings)
+{
+    <tr mc:hideable="mc:hideable">
+        <td align="center" valign="top">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="color:@columnObjectOne.textColor" bgcolor="@rowSettings.backgroundColor">
+                <tr>
+                    <td align="center" valign="top">
+                        <table border="0" cellpadding="10" cellspacing="0" width="@emailTableWidth">
+                            <tr>
+                                <td valign="top" width="@emailTableWidth">
+                                    <table align="center" border="0" cellpadding="10" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td align="left" valign="top">
+                                                <table border="0" cellpadding="0" cellspacing="0" width="@columnObjectOne.width" style="@emailTableMaxWidth">
+                                                    <tr>
+                                                        <td align="left">
+                                                            @CreateColumnBlock(columnObjectOne)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                            <td align="right" valign="top">
+                                                <table border="0" cellpadding="0" cellspacing="0" width="@columnObjectTwo.width" style="@emailTableMaxWidth">
+                                                    <tr>
+                                                        <td align="left">
+                                                            @CreateColumnBlock(columnObjectTwo)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+}
+
+@helper CreateThreeColumns(Column columnObjectOne, Column columnObjectTwo, Column columnObjectThree, RowSettings rowSettings)
+{
+    <tr mc:hideable="mc:hideable">
+        <td align="center" valign="top">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="color:@columnObjectOne.textColor" bgcolor="@rowSettings.backgroundColor">
+                <tr>
+                    <td align="center" valign="top">
+                        <table border="0" cellpadding="10" cellspacing="0" width="@emailTableWidth">
+                            <tr>
+                                <td valign="top" width="@emailTableWidth">
+                                    <table align="left" border="0" cellpadding="10" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td align="left" valign="top">
+                                                <table border="0" cellpadding="0" cellspacing="0" width="@columnObjectOne.width" style="@emailTableMaxWidth">
+                                                    <tr>
+                                                        <td align="left">
+                                                            @CreateColumnBlock(columnObjectOne)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                            <td align="center" valign="top">
+                                                <table border="0" cellpadding="0" cellspacing="0" width="@columnObjectTwo.width" style="@emailTableMaxWidth">
+                                                    <tr>
+                                                        <td align="left">
+                                                            @CreateColumnBlock(columnObjectTwo)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                            <td align="right" valign="top">
+                                                <table border="0" cellpadding="0" cellspacing="0" width="@columnObjectThree.width" style="@emailTableMaxWidth">
+                                                    <tr>
+                                                        <td align="left">
+                                                            @CreateColumnBlock(columnObjectThree)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+}
+
+@helper CreateColumnBlock(Column columnObject)
+{
+    @CreateColumnBlockContent(columnObject)
+}
+
+@helper CreateColumnBlockContent(Column columnObject)
+{
+    if (!String.IsNullOrEmpty(columnObject.preheader))
+    {
+        <small class="text text--small" style="color:@columnObject.textColor;text-align:@columnObject.align;@emailTextSmall;">@columnObject.preheader</small>
+    }
+
+    if (!string.IsNullOrEmpty(columnObject.image))
+    {
+        string image = Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host") + "/Admin/Public/GetImage.ashx?width=" + columnObject.imageSize + "&crop=1&image=" + columnObject.image;
+        string altText = !string.IsNullOrEmpty(columnObject.altText) ? columnObject.altText : columnObject.linkText;
+        if (!string.IsNullOrEmpty(columnObject.link) && !string.IsNullOrEmpty(altText))
+        {
+            <a href="@columnObject.link" style="display: inline-block" title="@altText">
+                <img src="@image" width="@columnObject.imageSize" class="flexibleImage" style="@emailFlexibleImage" alt="@altText">
+            </a>
+        }
+        else
+        {
+            <img src="@image" width="@columnObject.imageSize" class="flexibleImage" style="@emailFlexibleImage" alt="@altText">
+        }
+    }
+
+    if (!String.IsNullOrEmpty(columnObject.image) && (!String.IsNullOrEmpty(columnObject.introheader) || !String.IsNullOrEmpty(columnObject.header) || !String.IsNullOrEmpty(columnObject.text.content)))
+    {
+        <br>
+    }
+
+    if (!String.IsNullOrEmpty(columnObject.introheader))
+    {
+        <h1 style="color:@columnObject.introheaderTextColor;text-align:@columnObject.align;@emailHeaderOneStyle">@columnObject.introheader</h1>
+    }
+
+    if (!String.IsNullOrEmpty(columnObject.header))
+    {
+        <h2 style="color:@columnObject.textColor;text-align:@columnObject.align;@emailHeaderTwoStyle">
+            @if (!String.IsNullOrEmpty(columnObject.icon))
+            {
+                <img src="@columnObject.icon" class="flexibleImage" style="@emailFlexibleImage" alt="@columnObject.header">
+            }
+            @columnObject.header
+        </h2>
+    }
+
+    if (!String.IsNullOrEmpty(columnObject.subheader))
+    {
+        <h3 style="color:@columnObject.textColor;text-align:@columnObject.align;@emailHeaderThreeStyle">@columnObject.subheader</h3>
+    }
+
+    if (!String.IsNullOrEmpty(columnObject.text.content))
+    {
+        <div class="text text--large text--center" style="color:@columnObject.textColor;text-align:@columnObject.align;@emailTextLarge">@columnObject.text.content</div>
+    }
+
+    if (!String.IsNullOrEmpty(columnObject.link) && !String.IsNullOrEmpty(columnObject.linkText))
+    {
+        string bgColor = "#EC683B";
+        string borderColor = "#EC683B";
+        string fontColor = "#FFFFFF";
+        string fontSize = "17";
+        string fontWeight = "normal";
+        string buttonDesign = "";
+        string buttonDesignStyles = "";
+        string borderRadius = "";
+        string textAlignment = "center";
+
+        if (!String.IsNullOrEmpty(columnObject.buttonType))
+        {
+            string btnId;
+
+            switch (columnObject.buttonType)
+            {
+                case "Link":
+                    btnId = null;
+                    bgColor = "";
+                    borderColor = "";
+                    string linksColor = Dynamicweb.Core.Converter.ToString(Pageview.AreaSettings.GetItem("Layout").GetString("LinksColor"));
+                    fontColor = !String.IsNullOrEmpty(linksColor) ? linksColor : "#333";
+                    buttonDesignStyles = "background-color: transparent; text-decoration: underline; padding: 0;";
+                    textAlignment = "left";
+                    break;
+                case "Secondary":
+                    btnId = "SecondaryButton";
+                    break;
+                case "Tertiary":
+                    btnId = "TertiaryButton";
+                    break;
+                default:
+                    btnId = "PrimaryButton";
+                    break;
+            }
+
+            if (!String.IsNullOrEmpty(btnId))
+            {
+                var item = Pageview.AreaSettings.GetItem("Layout").GetItem(btnId);
+
+                if (item != null)
+                {
+                    if (!String.IsNullOrEmpty(item.GetString("BackgroundColor")))
+                    {
+                        bgColor = item.GetString("BackgroundColor");
+                        borderColor = item.GetString("BackgroundColor");
+                    }
+                    if (!String.IsNullOrEmpty(item.GetString("FontColor")))
+                    {
+                        fontColor = item.GetString("FontColor");
+                    }
+                    if (!String.IsNullOrEmpty(item.GetString("FontSize")))
+                    {
+                        fontSize = item.GetString("FontSize");
+                    }
+                    if (!String.IsNullOrEmpty(item.GetString("FontWeight")))
+                    {
+                        fontWeight = item.GetString("FontWeight");
+                    }
+                    if (!String.IsNullOrEmpty(item.GetString("ButtonDesign")))
+                    {
+                        buttonDesign = item.GetString("ButtonDesign");
+                    }
+                }
+
+                switch (buttonDesign)
+                {
+                    case "rounded":
+                        borderRadius = "0.2rem";
+                        buttonDesignStyles = "border: 1px " + borderColor + " solid; border-radius: " + borderRadius + "; background-color:" + bgColor + ";";
+                        break;
+                    case "round":
+                        borderRadius = "200px";
+                        buttonDesignStyles = "border: 1px " + borderColor + " solid; border-radius: " + borderRadius + "; background-color:" + bgColor + ";";
+                        break;
+                    case "outline-square":
+                        borderRadius = "0";
+                        bgColor = "transparent";
+                        buttonDesignStyles = "border: 1px " + borderColor + " solid; border-radius: " + borderRadius + "; background-color:" + bgColor + ";";
+                        break;
+                    case "outline-rounded":
+                        borderRadius = "0.2rem";
+                        bgColor = "transparent";
+                        buttonDesignStyles = "border: 1px " + borderColor + " solid; border-radius: " + borderRadius + "; background-color:" + bgColor + ";";
+                        break;
+                    case "outline-round":
+                        borderRadius = "200px";
+                        bgColor = "transparent";
+                        buttonDesignStyles = "border: 1px " + borderColor + " solid; border-radius: " + borderRadius + "; background-color:" + bgColor + ";";
+                        break;
+                    default:
+                        borderRadius = "0";
+                        buttonDesignStyles = "border: 1px " + borderColor + " solid; border-radius: " + borderRadius + "; background-color:" + bgColor + ";";
+                        break;
+                }
+            }
+        }
+
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td>
+                    <table align="@columnObject.buttonAlign" style="text-align: @columnObject.buttonAlign" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td align="@columnObject.buttonAlign" style="text-align: @columnObject.buttonAlign; border-radius: @borderRadius;" bgcolor="@bgColor">
+                                <a href="@columnObject.link" style="display: inline-block;padding: 10px;text-align: center; text-decoration:none;font-family:Helvetica,Arial,sans-serif; color: @fontColor; font-size: @(Int32.Parse(fontSize) + 2)px; font-weight: @fontWeight; @buttonDesignStyles; width: inherit" target="_blank" title="@columnObject.linkText">
+                                    @columnObject.linkText
+                                </a>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    }
+}
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="format-detection" content="telephone=no"> <!-- disable auto telephone linking in iOS -->
+    <title>@GetValue("Title")</title>
+@GetValue("MetaTags")
+@GetValue("CopyRightNotice")
+
+    <style type="text/css">
+
+        /* RESET STYLES */
+        html {
+            background-color: #d3d3d3;
+            margin: 0;
+            padding: 0;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        img, a img {
+            border: 0;
+            outline: none;
+            text-decoration: none;
+            height: auto;
+            line-height: 100%;
+        }
+
+        a {
+            text-decoration: none !important;
+            border-bottom: none;
+            font-weight: normal;
+        }
+
+        /* Force Hotmail/Outlook.com to display line heights normally. */
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            display: block;
+            margin-top: 0;
+            margin-right: 0;
+            margin-bottom: 5px;
+            margin-left: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            padding-left: 0;
+            padding-right: 0;
+            color: #5F5F5F;
+            font-weight: normal;
+            font-style: normal;
+            font-family: Helvetica,Arial,sans-serif;
+            line-height: 135%;
+            text-align: Left;
+            letter-spacing: normal;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+            font-size: 15px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+            font-size: 23px;
+        }
+
+        h3 {
+            margin-bottom: 3px;
+            font-size: 20px;
+            line-height: 125%;
+        }
+
+        h4 {
+            font-size: 18px;
+            font-style: italic;
+            line-height: 100%;
+        }
+
+        /* STYLES */
+
+        .table--fixed {
+            table-layout: fixed;
+            max-width: 100% !important;
+            width: 100% !important;
+            min-width: 100% !important;
+        }
+
+        .table-content-border--top {
+            border-top: 1px solid #a8a8a8;
+        }
+
+        .content {
+            height: 100% !important;
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            font-family: Helvetica, Arial, "Lucida Grande", sans-serif;
+        }
+
+        .content--bg {
+            background-color: #d3d3d3;
+        }
+
+        .content--hidden {
+            display: none !important;
+            mso-hide: all;
+        }
+
+        .label {
+            color: #828282;
+        }
+
+        .text {
+            font-size: 13px;
+            line-height: 120%;
+            font-weight: normal;
+            color: #828282;
+        }
+
+        .text--small {
+            margin-top: 0;
+            margin-bottom: 3px;
+            font-size: 10px;
+            line-height: 125%;
+        }
+
+        .text--large {
+            margin-bottom: 0;
+            font-size: 15px;
+            line-height: 135%;
+        }
+
+        .text--center {
+            text-align: center;
+        }
+
+        .link {
+            color: #828282;
+            text-decoration: underline;
+        }
+
+        .link--no-decoration {
+            text-decoration: none;
+        }
+
+        .no-top-bottom-inner-space {
+            padding-top: 0px;
+            padding-bottom: 0px;
+        }
+
+        /* MOBILE STYLES */
+        @@media only screen and (max-width: 480px) {
+
+            .flexibleImage {
+                height: auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+        }
+
+        /*  CONDITIONS FOR ANDROID DEVICES ONLY
+            *   http://developer.android.com/guide/webapps/targeting.html
+            *   http://pugetworks.com/2011/04/css-media-queries-for-targeting-different-mobile-devices/
+        */
+
+        @@media only screen and (-webkit-device-pixel-ratio:.75) {
+            /* Put CSS for low density (ldpi) Android layouts in here */
+        }
+
+        @@media only screen and (-webkit-device-pixel-ratio:1) {
+            /* Put CSS for medium density (mdpi) Android layouts in here */
+        }
+
+        @@media only screen and (-webkit-device-pixel-ratio:1.5) {
+            /* Put CSS for high density (hdpi) Android layouts in here */
+        }
+        /* end Android targeting */
+
+        /* CONDITIONS FOR IOS DEVICES ONLY
+            =====================================================*/
+        @@media only screen and (min-device-width : 320px) and (max-device-width:568px) {
+        }
+        /* end IOS targeting */
+    </style>
+
+@GetValue("Stylesheets")
+@GetValue("Javascripts")
+</head>
+
+@{
+    string emailBgColor = "#d3d3d3";
+    string emailContent = "height:100% !important;margin:0;padding:0;width:100% !important;font-family:Helvetica, Arial,'Lucida Grande',sans-serif;";
+    string emailTableFixedStyle = "table-layout: fixed;max-width:100% !important;width: 100% !important;min-width: 100% !important;";
+}
+
+<body class="content content--bg" bgcolor="@emailBgColor" style="@emailContent" marginwidth="0" marginheight="0" offset="0">
+    <center class="content--bg" bgcolor="@emailBgColor">
+        <table class="content table--fixed" border="0" cellpadding="0" cellspacing="0" height="100%" width="100%" id="bodyTable" style="@(emailTableFixedStyle + emailContent)">
+            <tr>
+                <td class="content" align="center" valign="top" id="bodyCell" style="@emailContent">
+                    @inherits RazorTemplateBase<RazorTemplateModel<Template>>
+@using Dynamicweb.Rendering;
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using Dynamicweb.Security;
+
+
+@inherits RazorTemplateBase<RazorTemplateModel<Template>>
+@using Dynamicweb.Rendering;
+@using Dynamicweb.Core;
+@using System.Linq;
+@using Dynamicweb.Ecommerce.Orders;
+@using Dynamicweb.Ecommerce.Orders.SalesDiscounts;
+@using System.Text.RegularExpressions;
+@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+
+@* 
+   This is a temporary fallback for the DefaultImage. The image pattern MUST be set up like this:
+   
+   ImageSmall = /{ProductNumber}.jpg
+   ImageMedium = /{ProductNumber}{VariantOptionLevel1}.jpg
+   ImageLarge = /{ProductNumber}{VariantComboName}.jpg
+
+   In addition to the ImageDefault setting
+*@
+
+@functions {
+    public string GetProductImage(LoopItem productObject = null)
+    {
+        string theImage = "";
+
+        if (productObject == null) {
+            theImage = GetString("Ecom:Product.ImageDefault.Default.Clean");
+            theImage = String.IsNullOrEmpty(theImage) ? GetString("Ecom:Product.ImageLarge.Clean") : theImage;
+            theImage = String.IsNullOrEmpty(theImage) ? GetString("Ecom:Product.ImageMedium.Clean") : theImage;
+            theImage = String.IsNullOrEmpty(theImage) ? GetString("Ecom:Product.ImageSmall.Clean") : theImage;
+            theImage = String.IsNullOrEmpty(theImage) ? GetString("Ecom:Product.ImageLarge.Default.Clean") : theImage;
+        } else {
+            theImage = productObject.GetString("Ecom:Product.ImageDefault.Default.Clean");
+            theImage = String.IsNullOrEmpty(theImage) ? productObject.GetString("Ecom:Product.ImageLarge.Clean") : theImage;
+            theImage = String.IsNullOrEmpty(theImage) ? productObject.GetString("Ecom:Product.ImageMedium.Clean") : theImage;
+            theImage = String.IsNullOrEmpty(theImage) ? productObject.GetString("Ecom:Product.ImageSmall.Clean") : theImage;
+            theImage = String.IsNullOrEmpty(theImage) ? productObject.GetString("Ecom:Product.ImageLarge.Default.Clean") : theImage;
+        }
+
+        return theImage;
+    }
+}
+
+@functions{
+    string logoimage;
+    string emailFontColor;
+    string emailBackgroundColor;
+    string emailLogoAlignment;
+    string emailFooterAlignment;
+
+    Column GetAddressColumn(string prefix, string type)
+    {
+        Column column = new Column();
+        column.text.Add(GetString("Ecom:" + prefix + "." + type + ".Company"));
+        column.text.Add(GetString("Ecom:" + prefix + "." + type + ".Name"));
+        column.text.Add(GetString("Ecom:" + prefix + "." + type + ".Address"));
+        column.text.Add(GetString("Ecom:" + prefix + "." + type + ".Zip") + " " + GetString("Ecom:" + prefix + "." + type + ".City"));
+        column.text.Add(GetString("Ecom:" + prefix + "." + type + ".Region"));
+        column.text.Add(GetString("Ecom:" + prefix + "." + type + ".Country"));
+        column.text.Add("<a href='mailto:" + GetString("Ecom:" + prefix + "." + type + ".Email") + "' style='text-decoration: none ;pointer-events: none;' title='" + GetString("Ecom:" + prefix + "." + type + ".Email") + "'>" + GetString("Ecom:" + prefix + "." + type + ".Email") + "</a>");
+        column.text.Add("<a href='tel:" + GetString("Ecom:" + prefix + "." + type + ".Phone") + "' style='text-decoration: none; ;pointer-events: none;' title='" + GetString("Ecom:" + prefix + "." + type + ".Phone") + "'>" + GetString("Ecom:" + prefix + "." + type + ".Phone") + "</a>");
+        return column;
+    }
+}
+
+@{
+
+    if (Pageview != null && Pageview.AreaSettings != null)
+    {
+        logoimage = Converter.ToString(Pageview.AreaSettings.GetItem("Layout").GetItem("Emails").GetFile("LogoImage").PathUrlEncoded);
+        emailFontColor = Converter.ToString(Pageview.AreaSettings.GetItem("Layout").GetItem("Emails").GetString("HeaderAndFooterFontColor"));
+        emailFontColor = !string.IsNullOrEmpty(emailFontColor) ? emailFontColor : "#FFFFFF";
+        emailBackgroundColor = Converter.ToString(Pageview.AreaSettings.GetItem("Layout").GetItem("Emails").GetString("HeaderAndFooterBackgroundColor"));
+        emailBackgroundColor = !string.IsNullOrEmpty(emailBackgroundColor) ? emailBackgroundColor : "#14304A";
+        emailFooterAlignment = Converter.ToString(Pageview.AreaSettings.GetItem("Layout").GetItem("Emails").GetString("FooterAlignment"));
+        emailFooterAlignment = !string.IsNullOrEmpty(emailFooterAlignment) ? emailFooterAlignment : "right";
+        emailLogoAlignment = Converter.ToString(Pageview.AreaSettings.GetItem("Layout").GetItem("Emails").GetString("LogoAlignment"));
+        emailLogoAlignment = !string.IsNullOrEmpty(emailLogoAlignment) ? emailLogoAlignment : "center";
+    }
+}
+
+@helper RenderHeaderImage()
+{
+    Column header = new Column();
+    header.image = logoimage;
+    header.imageSize = "250";
+    header.textColor = emailFontColor;
+    header.align = emailLogoAlignment;
+    header.altText = Translate("Go to frontpage");
+    header.link = Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host");
+
+    @CreateRow(header, new RowSettings { backgroundColor = emailBackgroundColor });
+}
+
+@helper RenderFooterSection()
+{
+    string footeremail = Converter.ToString(Pageview.AreaSettings.GetItem("Settings").GetString("ContactEmail"));
+    string footerphone = Converter.ToString(Pageview.AreaSettings.GetItem("Settings").GetString("ContactNumber")).Replace(" ", "");
+
+    Column footerRight = new Column();
+    footerRight.textColor = emailFontColor;
+    footerRight.image = logoimage;
+    footerRight.imageSize = "200";
+    footerRight.altText = Translate("Logo");
+    footerRight.align = emailFooterAlignment;
+    footerRight.altText = Translate("Go to frontpage");
+    footerRight.link = Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host");
+
+    footerRight.text.Add("<p></p>");
+    footerRight.text.Add("<a href='tel:" + footerphone + "' style='color: " + emailFontColor + "; text-decoration: none; border-bottom: 0;' title='" + footerphone + "'>" + footerphone + "</a>");
+    footerRight.text.Add("<a href='mailto:" + footeremail + "' style='color: " + emailFontColor + "; text-decoration: none; border-bottom: 0;' title='" + footeremail + "'>" + footeremail + "</a>");
+    footerRight.text.Add("");
+
+    string iconsHTML = "";
+    var socialLinks = Pageview.AreaSettings.GetItem("Layout").GetItems("FooterSocialLinks");
+    foreach (var socialitem in socialLinks)
+    {
+        var socialIcon = socialitem.GetValue("Icon") as Dynamicweb.Frontend.ListViewModel;
+        string socialIconClass = socialIcon.SelectedValue;
+        string socialIconTitle = socialIcon.SelectedName;
+        string socialLink = socialitem.GetString("Link");
+        socialIconClass = Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host") + "/Admin/Public/GetImage.ashx?width=35&image=" + "/Files/Images/SocialIcons/" + socialIconClass + ".png";
+
+        iconsHTML += " <a href='" + socialLink + "' style='color: white; text-decoration: none; border-bottom: 0; display: inline-block; width: 35px; height: 35px; background-image:url(\"" + socialIconClass + "\")' title='" + socialIconTitle + "'></a>";
+    }
+    footerRight.text.Add(iconsHTML);
+
+    @CreateRow(footerRight, new RowSettings { backgroundColor = emailBackgroundColor });
+}
+
+@helper RenderRecurringDetails()
+{
+    if (GetBoolean("Ecom:Order.IsRecurringOrder"))
+    {
+        Column recurringInfo = new Column();
+        recurringInfo.text.Add(Translate("You have placed a subscription. This is a confirmation of the subscription not the actual order receipt."));
+        recurringInfo.align = "center";
+
+        @CreateRow(recurringInfo);
+
+        @CreateRowDivider();
+    }
+
+    if (GetBoolean("Ecom:Order.IsBasedOnRecurringOrder"))
+    {
+        Column basedRecurringInfo = new Column();
+        basedRecurringInfo.text.Add(Translate("Your subscription order"));
+        basedRecurringInfo.align = "center";
+
+        @CreateRow(basedRecurringInfo);
+
+        @CreateRowDivider();
+    }
+}
+
+@helper RenderComments()
+{
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.Customer.Comment")))
+    {
+        Column comment = new Column();
+        comment.subheader = Translate("Comment");
+        comment.text.Add(GetString("Ecom:Order.Customer.Comment"));
+
+        @CreateRow(comment);
+
+        @CreateRowDivider();
+    }
+}
+
+@helper RenderAddresses(string billingTitle, string deliveryTitle, string prefix)
+{
+    Column billingInfo = GetAddressColumn(prefix, "Customer");
+    billingInfo.header = billingTitle;
+    var fix = GetString("Ecom:Order.Delivery.Name"); //without this delivery tags will not be rendered :(
+    Column shippingInfo = GetAddressColumn(prefix, !string.IsNullOrEmpty(GetString("Ecom:" + prefix + ".Delivery.Address")) ? "Delivery" : "Customer");
+    shippingInfo.header = deliveryTitle;
+    @CreateRow(billingInfo, shippingInfo, new RowSettings { backgroundColor = "#e4e4e4", smallScreenTable = "table-smallScreen" });
+}
+
+@helper RenderPaymentAndShipping()
+{
+    string businessName = Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("Name");
+    string businessCountry = Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("Country");
+    string businessCity = Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("City");
+    string businessRegion = Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("Region");
+    string businessZip = Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("PostalCode");
+    string businessAddress = Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("StreetAddress");
+    string businessCVR = Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("CVRNumber");
+
+    Column leftColumn = new Column();
+    Column shopInfo = new Column();
+
+    leftColumn.header = Translate("Payment and shipping");
+
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.PaymentMethod")))
+    {
+        leftColumn.text.Add(Translate("Payment method") + ": " + Translate(GetString("Ecom:Order.PaymentMethod")));
+    }
+
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethod")))
+    {
+        leftColumn.text.Add(Translate("Shipping method") + ": " + Translate(GetString("Ecom:Order.ShippingMethod")));
+    }
+
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.TransactionCardNumber")))
+    {
+        leftColumn.text.Add(Translate("Card no") + ": " + GetString("Ecom:Order.TransactionCardNumber"));
+    }
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.TransactionNumber")))
+    {
+        leftColumn.text.Add(Translate("Transaction no") + ": " + GetString("Ecom:Order.TransactionNumber"));
+    }
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.TransactionStatus")))
+    {
+        leftColumn.text.Add(Translate("Transaction status") + ": " + GetString("Ecom:Order.TransactionStatus"));
+    }
+
+    //Shop
+    if (!string.IsNullOrEmpty(businessAddress))
+    {
+        shopInfo.header = Translate("Shop");
+
+        shopInfo.text.Add(businessName);
+        shopInfo.text.Add(businessAddress);
+
+        if (!string.IsNullOrEmpty(businessRegion))
+        {
+            businessRegion += " "; //add space between region and country
+        }
+        shopInfo.text.Add(businessZip + " " + businessCity + ", " + businessRegion + businessCountry);
+
+        if (!string.IsNullOrEmpty(businessCVR))
+        {
+            shopInfo.text.Add(Translate("Business number") + ": " + businessCVR);
+        }
+    }
+
+    @CreateRow(leftColumn, shopInfo, new RowSettings { backgroundColor = "#e4e4e4" });
+}
+
+
+
+
+
+
+
+
+
+
+@helper RenderOrderline(LoopItem orderline, bool showImage = true)
+{
+    Column orderLineLeft = new Column();
+
+    Column orderLineCenter = new Column();
+
+    Column orderLineRight = new Column();
+    orderLineRight.align = "right";
+
+
+    string ServiceForProductId = "";            
+    foreach (LoopItem orderlinefield in orderline.GetLoop("Order.OrderLineFields")){
+        if (orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.SystemName")=="ServiceForProductId"){
+            ServiceForProductId = orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.Value");
+        }   
+    }
+
+// Remove Services
+if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct") && string.IsNullOrEmpty(ServiceForProductId)){
+
+//	string DeliveryServiceGroup = "GROUP895";
+	string ProdId = orderline.GetString("Ecom:Product.ID");
+//	string ProdNumber = orderline.GetString("Ecom:Product.Number");
+//	string ProdOrderlineID = "";
+//	int ProdQuantity = 0;
+	string DeliveryServiceOrderlineID = "";
+	string DeliveryServiceOrderlineID_List = "";
+	string DeliveryServiceDeleteByOrderlineID_OnClick = "";
+	string DeliveryServiceDeleteByOrderlineID_HTML = "";
+//	string DeliveryServiceSelection_HTML = "";
+            
+	int ActivDeliveryServiceLevel = 0;
+	string ActivDeliveryServiceName = "";
+	string ActivDeliveryServiceItemPrice = "";
+	int ActivDeliveryServiceQuantity = 0;
+	string ActivDeliveryServicePrice = "";
+		
+	int DS_cnt = 0;
+
+
+	foreach (LoopItem orderLines in GetLoop("OrderLines")) {
+		foreach (LoopItem orderlinefield in orderLines.GetLoop("Order.OrderLineFields")){
+			if (orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.SystemName")=="ServiceForProductId" && orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.Value") == ProdId){
+				DS_cnt++;
+				DeliveryServiceOrderlineID = orderLines.GetString("Ecom:Order:OrderLine.Id");
+				DeliveryServiceOrderlineID_List += orderLines.GetString("Ecom:Order:OrderLine.Id") + ",";
+				
+
+                //Do the same with bit different approach
+
+				DeliveryServiceDeleteByOrderlineID_OnClick = "Cart.ChangeQuantity("+ Pageview.Page.ID.ToString() + ", '" + DeliveryServiceOrderlineID + "', 0);";
+				
+                DeliveryServiceDeleteByOrderlineID_HTML += "<a onclick='"+DeliveryServiceDeleteByOrderlineID_OnClick+"'>"+DeliveryServiceOrderlineID+"</a> ";              
+
+				ActivDeliveryServiceLevel = orderLines.GetInteger("Ecom:Product:Field.isDeliveryServiceLevel");
+				ActivDeliveryServiceName = orderLines.GetString("Ecom:Product.Name");
+				ActivDeliveryServiceItemPrice = orderLines.GetString("Ecom:Product.Price");
+				ActivDeliveryServiceQuantity = orderLines.GetInteger("Ecom:Order:OrderLine.Quantity");
+				ActivDeliveryServicePrice = orderLines.GetString("Ecom:Order:OrderLine.Price");
+				
+			}   
+		}
+    }
+
+            
+
+
+
+    string orderLineType = orderline.GetString("Ecom:Order:OrderLine.Type");
+    if (orderLineType == "1" || orderLineType == "3" || orderLineType == "4")
+    {
+        //Discount
+        orderLineCenter.text.Add(orderline.GetString("Ecom:Order:OrderLine.ProductName"));
+        orderLineRight.text.Add("<strong>" + orderline.GetString("Ecom:Order:OrderLine.TotalPrice") + "</strong>");
+        @CreateRow(orderLineCenter, orderLineRight);
+    }
+    else
+    {
+        if (showImage)
+        {
+            orderLineLeft.image = GetProductImage(orderline);
+            orderLineLeft.altText = orderline.GetString("Ecom:Order:OrderLine.ProductName");
+        }
+
+        //Product
+        orderLineCenter.text.Add(orderline.GetString("Ecom:Order:OrderLine.ProductName"));
+        if (!string.IsNullOrEmpty(orderline.GetString("Ecom:Order:OrderLine.ProductNumber")))
+        {
+            orderLineCenter.text.Add("# " + orderline.GetString("Ecom:Order:OrderLine.ProductNumber"));
+        }
+        if (!string.IsNullOrWhiteSpace(orderline.GetString("Ecom:Order:OrderLine.ProductVariantText")))
+        {
+            orderLineCenter.text.Add(orderline.GetString("Ecom:Order:OrderLine.ProductVariantText"));
+        }
+
+        orderLineCenter.text.Add(Translate("Qty") + ": " + orderline.GetString("Ecom:Order:OrderLine.Quantity"));
+
+        // Services
+//        orderLineCenter.text.Add(ServiceForProductId);
+if (ActivDeliveryServiceName != ""){
+    orderLineCenter.text.Add("+ " + ActivDeliveryServiceName + " " + ActivDeliveryServicePrice);
+}
+
+
+
+
+        orderLineRight.text.Add(orderline.GetString("Ecom:Order:OrderLine.Price.PriceFormatted"));
+
+        if (showImage)
+        {
+            orderLineLeft.width = "105";
+            orderLineLeft.imageSize = "105";
+            orderLineCenter.width = "165";
+            orderLineRight.width = "110";
+            @CreateRow(orderLineLeft, orderLineCenter, orderLineRight);
+        }
+        else
+        {
+            orderLineCenter.width = "270";
+            orderLineRight.width = "110";
+            @CreateRow(orderLineCenter, orderLineRight);
+        }
+        //BOM Items
+        foreach (LoopItem bomitem in orderline.GetLoop("BOMItems"))
+        {
+            var bomImage = GetProductImage(bomitem);
+
+            Column bomLineLeft = new Column();
+            if (showImage)
+            {
+                bomLineLeft.image = bomImage;
+            }
+            Column bomLineCenter = new Column();
+            bomLineCenter.text.Add(bomitem.GetString("Ecom:Order:OrderLine.ProductName"));
+            bomLineCenter.text.Add("# " + bomitem.GetString("Ecom:Order:OrderLine.ProductNumber"));
+            bomLineCenter.text.Add(Translate("Qty") + ": " + bomitem.GetString("Ecom:Order:OrderLine.Quantity"));
+
+            Column bomLineRight = new Column();
+            bomLineRight.text.Add(bomitem.GetString("Ecom:Order:OrderLine.TotalPrice"));
+            bomLineRight.align = "right";
+
+            if (showImage)
+            {
+                bomLineLeft.width = "105";
+                bomLineLeft.imageSize = "105";
+                bomLineCenter.width = "165";
+                bomLineRight.width = "110";
+                @CreateRow(bomLineLeft, bomLineCenter, bomLineRight, new RowSettings { backgroundColor = "#e4e4e4" });
+            }
+            else
+            {
+                bomLineCenter.width = "270";
+                bomLineRight.width = "110";
+                @CreateRow(bomLineCenter, bomLineRight, new RowSettings { backgroundColor = "#e4e4e4" });
+            }
+        }
+    }
+    @CreateRowDivider()
+
+    }// Remove Services
+}
+
+
+
+
+
+
+
+@functions {
+    public class ProductDesign
+    {
+        public string imagePosition { get; set; }
+        public bool separationLines { get; set; }
+        public string backgroundColor { get; set; }
+        public string fontColor { get; set; }
+        public bool showViewButton { get; set; }
+        public string viewButtonText { get; set; }
+
+        //Defaults
+        public ProductDesign()
+        {
+            imagePosition = "left";
+            separationLines = true;
+            backgroundColor = "#FFFFFF";
+            fontColor = "#000000";
+            showViewButton = true;
+            viewButtonText = "View";
+        }
+    }
+
+    Column getProductColumn(LoopItem product, ProductDesign design)
+    {
+        Column productColumn = new Column
+        {
+            align = "center",
+            image = GetProductImage(product),
+            altText = product.GetString("Ecom:Product.Name"),
+            textColor = design.fontColor,
+            buttonAlign = "center"
+        };
+
+        string variantId = !string.IsNullOrEmpty(product.GetString("Ecom:Product.VariantID")) ? product.GetString("Ecom:Product.VariantID") : product.GetString("Ecom:Product.VariantID.Extented");
+        string link = link = Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host");
+        link += "/" + product.GetString("Ecom:Product.LinkGroup.Clean") + (!string.IsNullOrWhiteSpace(variantId) ? "&VariantID=" + variantId : "");
+        productColumn.link = link;
+
+        productColumn.text.Add(string.Format("<a href='{0}' title='{1}' style='{2}'><strong style='word-break: break-word;'>{1}</strong></a>", link, product.GetString("Ecom:Product.Name"), emailLinkStyle));
+
+        if (!string.IsNullOrWhiteSpace(product.GetString("Ecom:Product.VariantText")))
+        {
+            productColumn.text.Add(product.GetString("Ecom:Product.VariantText"));
+        }
+
+        if (!string.IsNullOrEmpty(product.GetString("Ecom:Product.Number")))
+        {
+            productColumn.text.Add("# " + product.GetString("Ecom:Product.Number"));
+        }
+
+        productColumn.text.Add("<br><strong>" + product.GetString("Ecom:Product.Price") + "</strong>");
+
+        if (design.showViewButton && !string.IsNullOrEmpty(design.viewButtonText))
+        {
+            productColumn.text.Add("<br>");
+            productColumn.linkText = Translate(design.viewButtonText);
+        }
+
+        return productColumn;
+    }
+}
+
+@helper RenderProduct(LoopItem product)
+{
+    @RenderProduct(product, new ProductDesign());
+}
+
+@helper RenderProduct(LoopItem product, ProductDesign design)
+{
+    Column productImage = new Column
+    {
+        width = "105",
+        imageSize = "105",
+        textColor = design.fontColor,
+        image = GetProductImage(product),
+        altText = product.GetString("Ecom:Product.Name")
+    };
+
+    Column productPrice = new Column
+    {
+        width = "110",
+        align = design.imagePosition == "left" ? "right" : "left",
+        textColor = design.fontColor
+    };
+    productPrice.text.Add("<strong>" + product.GetString("Ecom:Product.Price") + "</strong><br>");
+
+
+    Column productInfo = new Column
+    {
+        width = "165",
+        textColor = design.fontColor,
+        buttonAlign = "left"
+    };
+
+    string variantId = !string.IsNullOrEmpty(product.GetString("Ecom:Product.VariantID")) ? product.GetString("Ecom:Product.VariantID") : product.GetString("Ecom:Product.VariantID.Extented");
+    string link = Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host");
+    link += "/" + product.GetString("Ecom:Product.LinkGroup.Clean") + (!string.IsNullOrWhiteSpace(variantId) ? "&VariantID=" + variantId : "");
+    productImage.link = link;
+
+    productInfo.text.Add(string.Format("<a href='{0}' title='{1}' style='{2}'><strong style='word-break: break-word;'>{1}</strong></a>", link, product.GetString("Ecom:Product.Name"), emailLinkStyle));
+
+    if (!string.IsNullOrWhiteSpace(product.GetString("Ecom:Product.VariantText")))
+    {
+        productInfo.text.Add(product.GetString("Ecom:Product.VariantText"));
+    }
+
+    if (!string.IsNullOrEmpty(product.GetString("Ecom:Product.Number")))
+    {
+        productInfo.text.Add("# " + product.GetString("Ecom:Product.Number"));
+    }
+
+    if (design.showViewButton && !string.IsNullOrEmpty(design.viewButtonText))
+    {
+        productInfo.text.Add("<br>");
+        productInfo.link = link;
+        productInfo.linkText = Translate(design.viewButtonText);
+    }
+
+    if (design.imagePosition == "left")
+    {
+        @CreateRow(productImage, productInfo, productPrice, new RowSettings { backgroundColor = design.backgroundColor });
+    }
+    else if (design.imagePosition == "right")
+    {
+        @CreateRow(productPrice, productInfo, productImage, new RowSettings { backgroundColor = design.backgroundColor });
+    }
+    if (design.separationLines)
+    {
+        @CreateRowDivider()
+    }
+}
+
+
+@helper RenderGiftcards()
+{
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.HasGiftCards")))
+    {
+        Column giftcardHeader = new Column();
+        giftcardHeader.header = Translate("Giftcards bought on this order");
+        giftcardHeader.align = "center";
+
+        @CreateRow(giftcardHeader);
+
+        @CreateRowDivider();
+
+        foreach (LoopItem giftcards in GetLoop("GiftCards"))
+        {
+            Column giftcardCode = new Column();
+            giftcardCode.subheader = Translate("Gift card code") + ": " + giftcards.GetString("Ecom:Order.GiftCard.Code");
+
+            @CreateRow(giftcardCode);
+
+            Column giftcardLeft = new Column();
+            giftcardLeft.text.Add("<strong>" + giftcards.GetString("Ecom:Order.GiftCard.Name") + "</strong>");
+            giftcardLeft.text.Add(Translate("Expiry date") + ": " + giftcards.GetDate("Ecom:Order.GiftCard.ExpiryDate").ToString(Dynamicweb.Core.Helpers.DateHelper.DateFormatStringShort));
+
+            Column giftcardRight = new Column();
+            giftcardRight.subheader = giftcards.GetString("Ecom:Order.GiftCard.Amount");
+            giftcardRight.align = "right";
+
+            @CreateRow(giftcardLeft, giftcardRight);
+
+            @CreateRowDivider();
+        }
+    }
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.HasUsedGiftCards")))
+    {
+        Column usedGiftcardHeader = new Column();
+        usedGiftcardHeader.subheader = Translate("Order used gift cards");
+        usedGiftcardHeader.align = "center";
+
+        @CreateRow(usedGiftcardHeader);
+
+        @CreateRowDivider();
+
+        foreach (LoopItem usedgiftcards in GetLoop("UsedGiftCards"))
+        {
+            Column giftcardLeft = new Column();
+            giftcardLeft.subheader = usedgiftcards.GetString("Ecom:Order.UsedGiftCard.Code");
+            giftcardLeft.text.Add(usedgiftcards.GetString("Ecom:Order.UsedGiftCard.Name"));
+            giftcardLeft.text.Add(Translate("Expiry date") + " " + usedgiftcards.GetDate("Ecom:Order.UsedGiftCard.ExpiryDate").ToString(Dynamicweb.Core.Helpers.DateHelper.DateFormatStringShort));
+
+            Column giftcardRight = new Column();
+            giftcardRight.subheader = usedgiftcards.GetString("Ecom:Order.UsedGiftCard.InitialAmount");
+            giftcardRight.text.Add(usedgiftcards.GetString("Ecom:Order.UsedGiftCard.UsedAmountForTheOrder"));
+            giftcardRight.text.Add(usedgiftcards.GetString("Ecom:Order.UsedGiftCard.RemainingBalance"));
+            giftcardRight.align = "right";
+
+            @CreateRow(giftcardLeft, giftcardRight);
+
+            @CreateRowDivider();
+        }
+    }
+}
+
+
+@helper RenderVouchers()
+{
+    string voucherCode = GetString("Ecom:Order.Customer.VoucherCode");
+    if (!string.IsNullOrWhiteSpace(voucherCode))
+    {
+        Column vouchers = new Column();
+        vouchers.header = Translate("Vouchers");
+        vouchers.align = "center";
+
+        string orderId = GetString("Ecom:Order.ID");
+        Order order = new OrderService().GetById(orderId);
+
+        IEnumerable<string> codes = new List<string>();
+
+        if (order.VoucherUseType.HasFlag(VoucherUseCategoryType.Discount))
+        {
+            codes = voucherCode.Split(new string[] { ",", ";", " " }, StringSplitOptions.RemoveEmptyEntries);
+        }
+        else
+        {
+            codes = new string[] { voucherCode.Trim() };
+        }
+
+        bool hasUsedVouchers = false;
+        foreach (string code in codes)
+        {
+            Voucher vouch = Voucher.GetVoucherByCode(code);
+            if (vouch != null && vouch.DateUsed.HasValue && string.Equals(vouch.UsedOrderId, orderId, StringComparison.OrdinalIgnoreCase))
+            {
+                vouchers.text.Add(Translate("Voucher") + "<span style='font-weight:bold;'>" + code + "</span>" + Translate("has been used"));
+                hasUsedVouchers = true;
+            }
+        }
+
+        if (hasUsedVouchers)
+        {
+            @CreateRow(vouchers);
+        }
+    }
+}
+
+@helper RenderButton(string link, string text, string align = "left")
+{
+    Column button = new Column();
+    button.link = link;
+    button.linkText = Translate(text);
+    button.buttonAlign = align;
+    @CreateRow(button);
+}
+
+@CreatePreheader(Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host") + "/Default.aspx?ID=" + GetString("Global.PageId"))
+<table bgcolor="#FFFFFF" border="0" cellpadding="0" cellspacing="0" width="500" id="emailBody">
+    @RenderHeaderImage()
+    <tr><td><div id="mycontainer">@GetValue("DwContent(mycontainer)")</div></td></tr>
+    @RenderFooterSection()
+</table> 
+
+@CreateSubscriptionFooter("{{EmailMarketing:Email.UnsubscribeLink.Clean}}")
+                </td>
+            </tr>
+        </table>
+    </center>
+</body>
+</html>

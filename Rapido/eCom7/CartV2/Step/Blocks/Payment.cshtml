@@ -1,0 +1,152 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Linq
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@{
+    BlocksPage paymentCheckoutPage = BlocksPage.GetBlockPage("CheckoutPage");
+    bool pointShop = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    string paymentCardHeightClass = Pageview.Device.ToString() != "Tablet" ? "u-full-height" : "";
+    bool paymentCountryIsNotSupported = !string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Country.Code")) && !GetLoop("Countries").Any(country => country.GetString("Ecom:Country.Code2") == GetString("Ecom:Order.Customer.Country.Code"));
+
+    var paymentBlock = new Block()
+    {
+        Id = "Payment",
+        SortId = 10,
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "6-auto"
+        }
+    };
+
+    var paymentHeader = new Block
+    {
+        Id = "PaymentHeader",
+        SortId = 10,
+        Component = new Heading { Level = 3, Title = Translate("Payment"), Icon = new Icon { Prefix = "fas", Name = "fa-credit-card", LabelPosition = IconLabelPosition.After } },
+        Design = new Design
+        {
+            RenderType = RenderType.CardHeader,
+            CssClass = "u-color-light--bg"
+        }
+    };
+
+    var paymentBody = new Block
+    {
+        Id = "PaymentBody",
+        SortId = 20,
+        Design = new Design
+        {
+            RenderType = RenderType.CardBody,
+            CssClass = "u-color-light--bg " + paymentCardHeightClass
+        }
+    };
+
+    if (paymentCountryIsNotSupported)
+    {
+        paymentBlock.Add(paymentHeader);
+        paymentBody.Component = new NotificationMessage { MessageType = NotificationMessageType.Error, Message = Translate("There is no available payment options") };
+        paymentBlock.Add(paymentBody);
+    }
+    else if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HidePayment") && GetLoop("Paymethods").Count != 0 && !pointShop)
+    {
+        paymentBlock.Add(paymentHeader);
+        paymentBody.Template = RenderPayment();
+        paymentBlock.Add(paymentBody);
+    }
+    else
+    {
+        paymentBlock.Template = RenderHiddenPayment();
+        paymentBlock.Design.CssClass = "u-hidden";
+    }
+
+    paymentCheckoutPage.Add("OrderContainerRow", paymentBlock);
+}
+
+@helper RenderPayment()
+{
+    string errorMessage = GetString("Ecom:Cart.ValidationError.EcomCartPaymethodId.ErrorMessage");
+    string savedCardName = "";
+
+    foreach (LoopItem payment in GetLoop("Paymethods"))
+    {
+        bool supportSavedCards = payment.GetBoolean("Ecom:Cart.Paymethod.SupportSavedCard") && Dynamicweb.Core.Converter.ToBoolean(GetGlobalValue("Global:Extranet.UserName"));
+        bool cardIsSaved = !String.IsNullOrEmpty(payment.GetString("Ecom:Order.SavedCardName")) ? true : false;
+
+            @Render(new RadioButtonField
+            {
+                Name = "EcomCartPaymethodId",
+                Label = payment.GetString("Ecom:Cart.Paymethod.Name"),
+                Id = "EcomCartPaymethodId_" + payment.GetString("Ecom:Cart.Paymethod.ID"),
+                Value = payment.GetString("Ecom:Cart.Paymethod.ID"),
+                OnChange = "Cart.DeselectRadioGroup('EcomCartSavedCardID'); Cart.SubmitCart()",
+                Checked = payment.GetBoolean("Ecom:Cart.Paymethod.IsSelected"),
+                ExtraAttributes = new Dictionary<string, string>() {
+                    { "data-expand", "savedCards_" + payment.GetString("Ecom:Cart.Paymethod.Name").Replace(" ", "_") }
+                }
+            })
+
+            if (supportSavedCards)
+            {
+                <div class="expandable--collapsed dw-mod" data-trigger="savedCards_@payment.GetString("Ecom:Cart.Paymethod.Name").Replace(" ", "_")">
+                    <div class="u-padding u-margin-bottom show">
+                        @Render(new CheckboxField { Label = Translate("Save used card"), Name = "EcomOrderSavedCardCreate", Id = "EcomOrderSavedCardCreate_" + payment.GetString("Ecom:Cart.Paymethod.ID"), Value = "true", Checked = cardIsSaved })
+
+                        @Render(new TextField
+                        {
+                            Placeholder = Translate("Saved card name"),
+                            Value = payment.GetString("Ecom:Order.SavedCardName"),
+                            OnChange = "document.getElementById('MySavedCardName').value=this.value"
+                        })
+                    </div>
+                </div>
+            }
+    }
+    if (!string.IsNullOrEmpty(errorMessage))
+    {
+        @Render(new NotificationMessage { Message = errorMessage, MessageType = NotificationMessageType.Error })
+    }
+
+    if (GetLoop("SavedCards").Count > 0)
+    {
+        <div class="u-bold u-margin-top u-margin-bottom">@Translate("Pay with a saved card")</div>
+
+        foreach (LoopItem card in GetLoop("SavedCards"))
+        {
+            @Render(new RadioButtonField
+            {
+                Name = "EcomCartSavedCardID",
+                Label = card.GetString("Ecom:SavedCard.Name"),
+                Value = card.GetString("Ecom:SavedCard.ID"),
+                OnChange = "Cart.DeselectRadioGroup('EcomCartPaymethodID'); Cart.SubmitCart()",
+                Checked = card.GetBoolean("Ecom:SavedCard.IsSelected")
+            })
+
+            if (!card.GetBoolean("Ecom:SavedCard.IsSelected"))
+            {
+                savedCardName = card.GetString("Ecom:SavedCard.Name");
+            }
+        }
+    }
+
+    @Render(new HiddenField { Name = "EcomOrderSavedCardName", Id = "MySavedCardName", Value = savedCardName })
+}
+
+@helper RenderHiddenPayment()
+{
+    foreach (LoopItem payment in GetLoop("Paymethods"))
+    {
+        string selected = "checked";
+
+        <div class="form__field-group u-margin-bottom">
+            <input type="radio" name="EcomCartPaymethodID" id="EcomCartPaymethodID_@payment.GetString("Ecom:Cart.Paymethod.ID")" value="@payment.GetString("Ecom:Cart.Paymethod.ID")" @selected />
+            <label for="EcomCartPaymethodID_@payment.GetString("Ecom:Cart.Paymethod.ID")" class="u-inline">@payment.GetString("Ecom:Cart.Paymethod.Name")</label>
+        </div>
+    }
+}

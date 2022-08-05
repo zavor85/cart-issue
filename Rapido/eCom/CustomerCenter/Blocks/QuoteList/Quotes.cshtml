@@ -1,0 +1,93 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage quotesPage = BlocksPage.GetBlockPage("QuoteList");
+}
+
+@{
+    if (string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.Quotes.EmptyList")))
+    {
+        Block quotes = new Block
+        {
+            Id = "Quotes",
+            SortId = 20,
+            Template = RenderQuotes()
+        };
+        quotesPage.Add("PageContainer", quotes);
+    }
+}
+
+@helper RenderQuotes() {
+    var cart = Dynamicweb.Ecommerce.Common.Context.Cart;
+    var currentOrderId = cart != null ? cart.Id : null;
+
+    CustomerCenterList list = new CustomerCenterList { };
+
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "#" });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Date") });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("State") });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Price"), Align = CustomerCenterListInfoItemAlignment.Right });
+          
+    foreach (LoopItem quote in GetLoop("Quotes"))
+    {
+        string orderId = quote.GetString("Ecom:Order.ID");
+
+        if (orderId != currentOrderId && string.IsNullOrEmpty(quote.GetString("Ecom:Order.Completed")))
+        {
+            int cartPageID = GetPageIdByNavigationTag("CartPage");
+
+            CustomerCenterListItem listItem = new CustomerCenterListItem {
+                Id = orderId,
+                Title = Translate("No.") + " " + orderId,
+                OnClick = "orderModal.ShowOrderModal('" + orderId + "')"
+            };
+
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = quote.GetDate("Ecom:Order.Date").ToString(Pageview.Area.Dateformat + " HH:mm") });
+
+            string quoteState = "";
+            foreach (LoopItem state in quote.GetLoop("AvailableQuoteStates"))
+            {
+                if (state.GetBoolean("QuoteState.IsCurrent") && !string.IsNullOrEmpty(state.GetString("QuoteState.Name")))
+                {
+                    quoteState = state.GetString("QuoteState.Name");
+                }
+            }
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = quoteState });
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = quote.GetString("Ecom:Order.OrderLines.Total.Price"), Align = CustomerCenterListInfoItemAlignment.Right   });
+
+            listItem.AddActions(
+                new Button
+                {
+                    ButtonLayout = ButtonLayout.None,
+                    OnClick = "orderModal.ShowOrderModal('" + orderId + "')",
+                    Title = Translate("View quote"),
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-search",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                },
+                new Button
+                {
+                    ButtonLayout = ButtonLayout.None,
+                    OnClick = "acceptQuote('" + quote.GetString("Ecom:CustomerCenter.Quotes.AddToCart") + "', '/Default.aspx?ID=" + cartPageID + "')",
+                    Title = Translate("Accept quote"),
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-clipboard-check",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                }
+            );   
+
+            list.AddListItem(listItem);
+        }
+    }
+
+    @Render(list);
+}

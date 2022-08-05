@@ -1,0 +1,129 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Linq
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Services
+
+@functions {
+    BlocksPage productListActionsBlocksPage = BlocksPage.GetBlockPage("ProductList");
+}
+
+@{
+    string actionsFavoriteListId = HttpContext.Current.Request.QueryString.Get("ListID");
+    bool actionsIsFavoriteList = !string.IsNullOrEmpty(actionsFavoriteListId);
+    string actionsColumnSize = actionsIsFavoriteList ? "4" : "6";
+
+    productListActionsBlocksPage.Add("ProductListHeader", new Block
+    {
+        Id = "Actions",
+        SortId = 30,
+        Template = RenderListActions(),
+        Design = new Design
+        {
+            CssClass = "grid__col-" + actionsColumnSize + " grid--align-self-center"
+        }
+    });
+
+    productListActionsBlocksPage.Add("BottomSnippets", new Block() {
+        Id = "ListViewSelectListener",
+        Template = RenderListViewSelectListener()
+    });
+
+}
+
+@helper RenderListActions()
+{
+    @*This is part of a script template *@
+
+    bool showSorting = Pageview.AreaSettings.GetItem("ProductList").GetBoolean("EnableSorting");
+    string listId = HttpContext.Current.Request.QueryString.Get("ListID");
+    bool isFavoriteList = !string.IsNullOrEmpty(listId);
+    string cartIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon").SelectedValue : "fas fa-shopping-cart";
+
+    List<Block> subBlocks = this.productListActionsBlocksPage.GetBlockListById("Views").OrderBy(item => item.SortId).ToList();
+
+    <div class="buttons-collection buttons-collection--right">
+        @if (showSorting && Pageview.Device.ToString() != "Mobile")
+        {
+            string dropdownCssClass = Pageview.Device.ToString() == "Mobile" ? "u-flex-grow--1" : "";  
+
+            <input type="checkbox" id="ProductSort" class="dropdown-trigger" />
+            <div class="dropdown u-w150px u-inline-block @dropdownCssClass dw-mod">
+                <label class="dropdown__header dropdown__btn dropdown__btn--small dw-mod" for="ProductSort">{{selectedSort}}</label>
+                <div class="dropdown__content dw-mod">
+                    <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: '', SortOrder: '' }, true);">@Translate("Default")</div>
+                    <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'Created', SortOrder: 'DESC'}, true);">@Translate("Newest")</div>
+                    <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'NameForSort', SortOrder: 'ASC'}, true);">@Translate("Name A - Z")</div>
+                    <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'NameForSort', SortOrder: 'DESC'}, true);">@Translate("Name Z - A")</div>
+                    @if (Dynamicweb.Rapido.Services.User.IsPricesAllowed())
+                    {
+                        <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'Price', SortOrder: 'ASC' }, true);">@Translate("Price low - high")</div>
+                        <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'Price', SortOrder: 'DESC' }, true);">@Translate("Price high - low")</div>
+                    }
+                </div>
+                <label class="dropdown-trigger-off" for="ProductSort"></label>
+            </div>
+        }
+
+        @if (subBlocks.Count > 1 && Pageview.Device.ToString() != "Mobile")
+        {
+            <div>
+                @foreach (Block item in subBlocks)
+                {
+                    <input type="radio" class="tag-btn-trigger" id="ListViewBtn_@item.Id" name="ViewBtnGroup">
+                    <label for="ListViewBtn_@item.Id" class="btn btn--tag u-no-margin" onclick="HandlebarsBolt.UpdateTemplate('ProductsContainer', '@item.Id')"><i class="fas fa-@item.Name"></i></label>
+                }
+            </div>
+        }
+
+        @if (isFavoriteList && Dynamicweb.Rapido.Services.User.IsBuyingAllowed())
+        {
+            if (Pageview.Device.ToString() != "Mobile")
+            {
+                <button type="submit" class="btn btn--secondary btn--sm dw-mod">@Translate("Buy all") <i class="@cartIcon"></i></button>
+            }
+            else
+            {
+                <button type="submit" class="btn btn--secondary btn--full btn--sm dw-mod">@Translate("Buy all") <i class="@cartIcon"></i></button>
+            }
+        }
+    </div>
+}
+
+@helper RenderListViewSelectListener()
+{
+    /* the same block code placed in ProductListFeed.cshtml */
+    Dictionary<string, bool> views = new Dictionary<string, bool>()
+    {
+        { "ProductItemContainer", Pageview.AreaSettings.GetItem("ProductList").GetBoolean("EnableListView") },
+        { "ProductGridItemContainer", Pageview.AreaSettings.GetItem("ProductList").GetBoolean("EnableGridView") },
+        { "ProductDetailsItemContainer", Pageview.AreaSettings.GetItem("ProductList").GetBoolean("EnableDetailsView") },
+        { "ProductTilesViewContainer", Pageview.AreaSettings.GetItem("ProductList").GetBoolean("EnableTilesView") }
+    };
+
+    string defaultView = Pageview.AreaSettings.GetItem("ProductList").GetList("DefaultListView") != null ? Pageview.AreaSettings.GetItem("ProductList").GetList("DefaultListView").SelectedValue : "";
+
+    if (string.IsNullOrEmpty(defaultView) || !views[defaultView])
+    {
+        defaultView = views.FirstOrDefault(x => x.Value).Key ?? "ProductItemContainer";
+    }
+
+    <script>
+        let defaultTemplate = '@defaultView';
+        let container = 'productList';
+        let cookieName = 'ProductsContainerTemplate';
+
+        document.addEventListener('DOMContentLoaded', function (event) {
+            document.getElementById(container).addEventListener('contentLoaded', function () {
+                let selectedMode = RememberState.GetCookie(cookieName);
+                let element = document.getElementById('ListViewBtn_' + (selectedMode ? selectedMode : defaultTemplate));
+                if (element != null) {
+                    element.checked = true;
+                }
+            }, false);
+        });
+    </script>
+}

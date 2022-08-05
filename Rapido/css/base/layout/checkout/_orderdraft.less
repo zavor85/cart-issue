@@ -1,0 +1,28 @@
+﻿.orderdraft {
+
+    &__button {
+        &--rename {
+            i {
+                position: relative;
+                opacity: 0;
+                transform: translateX(-50%);
+                visibility: hidden;
+                pointer-events: none;
+                transition: all .3s ease;
+
+                &:hover {
+                    color: @color-sticker-new;
+                }
+            }
+
+            &:hover {
+                i {
+                    transform: translateX(0);
+                    opacity: 1;
+                    visibility: visible;
+                    pointer-events: auto;
+                }
+            }
+        }
+    }
+}

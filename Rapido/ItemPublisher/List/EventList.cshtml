@@ -1,0 +1,159 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System.Web;
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.Articles
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage eventListPage = BlocksPage.GetBlockPage("EventList");
+}
+
+@{ 
+    var articleItemTypeFields = ItemManager.Metadata.GetItemType("EventArticle").Fields;
+    var filterOneOptions = articleItemTypeFields.Find("EventType") != null ? articleItemTypeFields.Find("EventType").Options.Values : null;
+
+    Block listContainer = new Block
+    {
+        Id = "ArticleListContainer",
+        SortId = 10,
+        Design = new Design
+        {
+            RenderType = RenderType.Row
+        },
+            BlocksList = new List<Block> {
+                new Block {
+                Id = "ArticleListBody",
+                SortId = 30,
+                Design = new Design {
+                    RenderType = RenderType.Column,
+                    Size = "12"
+                }
+            }
+        }
+    };
+    eventListPage.Add(listContainer);
+
+    Block articleListBodyRow = new Block
+    {
+        Id = "ArticleListBodyRow",
+        SortId = 10,
+        Design = new Design
+        {
+            RenderType = RenderType.Row
+        }
+    };
+    eventListPage.Add("ArticleListBody", articleListBodyRow);
+
+    Block listFilters = new Block
+    {
+        Id = "ArticleListFilters",
+        SortId = 10,
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "12",
+            CssClass = "grid__cell"
+        },
+        BlocksList = new List<Block> {
+        new Block {
+            Id = "ArticleListSearch",
+                SortId = 10,
+                Component = new ArticleListSearch { }
+            },
+            new Block {
+                Id = "EventTypesFilter",
+                SortId = 20,
+                Component = new ArticleListFilter { Options = filterOneOptions, Label = Translate("Event type"), SystemName = "EventType" }
+            }
+        }
+    };
+    eventListPage.Add("ArticleListBodyRow", listFilters);
+
+    Block eventsList = new Block
+    {
+        Id = "ArticleEventList",
+        SortId = 20,
+        Template = RenderEventList(),
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "12"
+        }
+    };
+    eventListPage.Add("ArticleListBodyRow", eventsList);
+}
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/ArticleComponents.cshtml")
+
+
+@* Include the Blocks for the page *@
+@Include("Blocks/Custom__Blocks.cshtml")
+
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(eventListPage.BlocksRoot.BlocksList)
+
+@helper RenderEventList() {
+    var months = GetLoop("ItemPublisher:Items.List").Where(x => x.GetDate("ItemPublisher:Item.DateAndTime") > DateTime.Now).GroupBy(x => x.GetDate("ItemPublisher:Item.DateAndTime").Month).ToDictionary(y => y.Key, z => z.ToList());
+    int signUpForEventPageId = GetPageIdByNavigationTag("SignUpForEventPage");
+
+    var eventTypeField = GetLoop("ItemPublisher:ItemType.Fields").FirstOrDefault((field) => field.GetString("ItemPublisher:ItemType.Field.SystemName") == "EventType");
+    Dictionary<string, string> eventTypes = eventTypeField.GetLoop("ItemPublisher:ItemType.Field.Options").ToDictionary(x => x.GetString("ItemPublisher:ItemType.Field.Option.Value"), x => x.GetString("ItemPublisher:ItemType.Field.Option.Label"));
+
+
+    foreach (var month in months)
+    {
+        string monthName = new DateTime(2010, month.Key, 1).ToString("MMMM", System.Globalization.CultureInfo.CurrentCulture);
+
+        @Render(new Heading { Title = monthName, Level = 3, CssClass = "grid-caption" })
+
+        <div class="u-margin-bottom">
+            @foreach (var eventInfo in month.Value)
+            {
+                string eventType = eventInfo.GetString("ItemPublisher:Item.EventType");
+                string signUpLink = "";
+                string signUpTargetType = "_self";
+
+                if (eventInfo.GetString("ItemPublisher:Item.SignUp") == "external")
+                {
+                    signUpLink = eventInfo.GetString("ItemPublisher:Item.SignUpLink");
+                    signUpTargetType = "_blank";
+                }
+                else
+                {
+                    signUpLink = "/Default.aspx?Id=" + signUpForEventPageId + "&eventId=" + eventInfo.GetString("ItemPublisher:Item.Field.Id") + "&eventName=" + HttpUtility.UrlEncode(eventInfo.GetString("ItemPublisher:Item.Title"));
+                }
+
+                <div class="u-padding u-border-bottom">
+                    <div class="grid">
+                        <div class="grid__col-sm-4 grid__col--bleed-y">
+                            <a href="/Default.aspx?ID=@eventInfo.GetString("ItemPublisher:Item.Field.PageId")">@eventInfo.GetString("ItemPublisher:Item.Title")</a>
+                        </div>
+                        <div class="grid__col-sm-1 grid__col--bleed-y">
+                            @eventInfo.GetDate("ItemPublisher:Item.DateAndTime").ToString("MMM. dd")
+                        </div>
+                        <div class="grid__col-sm-2 grid__col--bleed-y">
+                            @(eventTypes.ContainsKey(eventType) ? Translate(eventTypes[eventType]) : "")
+                        </div>
+                        <div class="grid__col-sm-2 grid__col--bleed-y">
+                            @*Split address parts by comma*@
+                            @string.Join(", ", (new[] {
+                                eventInfo.GetString("ItemPublisher:Item.Location.City"),
+                                eventInfo.GetString("ItemPublisher:Item.Location.Region"),
+                                eventInfo.GetString("ItemPublisher:Item.Location.Country") }).Where(x => !string.IsNullOrEmpty(x)))
+                        </div>
+                        <div class="grid__col-sm-1 grid__col-6 grid__col--bleed-y">
+                            @eventInfo.GetString("ItemPublisher:Item.ParticipationFee")
+                        </div>
+                        <div class="grid__col-sm-2 grid__col-6 grid__col--bleed-y u-ta-right">
+                            <a href="@signUpLink" target="@signUpTargetType">@Translate("Sign up")</a>
+                        </div>
+                    </div>
+            </div>
+            }
+        </div>
+    }    
+}

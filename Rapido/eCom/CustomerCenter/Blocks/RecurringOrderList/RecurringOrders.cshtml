@@ -1,0 +1,103 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage recurringOrdersPage = BlocksPage.GetBlockPage("RecurringOrderList");
+
+}
+
+@{
+    Block recurringOrders = new Block
+    {
+        Id = "RecurringOrders",
+        SortId = 20,
+        Template = RenderRecurringOrders()
+    };
+    recurringOrdersPage.Add("PageContainer", recurringOrders);
+}
+
+@helper RenderRecurringOrders() {
+    if (!GetBoolean("Ecom:CustomerCenter.RecurringOrders.EmptyList"))
+    {
+        CustomerCenterList list = new CustomerCenterList { };
+
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "#" });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Frequency") });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Start") });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("End") });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Next delivery") });
+
+        foreach (LoopItem order in GetLoop("RecurringOrders"))
+        {
+            string orderId = order.GetString("Ecom:Recurringorder.Id");
+
+            CustomerCenterListItem listItem = new CustomerCenterListItem {
+                Id = order.GetString("Ecom:Recurringorder.Id"),
+                Title = orderId,
+                OnClick = "orderModal.ShowOrderModal('" + orderId + "')"
+            };
+
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = Translate("Every") + " " + order.GetString("Ecom:RecurringOrder.Interval") + " " + order.GetString("Ecom:RecurringOrder.IntervalUnit.Name") });
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = order.GetDate("Ecom:RecurringOrder.StartDate").ToString(Pageview.Area.Dateformat) });
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = !string.IsNullOrWhiteSpace(order.GetString("Ecom:RecurringOrder.EndDate")) ? order.GetDate("Ecom:RecurringOrder.EndDate").ToString(Pageview.Area.Dateformat) : Translate("Never") });
+
+            if (!string.IsNullOrWhiteSpace(order.GetString("Ecom:RecurringOrder.NextDelivery")))
+            {
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = order.GetDate("Ecom:RecurringOrder.NextDelivery").ToString(Pageview.Area.Dateformat + " HH:mm") });
+            } else {
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = Translate("Ended") });
+            }
+
+            listItem.AddActions(
+                new Button
+                {
+                    Title = Translate("View order"),
+                    OnClick = "orderModal.ShowOrderModal('" + orderId + "')",
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-search",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                },
+                new Link
+                {
+                    Href = order.GetString("Ecom:CustomerCenter.RecurringOrders.RecurringOrderDetailsURL"),
+                    Title = Translate("Deliveries"),
+                    AltText = Translate("Deliveries"),
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-truck",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                }
+            );
+
+            if (!string.IsNullOrWhiteSpace(order.GetString("Ecom:CustomerCenter.RecurringOrders.DeleteUrl")))
+            {
+                listItem.AddAction(new Link
+                {
+                    Href = order.GetString("Ecom:CustomerCenter.RecurringOrders.DeleteUrl"),
+                    Title = Translate("Cancel"),
+                    AltText = Translate("Cancel"),
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-trash-alt",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                });
+            }
+
+            list.AddListItem(listItem);
+        }
+
+        @Render(list);
+    }
+    else
+    {
+        <div>@Translate("No recurring orders found")</div>
+    }
+}

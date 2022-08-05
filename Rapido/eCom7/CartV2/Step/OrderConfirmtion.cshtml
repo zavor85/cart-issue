@@ -1,0 +1,72 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage confirmationPage = BlocksPage.GetBlockPage("OrderConfirmation");
+}
+
+@{
+    Block pageContainer = new Block
+    {
+        Id = "PageContainer",
+        SortId = 10,
+        BlocksList = new List<Block> {
+            new Block
+            {
+                Id = "Head",
+                SortId = 20,
+                Design = new Design {
+                    RenderType = RenderType.Row
+                }
+            },
+            new Block
+            {
+                Id = "Body",
+                SortId = 30,
+                Design = new Design {
+                    RenderType = RenderType.Row
+                },
+                BlocksList = new List<Block>
+                {
+                    new Block
+                    {
+                        Id = "CartBody",
+                        SortId = 20,
+                        Design = new Design {
+                            RenderType = RenderType.Column,
+                            Size = "12"
+                        }
+                    }
+                }
+            },
+            new Block
+            {
+                Id = "BottomSnippets",
+                SortId = 40
+            }
+        }
+    };
+
+    confirmationPage.Add(pageContainer);
+}
+
+@Include("Blocks/OrderConfirmation/Header.cshtml")
+@Include("Blocks/OrderConfirmation/Content.cshtml")
+@Include("Blocks/OrderConfirmation/Footer.cshtml")
+@Include("Blocks/OrderConfirmation/Custom__Blocks.cshtml")
+
+
+<form method="post">
+    @RenderBlockList(confirmationPage.BlocksRoot.BlocksList)
+</form>
+
+
+@* Include the Rendering helpers *@
+@Include("../../../Components/GridBuilder.cshtml")
+@Include("../../../Components/GeneralComponents.cshtml")

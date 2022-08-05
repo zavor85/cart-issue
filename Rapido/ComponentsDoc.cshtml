@@ -1,0 +1,867 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+@MasterPageFile("cleanlayout.cshtml")
+
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Rapido.Blocks.Components.Documentation
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.Articles
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks
+
+<style>
+    .test-table-class td, .test-table-class th {
+        border: 1px solid #d3d3d3;
+    }
+
+    .cm-invalidchar {
+        display: none;
+    }
+
+    .fixed-doc-navigation {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 100;
+        background-color: #fff;
+        box-shadow: 0px 2px 20px 1px rgba(0,0,0,0.25);
+    }
+
+    .fixed-doc-navigation-search {
+        position: relative;
+        background-color: #fff;
+        z-index: 20;
+        width: 285px;
+    }
+
+    .fixed-doc-navigation-container {
+        overflow-y: scroll;
+        height: 100vh;
+        z-index: 10;
+    }
+
+    .doc-to-top-btn {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        z-index: 100;
+    }
+</style>
+
+@functions {
+    public class DocItem
+    {
+        public string Name { get; set; }
+        public ComponentBase component { get; set; }
+        public string CodeExample { get; set; }
+    }
+
+    BlocksPage componentsDocPage = BlocksPage.GetBlockPage("ComponentsDoc");
+
+    List<DocItem> GeneralComponentsList = new List<DocItem>();
+    List<DocItem> EcommerceComponentsList = new List<DocItem>();
+    List<DocItem> ArticleComponentsList = new List<DocItem>();
+
+    int count = 10;
+
+    public dynamic GetEnumSetting(dynamic enumSetting, string name = null)
+    {
+        string enumName = name == null ? enumSetting.GetType().Name : name;
+        enumSetting = HttpContext.Current.Request.QueryString.Get(enumName) != null ? System.Enum.Parse(enumSetting.GetType(), HttpContext.Current.Request.QueryString.Get(enumName)) : enumSetting;
+        return enumSetting;
+    }
+}
+
+@{
+    Dynamicweb.Frontend.FileViewModel DummyImage = new Dynamicweb.Frontend.FileViewModel();
+    DummyImage.Path = "/Files/Images/Demo/8026157750_b98560948c_b.jpg";
+
+    SelectField selectField = new SelectField
+    {
+        Id = "MySelectField",
+        Label = Translate("Select field"),
+        ErrorMessage = Translate("There is an error"),
+        Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" },
+        ActionButton = new Button { OnClick = "#", Icon = new Icon { Prefix = "fas", Name = "fa-plus", LabelPosition = IconLabelPosition.After } }
+    };
+    selectField.Options.Add(new SelectFieldOption { Label = Translate("One"), Value = "one" });
+    selectField.Options.Add(new SelectFieldOption { Label = Translate("Two"), Value = "two" });
+    selectField.Options.Add(new SelectFieldOption { Label = Translate("Three"), Value = "three", Disabled = true });
+
+    string selectFieldCodeExample = "SelectField selectField = new SelectField " +
+    "{" +
+        "Id = \"MySelectField\"," +
+        "Label = Translate(\"Select field\")," +
+        "ErrorMessage = Translate(\"There is an error\")," +
+        "ActionButton = new Button { OnClick = \"#\", Icon = new Icon { Prefix = \"fas\", Name = \"fa-plus\", LabelPosition = IconLabelPosition.After } }" +
+    "};" +
+    "-newline" +
+    "selectField.Options.Add(new SelectFieldOption { Label = Translate(\"One\"), Value = \"one\" });";
+
+    RadioButtonListField radioButtonListField = new RadioButtonListField
+    {
+        Id = "MyRadioButtons",
+        Name = "MyRadioButtons",
+        Label = Translate("Select option"),
+        ErrorMessage = Translate("There is an error"),
+        Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" },
+        Options = new List<RadioButtonField> {
+            new RadioButtonField { Label = Translate("One"), Value = "one", Id = "RadioOne", Checked = true },
+            new RadioButtonField { Label = Translate("Two"), Value = "two", Id = "RadioTwo"},
+            new RadioButtonField { Label = Translate("Three"), Value = "three", Id = "RadioThree", Disabled = true }
+        }
+    };
+
+    CheckboxListField checkboxListField = new CheckboxListField
+    {
+        Id = "MyCheckboxes",
+        Label = Translate("Select multiple options"),
+        Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" },
+        ErrorMessage = Translate("There is an error")
+    };
+    checkboxListField.Options.Add(new CheckboxField { Label = Translate("One"), Id = "CheckOne", Checked = true });
+    checkboxListField.Options.Add(new CheckboxField { Label = Translate("Two"), Id = "CheckTwo", Checked = true });
+    checkboxListField.Options.Add(new CheckboxField { Label = Translate("Three"), Id = "CheckThree", Disabled = true });
+
+    string checkboxListFieldCodeExample = "CheckboxListField checkboxListField = new CheckboxListField " +
+    "{" +
+        "Id = \"MyCheckboxes\"," +
+        "Label = Translate(\"Select multiple options\")," +
+        "ErrorMessage = Translate(\"There is an error\")" +
+    "};" +
+    "-newline" +
+    "checkboxListField.Options.Add(new CheckboxField { Label = Translate(\"One\"), Id = \"CheckOne\", Checked = true });";
+
+    StickersCollection stickersCollection = new StickersCollection { CssClass = "u-block", Position = GetEnumSetting(StickersListPosition.TopLeft) };
+    stickersCollection.Stickers.Add(new Sticker { Title = "On sale", Style = StickerStyle.Sale });
+    stickersCollection.Stickers.Add(new Sticker { Title = "New", Style = StickerStyle.New });
+    stickersCollection.Stickers.Add(new Sticker { Title = "Black friday", Style = StickerStyle.Custom });
+
+    Form formComponent = new Form { Method = FormMethod.Get };
+    formComponent.Add(new CheckboxField { Checked = true, Label = Translate("My label") });
+    formComponent.Add(new TextField { Required = true, Label = Translate("My text") });
+    formComponent.Add(new NumberField { Required = true, Label = Translate("My number"), Min = 2 });
+    formComponent.Add(new NumberField { Required = true, Label = Translate("My number"), Min = 2 });
+
+    //here used custom styles from end of this page
+    var table = new Table
+    {
+        Id = "MyTable",
+        Design = GetEnumSetting(TableDesign.Clean),
+        CssClass = "test-table-class",
+        Header = new TableRow
+        {
+            CssClass = "test-tr-class",
+            Id = "tr1",
+            Cells = new List<TableCell> {
+                    new TableCell { Content = "Meat" },
+                    new TableCell { Content = "Proteins (g)" },
+                    new TableCell { Content = "Fats (g)" },
+                    new TableCell { Content = "Carbs (g)" }
+                }
+        },
+        Rows = new List<TableRow> {
+                new TableRow ("Chicken", "20,8", "8,8", "0,6"),
+                new TableRow ("Pork", "19,4", "7,1", "0"),
+                new TableRow ("Beef", "18,9", "12,4", "0"),
+                new TableRow (
+                    new TableCell { IsHeader = true, Content = "CustomCell", Colspan = 2 },
+                    new TableCell { Content = "CustomCell2", Rowspan = 2, Colspan = 2, CssClass = "u-brand-color-one--bg-lighten-20 u-color-light" }
+                ),
+                new TableRow {
+                    IsHeaderRow = true,
+                    Cells = new List<TableCell> {
+                        new TableCell { Content = "string1" },
+                        new TableCell { Content = "string2" }
+                    }
+                }
+            },
+        Footer = new TableRow
+        {
+            CssClass = "u-color-light-gray--bg",
+            Cells = new List<TableCell> {
+                    new TableCell { Content = "1" },
+                    new TableCell { Content = "2" },
+                    new TableCell { Content = "3" },
+                    new TableCell { Content = "4" }
+                }
+        }
+    };
+
+    var simpleTable = new Table
+    {
+        Id = "MySimpleTable",
+        CssClass = "test-table-class",
+        Design = GetEnumSetting(TableDesign.Striped),
+        Rows = new List<TableRow> {
+                new TableRow ("Color", "Blue"),
+                new TableRow ("Size", "M")
+            }
+    };
+    string simpleTableCodeExample = "new Table { " +
+        "Id = \"MySimpleTable\"," +
+        "Design = GetEnumSetting(TableDesign.Striped), " +
+        "Rows = new List<TableRow> { " +
+                "new TableRow (\"Color\", \"Blue\"), " +
+                "new TableRow (\"Size\", \"M\") " +
+             "} " +
+    "};";
+
+    Dashboard dashboard = new Dashboard { WidgetsBaseBackgroundColor = "#0582c4" };
+    dashboard.AddWidget(new DashboardWidgetLink { Link = "#", Title = "Example", Icon = new Icon { Prefix = "fas", Name = "fa-code" } });
+    dashboard.AddWidget(new DashboardWidgetLink { Link = "#", Title = "Widget", Icon = new Icon { Prefix = "fas", Name = "fa-bell" } });
+    dashboard.AddWidget(new DashboardWidgetLink { Link = "#", Title = "Sample", Icon = new Icon { Prefix = "fas", Name = "fa-bomb" } });
+
+    string dashboardCodeExample = "Dashboard dashboard = new Dashboard { WidgetsBaseBackgroundColor = \"#0582c4\" }; " + "-newline " +
+    "dashboard.AddWidget(new DashboardWidgetLink { Link = \"#\", Title = \"Example\", Icon = new Icon { Prefix = \"fas\", Name = \"fa-code\" } }); " + "-newline " +
+    "dashboard.AddWidget(new DashboardWidgetLink { Link = \"#\", Title = \"Widget\", Icon = new Icon { Prefix = \"fas\", Name = \"fa-bell\" } }); " + "-newline " +
+    "dashboard.AddWidget(new DashboardWidgetLink { Link = \"#\", Title = \"Sample\", Icon = new Icon { Prefix = \"fas\", Name = \"fa-bomb\" } });";
+
+    Dashboard dashboard2 = new Dashboard { WidgetsBaseBackgroundColor = "#32b132" };
+    dashboard2.AddWidget(new DashboardWidgetCounter { Count = 120, Title = "Orders", Icon = new Icon { Prefix = "fas", Name = "fa-code" } });
+    dashboard2.AddWidget(new DashboardWidgetCounter { Count = 1105, Title = "Count" });
+    dashboard2.AddWidget(new DashboardWidgetCounter { Count = 5, Title = "Quotes", Icon = new Icon { Prefix = "fas", Name = "fa-quote-right" } });
+    dashboard2.AddWidget(new DashboardWidgetCounter { Count = 15, Title = "Days", Icon = new Icon { Prefix = "fas", Name = "fa-calendar" } });
+
+    string dashboard2CodeExample = "Dashboard dashboard = new Dashboard { WidgetsBaseBackgroundColor = \"#32b132\" }; " + "-newline " +
+    "dashboard.AddWidget(new DashboardWidgetCounter { Count = 120, Title = \"Orders\", Icon = new Icon { Prefix = \"fas\", Name = \"fa-code\" } }); " + "-newline " +
+    "dashboard.AddWidget(new DashboardWidgetCounter { Count = 1105, Title = \"Count\" }); ";
+
+    VariantMatrix variantMatrix = new VariantMatrix { ProductId = "PRODTEST" };
+
+    VariantGroup variantGroup1 = new VariantGroup
+    {
+        Name = "Colors"
+    };
+
+    VariantOption option1 = new VariantOption
+    {
+        Name = "Blue",
+        Id = "V0"
+    };
+    variantGroup1.AddVariantOption(option1);
+
+    VariantOption option2 = new VariantOption
+    {
+        Name = "Red",
+        Id = "V1"
+    };
+    variantGroup1.AddVariantOption(option2);
+
+    variantMatrix.AddVariantGroup(variantGroup1);
+
+    variantMatrix.AddVariantProduct("V0.V1", new VariantProduct { ProductId = "PROD0", VariantId = "V0.V1" });
+    variantMatrix.AddVariantProduct("V0.V2", new VariantProduct { ProductId = "PROD1", VariantId = "V0.V2" });
+    variantMatrix.AddVariantProduct("V1.V2", new VariantProduct { ProductId = "PROD2", VariantId = "V1.V2" });
+
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Button { Id = "MyButton", ButtonLayout = GetEnumSetting(ButtonLayout.Primary), Title = Translate("Read more"), Icon = new Icon { Prefix = "fas", Name = "fa-plus", LabelPosition = IconLabelPosition.After }, OnClick = "document.getElementById('MyButtonModalTrigger').checked = false" },
+        CodeExample = "new Button { Id = \"MyButton\", ButtonLayout = GetEnumSetting(ButtonLayout.Primary), Title = Translate(\"Read more\"), Icon = new Icon { Prefix = \"fas\", Name = \"fa-plus\", LabelPosition = IconLabelPosition.After }, OnClick = \"document.getElementById('MyButtonModalTrigger').checked = false\" }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Link { Id = "MyLink", ButtonLayout = GetEnumSetting(ButtonLayout.Primary), Target = GetEnumSetting(LinkTargetType.Blank), Href = "#", Title = "Read more", Icon = new Icon { Prefix = "fas", Name = "fa-plus", LabelPosition = IconLabelPosition.After }, OnClick = "document.getElementById('MyButtonModalTrigger').checked = false" },
+        CodeExample = "new Link { Id = \"MyButton\", ButtonLayout = GetEnumSetting(ButtonLayout.Primary), Target = GetEnumSetting(LinkTargetType.Blank), Href = \"#\", Title = \"Read more\", Icon = new Icon { Prefix=\"fas\", Name=\"fa-plus\", LabelPosition = IconLabelPosition.After }, OnClick=\"document.getElementById('MyButtonModalTrigger').checked = false\" }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Heading { Title = Translate("My new heading"), Level = 1, Icon = new Icon { Prefix = "fas", Name = "fa-plus", LabelPosition = IconLabelPosition.After } },
+        CodeExample = "new Heading { Title= Translate(\"My new heading\"), Level = 1, Icon = new Icon { Prefix = \"fas\", Name = \"fa-plus\", LabelPosition = IconLabelPosition.After } }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Image { Path = DummyImage, Caption = Translate("Image caption"), ImageDefault = new ImageSettings { Width = 1000, Height = 600, Crop = 1, Compression = 75 }, ImageSmall = new ImageSettings { Width = 500, Height = 300, Crop = 1, Compression = 75 }, Style = GetEnumSetting(ImageStyle.None), FilterPrimary = GetEnumSetting(ImageFilter.None), FilterSecondary = GetEnumSetting(ImageFilter.None) },
+        CodeExample = "new Image { Path = DummyImage, Caption = Translate(\"Image caption\"), ImageDefault = new ImageSettings { Width = 1000, Height = 600, Crop = 1, Compression = 75 }, ImageSmall = new ImageSettings { Width = 500, Height = 300, Crop = 1, Compression = 75 }, Style = GetEnumSetting(ImageStyle.None), FilterPrimary = GetEnumSetting(ImageFilter.None), FilterSecondary = GetEnumSetting(ImageFilter.None) }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Icon { Prefix = "fas", Name = "fa-plus", Label = Translate("Icon label"), LabelPosition = GetEnumSetting(IconLabelPosition.After) },
+        CodeExample = "new Icon { Prefix = \"fas\", Name = \"fa-plus\", Label = Translate(\"Icon label\"), LabelPosition = GetEnumSetting(IconLabelPosition.After) }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new FileField { Id = "MyFileField", ChooseFileText = Translate("Choose file"), NoFilesChosenText = Translate("No files chosen"), Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" } },
+        CodeExample = "new FileField { Id = \"MyFileField\", ChooseFileText = Translate(\"Choose file\"), NoFilesChosenText = Translate(\"No files chosen\") }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new TextField { Id = "MyTextField", Label = Translate("Text field"), Placeholder = "Text", MaxLength = 160, ErrorMessage = Translate("There is an error"), ExtraAttributes = new Dictionary<string, string> { { "data-extend", "true" } }, Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" } },
+        CodeExample = "new TextField { Id = \"MyTextField\", Label = Translate(\"Text field\"), Placeholder = \"Text\", MaxLength = 160, ErrorMessage = Translate(\"There is an error\"), ExtraAttributes = new Dictionary<string, string> { { \"data-extend\", \"true\" } }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = selectField,
+        CodeExample = selectFieldCodeExample
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new NumberField { Label = Translate("My number"), Max = 10, Min = 0, Step = 1, Value = "1", Id = "MyNumber", Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" } },
+        CodeExample = "new NumberField { Label = Translate(\"My number\"), Max = 10, Min = 0, Step = 1, Value = \"1\", Id = \"MyNumber\" }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new HiddenField { Id = "HiddenField", Value = "HiddenValue" },
+        CodeExample = "new HiddenField { Id=\"HiddenField\", Value=\"HiddenValue\" }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new CheckboxField { Checked = true, Id = "MyCheckbox", Label = "Check this", ErrorMessage = Translate("There is an error"), Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" } },
+        CodeExample = "new CheckboxField { Checked = true, Id=\"MyCheckbox\", Label= \"Check this\", ErrorMessage= Translate(\"There is an error\") }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = checkboxListField,
+        CodeExample = checkboxListFieldCodeExample
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new TextareaField { Id = "MyTextareaField", Label = Translate("Comment"), Rows = 4, Placeholder = Translate("Comment"), ErrorMessage = Translate("There is an error"), Link = new Link { Icon = new Icon { Name = "fa-info-circle", Prefix = "fal" }, Href = "#" } },
+        CodeExample = "new TextareaField { Id = \"MyTextareaField\", Label = Translate(\"Comment\"), Rows = 4, Placeholder = Translate(\"Comment\"), ErrorMessage = Translate(\"There is an error\") }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        Name = "Table (Simple demo)",
+        component = simpleTable,
+        CodeExample = simpleTableCodeExample
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = table,
+        CodeExample = simpleTableCodeExample
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new DashboardWidgetLink { Link = "#", Title = "My cart", BackgroundColor = "#002240", Icon = new Icon { Prefix = "fas", Name = "fa-shopping-cart" } },
+        CodeExample = "new DashboardWidgetLink { Link = \"#\", Title = \"My cart\", BackgroundColor = \"#002240\", Icon = new Icon { Prefix = \"fas\", Name = \"fa-shopping-cart\" } }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new DashboardWidgetCounter { Count = 167, Title = "Products", BackgroundColor = "#002240", Icon = new Icon { Prefix = "fas", Name = "fa-shopping-cart" } },
+        CodeExample = "new DashboardWidgetCounter { Count = 167, Title =\"Products\", BackgroundColor = \"#002240\", Icon = new Icon { Prefix = \"fas\", Name = \"fa-shopping-cart\" } }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = dashboard,
+        CodeExample = dashboardCodeExample
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        Name = "Dashboard (Counters)",
+        component = dashboard2,
+        CodeExample = dashboard2CodeExample
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new NotificationMessage { Message = Translate("There is an error"), MessageType = GetEnumSetting(NotificationMessageType.Error) },
+        CodeExample = "new NotificationMessage { Message = Translate(\"There is an error\"), MessageType = GetEnumSetting(NotificationMessageType.Error) }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Rating { Score = 4, OutOf = 5, Type = GetEnumSetting(RatingType.Stars) },
+        CodeExample = "new Rating { Score = 4, OutOf = 5, Type = GetEnumSetting(RatingType.Stars) }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Sticker { Title = "On sale", Style = GetEnumSetting(StickerStyle.Sale), Size = GetEnumSetting(StickerSize.Medium) },
+        CodeExample = "new Sticker { Title = \"On sale\", Style = GetEnumSetting(StickerStyle.Sale), Size = GetEnumSetting(StickerSize.Medium) }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Text { Content = Translate("My text") },
+        CodeExample = "new Text { Content = Translate(\"My text\") }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new ContentModule { Content = Translate("Add the module as a text string") },
+        CodeExample = "new ContentModule { Content = Translate(\"Add the module as a text string\") }"
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = stickersCollection
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = formComponent
+    });
+    GeneralComponentsList.Add(new DocItem
+    {
+        component = new Modal { Id = "ModalTest", Heading = new Heading { Title = Translate("My text") }, BodyText = "To trigger a modal, simply force the associated checkbox to true with javascript. E.g. document.getElementById('ModalTestModalTrigger').value = true;", Height = ModalHeight.Md },
+        CodeExample = "new Modal { Id = \"ModalTest\", Heading = new Heading { Title = Translate(\"My text\") }, BodyText = \"To trigger a modal, simply force the associated checkbox to true with javascript. E.g. document.getElementById('ModalTestModalTrigger').value = true;\", Height = ModalHeight.Md }"
+    });
+
+    <script>
+        window.cartId = 530;
+        document.addEventListener('addToCart', function (event) {
+            console.log(event.detail)
+            alert("Product added to cart: " + event.detail.quantity + " x " + event.detail.productInfo.name + " ( product id = " + event.detail.id + ", unit id = " + event.detail.unitId + ")");
+        });
+        window.selectedTestUnit = "";
+        function selectTestUnit(unit) {
+            window.selectedTestUnit = unit.getAttribute('data-value');
+            unit.closest('.unit-selector').previousElementSibling.checked = false;
+            unit.closest('.unit-selector').querySelector('.dropdown__header').innerText = unit.innerText;
+        }
+    </script>
+
+
+    EcommerceComponentsList.Add(new DocItem
+    {
+        component = new AddToCart {
+            AddButton = new AddToCartButton {
+                ProductId = "PROD102", UnitId = "' + window.selectedTestUnit + '", ProductInfo = "{name: 'Test product'}"
+            },
+            UnitSelector = new UnitSelector {
+                SelectedOption = "Select unit",
+                OptionsContent = "<div class='dropdown__item dw-mod' onclick='selectTestUnit(this)' data-value=''>Select unit</div><div class='dropdown__item dw-mod' onclick='selectTestUnit(this)' data-value='VO53'>Piece</div><div class='dropdown__item dw-mod' onclick='selectTestUnit(this)' data-value='VO44'>Pkg. of 8</div>" },
+            QuantitySelector = new QuantitySelector { } },
+        CodeExample = "new AddToCart { AddButton = new AddToCartButton { ProductId = \"PROD102\", UnitId = \"VO53\", ProductInfo = \"{name: 'Test product'}\" }, UnitSelector = new UnitSelector { SelectedOption = \"Select unit\" }, QuantitySelector = new QuantitySelector { } }"
+    });
+
+    EcommerceComponentsList.Add(new DocItem
+    {
+        component = new UnitSelector { SelectedOption = "Select unit", OptionsContent = "<div class='dropdown__item dw-mod' onclick='alert(\"Unit selected\")'>Select unit</div><div class='dropdown__item dw-mod' onclick='alert(\"Unit selected\")'>Piece</div><div class='dropdown__item dw-mod' onclick='alert(\"Unit selected\")'>Test unit</div>" },
+        CodeExample = "new UnitSelector { SelectedOption = \"All\", OptionsContent = \"<div class='dropdown__item dw-mod' onclick='**js event**'>Test unit</div>\" }"
+    });
+
+    EcommerceComponentsList.Add(new DocItem
+    {
+        component = new QuantitySelector { Id = "MyQuantitySelector", max = "MyQuantitySelectorMax", onkeyup = "MyQuantitySelectorOnKeyUp" },
+        CodeExample = "new QuantitySelector { Id = \"MyQuantitySelector\", max = \"MyQuantitySelectorMax\", onkeyup = \"MyQuantitySelectorOnKeyUp\" }"
+    });
+
+    EcommerceComponentsList.Add(new DocItem
+    {
+        component = new AddToCartButton { ProductId = "PROD102", UnitId = "VO53", ProductInfo = "{name: 'Test product'}", QuantitySelectorId = "MyQuantitySelector", QuantitySelectorMax = "MyQuantitySelectorMax", QuantitySelectorOnKeyUp = "MyQuantitySelectorOnKeyUp" },
+        CodeExample = "new AddToCartButton { ProductId = \"PROD102\", UnitId = \"VO53\", ProductInfo = \"{name: 'Test product'}\", QuantitySelectorId = \"MyQuantitySelector\", QuantitySelectorMax = \"MyQuantitySelectorMax\", QuantitySelectorOnKeyUp = \"MyQuantitySelectorOnKeyUp\" }"
+    });
+
+    EcommerceComponentsList.Add(new DocItem
+    {
+        component = variantMatrix
+    });
+
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleHeader { Heading = "Header clean layout", Author = "Me", ButtonLayout = GetEnumSetting(ButtonLayout.Primary), Category = "Guides", CategoryColor = "#c21212", Date = "01-01-2020", Image = new Image { Path = DummyImage, ImageDefault = new ImageSettings { Width = 1000, Height = 600, Crop = 1, Compression = 75 } }, Link = "#", LinkText = "Read more", Subheading = "This is new", TextLayout = GetEnumSetting(ArticleHeaderTextLayout.Center), Layout = GetEnumSetting(ArticleHeaderLayout.Clean) },
+        CodeExample = " new ArticleHeader { Heading = \"Header clean layout\", Author = \"Me\", ButtonLayout = GetEnumSetting(ButtonLayout.Primary), Category = \"Guides\", CategoryColor = \"#c21212\", Date = \"01-01-2020\", Image = new Image { Path = DummyImage, ImageDefault = new ImageSettings { Width = 1000, Height = 600, Crop = 1, Compression = 75 } }, Link = \"#\", LinkText = \"Read more\", Subheading = \"This is new\", TextLayout = GetEnumSetting(ArticleHeaderTextLayout.Center), Layout = GetEnumSetting(ArticleHeaderLayout.Clean) }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleImage { Image = new Image { Path = DummyImage, ImageDefault = new ImageSettings { Height = 650, Width = 1300 }, Style = GetEnumSetting(ImageStyle.None), Title = "ComponentImage", Caption = "This is the caption for the image" } },
+        CodeExample = "new ArticleImage { Image = new Image { Path = DummyImage, ImageDefault = new ImageSettings { Height = 650, Width = 1300 }, Style = GetEnumSetting(ImageStyle.None), Title = \"ComponentImage\", Caption = \"This is the caption for the image\" } }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleBanner { Image = new Image { Path = DummyImage, ImageDefault = new ImageSettings { Width = 1000, Height = 600, Crop = 1, Compression = 75 } }, Heading = "A perfect banner" },
+        CodeExample = "new ArticleBanner { Image = new Image { Path = DummyImage, ImageDefault = new ImageSettings { Width = 1000, Height = 600, Crop = 1, Compression = 75 } }, Heading = \"A perfect banner\" }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleQuote { Author = "The user", Image = new Image { Path = DummyImage }, Text = "I would like to quote that this is so." },
+        CodeExample = "new ArticleQuote { Author = \"The user\", Image = new Image { Path = DummyImage }, Text = \"I would like to quote that this is so.\" }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleSubHeader { Title = "My sub header" },
+        CodeExample = "new ArticleSubHeader { Title = \"My sub header\" },"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleText { Text = "Normal body text..." },
+        CodeExample = "new ArticleText { Text = \"Normal body text...\" }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleMenu { Items = new List<ArticleMenuItem>() { new ArticleMenuItem { Title = "Menu item" } } },
+        CodeExample = "new ArticleMenu { Items = new List<ArticleMenuItem>() { new ArticleMenuItem { Title = \"Menu item\" } } }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleMenuItem { Title = "Menu item" },
+        CodeExample = "new ArticleMenuItem { Title = \"Menu item\" }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleBodyRow { TextLayout = "left", TopLayout = "center" },
+        CodeExample = "new ArticleBodyRow { TextLayout = \"left\", TopLayout = \"center\" }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleLink { Title = Translate("More"), OnClick = "#", ButtonLayout = ButtonLayout.Primary },
+        CodeExample = "new ArticleLink { Title = Translate(\"More\"), OnClick = \"#\", ButtonLayout = ButtonLayout.Primary }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleSummary { Text = Translate("This is a summary") },
+        CodeExample = "new ArticleSummary { Text = Translate(\"This is a summary\") }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleAuthorAndDate { Author = "Me", Date = "27-03-1984" },
+        CodeExample = "new ArticleAuthorAndDate { Author = \"Me\", Date = \"27-03-1984\" }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleListSearch { },
+        CodeExample = "new ArticleListSearch { }"
+    });
+    ArticleComponentsList.Add(new DocItem
+    {
+        component = new ArticleListFilter { Label = Translate("Filter") },
+        CodeExample = "new ArticleListFilter { Label = Translate(\"Filter\") }"
+    });
+
+    GeneralComponentsList = GeneralComponentsList.OrderBy(x => x.component.HelperName).ToList();
+    ArticleComponentsList = ArticleComponentsList.OrderBy(x => x.component.HelperName).ToList();
+    EcommerceComponentsList = EcommerceComponentsList.OrderBy(x => x.component.HelperName).ToList();
+
+    int itemCount = 0;
+
+    ArticleMenu generalMenu = new ArticleMenu();
+    generalMenu.Title = Translate("General components");
+    foreach (DocItem docItem in GeneralComponentsList)
+    {
+        ArticleMenuItem item = new ArticleMenuItem();
+        item.Title = String.IsNullOrEmpty(docItem.Name) ? docItem.component.HelperName.Replace("Render", "") : docItem.Name;
+        item.OnClick = "event.preventDefault(); document.getElementById('Block__Component" + (itemCount + 10) + "').scrollIntoView();";
+        generalMenu.Items.Add(item);
+
+        itemCount++;
+    }
+
+    ArticleMenu ecommerceMenu = new ArticleMenu();
+    ecommerceMenu.Title = Translate("Ecommerce components");
+    foreach (DocItem docItem in EcommerceComponentsList)
+    {
+        ArticleMenuItem item = new ArticleMenuItem();
+        item.Title = String.IsNullOrEmpty(docItem.Name) ? docItem.component.HelperName.Replace("Render", "") : docItem.Name;
+        item.OnClick = "event.preventDefault(); document.getElementById('Block__Component" + (itemCount + 10) + "').scrollIntoView();";
+        ecommerceMenu.Items.Add(item);
+
+        itemCount++;
+    }
+
+    ArticleMenu articleMenu = new ArticleMenu();
+    articleMenu.Title = Translate("Article components");
+    foreach (DocItem docItem in ArticleComponentsList)
+    {
+        ArticleMenuItem item = new ArticleMenuItem();
+        item.Title = String.IsNullOrEmpty(docItem.Name) ? docItem.component.HelperName.Replace("Render", "") : docItem.Name;
+        item.OnClick = "event.preventDefault(); document.getElementById('Block__Component" + (itemCount + 10) + "').scrollIntoView();";
+        articleMenu.Items.Add(item);
+
+        itemCount++;
+    }
+}
+
+@{
+    Block site = new Block
+    {
+        Id = "SiteContainer",
+        SortId = 10,
+        Design = new Design
+        {
+            RenderType = RenderType.Row
+        },
+        BlocksList = new List<Block> {
+            new Block {
+                Id = "EmptyColumn",
+                SortId = 30,
+                Design = new Design
+                {
+                    RenderType = RenderType.Column,
+                    Size = "3"
+                }
+            },
+            new Block {
+                Id = "Main",
+                SortId = 40,
+                Design = new Design
+                {
+                    RenderType = RenderType.Column,
+                    Size = "9"
+                },
+                BlocksList = new List<Block> {
+                    new Block {
+                        Id = "MainRow",
+                        SortId = 20,
+                        Design = new Design
+                        {
+                            RenderType = RenderType.Row
+                        }
+                    }
+                }
+            }
+        }
+    };
+    componentsDocPage.Add(site);
+
+    if (Pageview.Device.ToString() != "Mobile")
+    {
+        Block navigationBlock = new Block
+        {
+            Id = "Navigation",
+            SortId = 10,
+            Design = new Design
+            {
+                CssClass = "fixed-doc-navigation"
+            },
+            BlocksList = new List<Block> {
+                new Block {
+                    Id = "Search",
+                    SortId = 10,
+                    Component = new TextField { Placeholder = Translate("Search"), CssClass = "u-margin", OnKeyUp = "FilterComponents(event);" },
+                    Design = new Design {
+                        CssClass = "fixed-doc-navigation-search"
+                    }
+                },
+                new Block {
+                    Id = "NavigationContainer",
+                    SortId = 20,
+                    Design = new Design {
+                        CssClass = "fixed-doc-navigation-container"
+                    },
+                    BlocksList = new List<Block> {
+                        new Block {
+                            Id = "GeneralComponents",
+                            SortId = 20,
+                            Component = generalMenu
+                        },
+                        new Block {
+                            Id = "EcommerceComponents",
+                            SortId = 30,
+                            Component = ecommerceMenu
+                        },
+                        new Block {
+                            Id = "GeneralComponents",
+                            SortId = 40,
+                            Component = articleMenu
+                        }
+                    }
+                }
+            }
+        };
+        componentsDocPage.Add("Main", navigationBlock);
+    }
+
+    Block pageHeader = new Block
+    {
+        Id = "PageHeader",
+        SortId = 0,
+        Component = new Heading { Level = 1, Title = Translate("Components documentation") },
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "12"
+        }
+    };
+    componentsDocPage.Add("MainRow", pageHeader);
+
+    Block pageInfo = new Block
+    {
+        Id = "PageInfo",
+        SortId = 1,
+        Template = RenderPageInfo(),
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "12",
+        }
+    };
+    componentsDocPage.Add("MainRow", pageInfo);
+
+    Block pageToTop = new Block
+    {
+        Id = "BackToTop",
+        SortId = 5,
+        Component = new Button { Id = "ScrollToTopBtn", OnClick = "window.scroll(0, 0);", Icon = new Icon { Prefix = "fas", Name = "fa-arrow-circle-up" }, CssClass = "doc-to-top-btn" }
+    };
+    componentsDocPage.Add("SiteContainer", pageToTop);
+
+    BuildComponents(GeneralComponentsList);
+    BuildComponents(EcommerceComponentsList);
+    BuildComponents(ArticleComponentsList);
+}
+
+@functions {
+    public void BuildComponents(List<DocItem> componentsList)
+    {
+        foreach (DocItem docItem in componentsList)
+        {
+            Block componentNameBlock = new Block
+            {
+                Id = "Component" + count,
+                SortId = 10 * count,
+                Component = new ArticleSubHeader { Title = "Helper method: " + docItem.component.HelperName },
+                Design = new Design
+                {
+                    RenderType = RenderType.Column,
+                    Size = "12",
+                    CssClass = "u-border"
+                }
+            };
+            componentsDocPage.Add("MainRow", componentNameBlock);
+
+            Block componentBlock = new Block
+            {
+                Id = "ComponentContainer" + count,
+                SortId = (10 * count) + 1,
+                Design = new Design
+                {
+                    RenderType = RenderType.Column,
+                    Size = "12",
+                    CssClass = "u-border"
+                },
+                BlocksList = new List<Block> {
+                    new Block {
+                        Id = "Component" + count,
+                        SortId = 10,
+                        Component = docItem.component,
+                        Design = new Design { CssClass= "grid__cell" }
+                    }
+                }
+            };
+            componentsDocPage.Add("MainRow", componentBlock);
+
+            Block componentInfoBlock = new Block
+            {
+                Id = "ComponentInfo" + count,
+                SortId = (10 * count) + 2,
+                Component = new ComponentInfo { Content = docItem.component },
+                Design = new Design
+                {
+                    RenderType = RenderType.Column,
+                    Size = "4",
+                    CssClass = "js-component-info"
+                }
+            };
+            componentsDocPage.Add("MainRow", componentInfoBlock);
+
+            if (docItem.component.HelperName != "RenderTextareaField")
+            {
+                Block componentCodeBlock = new Block
+                {
+                    Id = "ComponentCode" + count,
+                    SortId = (10 * count) + 3,
+                    Component = new ComponentCode { Content = docItem },
+                    Design = new Design
+                    {
+                        RenderType = RenderType.Column,
+                        Size = "8"
+                    }
+                };
+                componentsDocPage.Add("MainRow", componentCodeBlock);
+            }
+            else
+            {
+                Block componentCodeBlock = new Block
+                {
+                    Id = "ComponentCode" + count,
+                    SortId = (10 * count) + 3,
+                    Component = new NotificationMessage { Message = Translate("Code preview is not available for this component") },
+                    Design = new Design
+                    {
+                        RenderType = RenderType.Column,
+                        Size = "8"
+                    }
+                };
+                componentsDocPage.Add("MainRow", componentCodeBlock);
+            }
+
+            Block componentSpacingBlock = new Block
+            {
+                Id = "ComponentSpacing" + count,
+                SortId = (10 * count) + 4,
+                Design = new Design
+                {
+                    RenderType = RenderType.Column,
+                    Size = "12",
+                    CssClass = "u-padding-bottom--lg"
+                }
+            };
+            componentsDocPage.Add("MainRow", componentSpacingBlock);
+
+            count++;
+        }
+    }
+}
+
+<link rel="stylesheet" href="/Files/Templates/Designs/Rapido/css/codemirror/codemirror.css">
+<link rel="stylesheet" href="/Files/Templates/Designs/Rapido/css/codemirror/cobalt.css">
+<script src="/Files/Templates/Designs/Rapido/js/codemirror/codemirror.js"></script>
+<script src="/Files/Templates/Designs/Rapido/js/codemirror/xml.js"></script>
+<script src="/Files/Templates/Designs/Rapido/js/codemirror/clike.js"></script>
+<script src="/Files/Templates/Designs/Rapido/js/codemirror/coffeescript.js"></script>
+
+<script>
+    FilterComponents = function (e) {
+        var currentFilter = e.currentTarget;
+        var searchString = currentFilter.value.toLowerCase();
+        var menuItems = document.querySelectorAll('.menu-left__link');
+
+        menuItems.forEach(function (menuItem) {
+            menuItem.parentNode.classList.add("u-hidden");
+        });
+
+        menuItems.forEach(function (menuItem) {
+            var filterValue = menuItem.innerHTML.toLowerCase();
+
+            console.log(searchString);
+            console.log(filterValue);
+
+            if (filterValue.indexOf(searchString) != -1) {
+                menuItem.parentNode.classList.remove("u-hidden");
+            }
+        });
+    }
+</script>
+
+@helper RenderPageInfo()
+{
+    <p>
+        @Translate("This page contains an overview + examples on all available components on the current solution.")
+        @Translate("The code for the components are found in /Templates/Designs/Rapido/Components.")
+    </p>
+
+    @Render(new Link { Title = Translate("How to overwrite existing components"), Href = "https://doc.dynamicweb.com/rapido/development/blocks/example-8-components#sideNavTitle1-4", ButtonLayout = ButtonLayout.Link, CssClass = "u-ta-left u-no-padding", Icon = new Icon { Prefix = "fas", Name = "fa-link", LabelPosition = IconLabelPosition.After }, Target = LinkTargetType.Blank })
+    @Render(new Link { Title = Translate("How to write your own components"), Href = "https://doc.dynamicweb.com/rapido/development/blocks/example-8-components#sideNavTitle1-5", ButtonLayout = ButtonLayout.Link, CssClass = "u-ta-left u-no-padding", Icon = new Icon { Prefix = "fas", Name = "fa-link", LabelPosition = IconLabelPosition.After }, Target = LinkTargetType.Blank })
+    @Render(new Link { Title = Translate("The detailed Components documentation"), Href = "https://doc.dynamicweb.com/rapido/development/blocks/example-8-components", ButtonLayout = ButtonLayout.Link, CssClass = "u-ta-left u-no-padding", Icon = new Icon { Prefix = "fas", Name = "fa-link", LabelPosition = IconLabelPosition.After }, Target = LinkTargetType.Blank })
+    @Render(new Link { Title = Translate("The detailed Blocks documentation"), Href = "https://doc.dynamicweb.com/rapido/development/blocks/introduction-quickstart", ButtonLayout = ButtonLayout.Link, CssClass = "u-ta-left u-no-padding", Icon = new Icon { Prefix = "fas", Name = "fa-link", LabelPosition = IconLabelPosition.After }, Target = LinkTargetType.Blank })
+
+    <br />
+    <br />
+}
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(componentsDocPage.BlocksRoot.BlocksList)
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function (event) {
+        if (QueryArray.getParameterFromCurrentURL("scrollToId")) {
+            document.getElementById(QueryArray.getParameterFromCurrentURL("scrollToId")).scrollIntoView();
+            window.scrollBy(0, -200);
+        }
+    });
+
+    CopyCode = function (targetArea) {
+        targetArea.style.display = "block";
+        targetArea.innerHTML = targetArea.innerHTML.replace("-newline", "");
+        targetArea.select();
+        document.execCommand('copy');
+        targetArea.style.display = "none";
+    }
+
+    document.addEventListener("scroll", function () {
+        var scrollPos = document.documentElement.scrollTop || document.body.scrollTop;
+
+        if (scrollPos > 500) {
+            document.getElementById("ScrollToTopBtn").style.display = "block";
+        } else {
+            document.getElementById("ScrollToTopBtn").style.display = "none";
+        }
+    });
+</script>
+
+

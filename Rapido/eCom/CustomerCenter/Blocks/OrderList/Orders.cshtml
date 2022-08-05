@@ -1,0 +1,133 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage ordersPage = BlocksPage.GetBlockPage("OrderList");
+}
+
+@{
+    if (string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.Orders.EmptyList")))
+    {
+        Block orders = new Block
+        {
+            Id = "Orders",
+            SortId = 30,
+            Template = RenderOrders()
+        };
+
+        ordersPage.Add("PageContainer", orders);
+    }
+}
+
+@helper RenderOrders()
+{  
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool isMyCustomerOrdersPage = GetGlobalValue("Global:Page.NavigationTag") == "MyCustomersOrders";
+    var user = Dynamicweb.Security.UserManagement.User.get_Current(Dynamicweb.Security.UserManagement.PagePermissionLevels.Frontend);
+    double userPoints = user != null ? user.PointBalance : 0;
+    var cart = Dynamicweb.Ecommerce.Common.Context.Cart;
+    double pointsUsedInCart = cart != null && cart.TotalPoints.HasValue ? cart.TotalPoints.Value : 0;
+
+    CustomerCenterList list = new CustomerCenterList { };
+
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "#" });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Date") });
+    if (Pageview.Device.ToString() != "Mobile") {
+        if (!pointShopOnly) {
+            list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Payment") });
+        }
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Shipping") });
+        if (isMyCustomerOrdersPage) {
+            list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Customer name") });
+            list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Customer nb.") });
+        }
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("State") });
+    }
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Price"), Align = CustomerCenterListInfoItemAlignment.Right });
+
+    foreach (LoopItem order in GetLoop("Orders"))
+    {
+        string orderId = order.GetString("Ecom:Order.ID");
+        string printLink = order.GetString("Ecom:CustomerCenter.Orders.PrintOrderURL");
+        bool canBePurchasedWithPoints = userPoints - pointsUsedInCart >= order.GetDouble("Ecom:Order.TotalPoints");
+        string price = pointShopOnly ? "<span class='u-color--loyalty-points'>" + order.GetString("Ecom:Order.TotalPoints") + "</span> " + Translate("points") : order.GetString("Ecom:Order.OrderLines.Total.Price");
+
+        CustomerCenterListItem listItem = new CustomerCenterListItem {
+            Id = orderId,
+            Title = orderId,
+            OnClick = "orderModal.ShowOrderModal('" + orderId + "', '" + printLink + "')"
+        };
+
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = order.GetDate("Ecom:Order.Date").ToString(Pageview.Area.Dateformat + " HH:mm") });
+        
+        if (Pageview.Device.ToString() != "Mobile") {
+            if (!pointShopOnly) {
+               listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = order.GetString("Ecom:Order.PaymentMethod") });
+            }
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = order.GetString("Ecom:Order.ShippingMethod") });
+            if (isMyCustomerOrdersPage)
+            {
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = order.GetString("Ecom:Order.Customer.Name") });
+            }
+        }
+
+        if (Pageview.Device.ToString() != "Mobile") {
+            if (isMyCustomerOrdersPage)
+            {
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = order.GetString("Ecom:Order.Customer.Number") });
+            }
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = Translate(order.GetString("Ecom:Order:Orderstate.Name")) });
+        }
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = price, Align = CustomerCenterListInfoItemAlignment.Right });
+
+        if (Pageview.Device.ToString() != "Mobile") {
+            listItem.AddActions(
+                new Button
+                {
+                    OnClick = "orderModal.ShowOrderModal('" + orderId + "', '" + printLink + "')",
+                    Title = Pageview.Device.ToString() != "Mobile" ? Translate("View order") : "",
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-search",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                },
+                new Link
+                {
+                    Href = printLink,
+                    Title = Pageview.Device.ToString() != "Mobile" ? Translate("Print") : "",
+                    Target = LinkTargetType.Blank,
+                    Rel = LinkRelType.Noopener,
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-print",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                }
+            );
+        
+            if (!pointShopOnly || canBePurchasedWithPoints)
+            {
+                listItem.AddAction(new Link
+                {
+                    Href = order.GetString("Ecom:Order.ReorderID"),
+                    Title = Pageview.Device.ToString() != "Mobile" ? Translate("Reorder") : "",
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-sync",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                });
+            }
+        }
+
+        list.AddListItem(listItem);
+    }
+
+    @Render(list);
+}
+

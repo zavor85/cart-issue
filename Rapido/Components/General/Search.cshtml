@@ -1,0 +1,123 @@
+﻿@using Dynamicweb.Rapido.Blocks.Components.General
+
+@* Component *@
+
+@helper RenderSearch(Search settings)
+{
+    var searchValue = HttpContext.Current.Request.QueryString.Get(settings.SearchParameter) ?? "";
+    var groupValue = HttpContext.Current.Request.QueryString.Get(settings.GroupsParameter) ?? "";
+
+    if (string.IsNullOrEmpty(settings.Id)) 
+    {
+        settings.Id = Guid.NewGuid().ToString("N");
+    }
+
+    var resultAttributes = new Dictionary<string, string>();
+
+    if (settings.PageSize != 0)
+    {
+        resultAttributes.Add("data-page-size", settings.PageSize.ToString());
+    }
+    if (!string.IsNullOrEmpty(settings.GroupItemsFeedUrl))
+    {
+        resultAttributes.Add("data-groups-feed-url", settings.GroupItemsFeedUrl);
+        if (!string.IsNullOrEmpty(groupValue))
+        {
+            resultAttributes.Add("data-selected-group", groupValue);
+        }
+        if (!string.IsNullOrEmpty(settings.GroupsParameter))
+        {
+            resultAttributes.Add("data-groups-parameter", settings.GroupsParameter);
+        }
+    }
+    resultAttributes.Add("data-force-init", "true");
+    if (settings.GoToFirstSearchResultOnEnter)
+    {
+        resultAttributes.Add("data-go-to-first-search-result-on-enter", settings.GoToFirstSearchResultOnEnter.ToString().ToLower());
+    }
+    if (!string.IsNullOrEmpty(settings.SearchParameter))
+    {
+        resultAttributes.Add("data-search-parameter", settings.SearchParameter);
+    }
+    resultAttributes.Add("data-search-feed-url", settings.SearchData.SearchFeedUrl);
+    resultAttributes.Add("data-results-template-id", settings.SearchData.ResultsTemplateId);
+
+    if (settings.SecondSearchData != null) 
+    {
+        resultAttributes.Add("data-second-search-feed-url", settings.SecondSearchData.SearchFeedUrl);
+        resultAttributes.Add("data-second-results-template-id", settings.SecondSearchData.ResultsTemplateId);
+    }
+    if (!string.IsNullOrEmpty(settings.ResultsPageUrl)) 
+    {
+        resultAttributes.Add("data-results-page-url", settings.ResultsPageUrl);
+    }
+
+    resultAttributes = resultAttributes.Concat(settings.ExtraAttributes).GroupBy(d => d.Key).ToDictionary (d => d.Key, d => d.Last().Value);
+
+    string searchFieldCss = (settings.SearchButton == null) ? "search--with-icon" : "";
+
+    <div class="search @settings.CssClass @searchFieldCss js-search-data-source dw-mod" id="@settings.Id" @ComponentMethods.AddAttributes(resultAttributes)>
+        @if (!string.IsNullOrEmpty(settings.GroupItemsFeedUrl))
+        {
+            <button type="button" class="search__groups-btn dw-mod js-search-groups-btn">@Translate("All")</button>
+            <ul class="dropdown dropdown--absolute-position dw-mod search__groups-results js-search-groups-list"></ul>
+        }
+
+        <input type="text" class="search__field dw-mod js-search-field" placeholder="@settings.Placeholder" value="@searchValue">
+        
+        <div class="dropdown dropdown--absolute-position search__results dw-mod js-search-results @(settings.SecondSearchData != null ? "search__results--combined" : "")">
+            @if (settings.SecondSearchData != null)
+            {
+                <div class="search__column search__column--products dw-mod">
+                    <div class="search__column-header dw-mod">@Translate("Products")</div>
+                    <ul class="search__results-list dw-mod js-search-results-list" id="@(settings.Id)_ResultsList"></ul>
+                    @if (!string.IsNullOrEmpty(settings.SearchData.ResultsPageUrl))
+                    {
+                        @Render(new Link {
+                            Title = Translate("View all"),
+                            CssClass = "js-view-all-button u-margin",
+                            Href = settings.SearchData.ResultsPageUrl
+                        });
+                    }
+                </div>
+                <div class="search__column search__column--pages dw-mod">
+                    <div class="search__column-header">@Translate("Pages")</div>
+                    <ul class="search__results-list dw-mod js-search-results-second-list" id="@(settings.Id)_SecondResultsList"></ul>
+                    @if (!string.IsNullOrEmpty(settings.SecondSearchData.ResultsPageUrl))
+                    {
+                        @Render(new Link
+                        {
+                            Title = Translate("View all"),
+                            CssClass = "js-view-all-button u-margin",
+                            Href = settings.SecondSearchData.ResultsPageUrl
+                        });
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="search__column search__column--only dw-mod">
+                    <ul class="search__results-list dw-mod js-search-results-list" id="@(settings.Id)_ResultsList"></ul>
+                    @if (!string.IsNullOrEmpty(settings.SearchData.ResultsPageUrl))
+                    {
+                        @Render(new Link {
+                            Title = Translate("View all"),
+                            CssClass = "js-view-all-button u-margin",
+                            Href = settings.SearchData.ResultsPageUrl
+                        });
+                    }
+                </div>
+            }
+        </div>
+
+        @if (settings.SearchButton != null)
+        {
+            settings.SearchButton.CssClass += " search__btn js-search-btn";
+            if (settings.RenderDefaultSearchIcon)
+            {
+                settings.SearchButton.Icon = new Icon { Name = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("SearchIcon").SelectedValue };
+            }
+            @Render(settings.SearchButton);
+        }
+    </div>
+}

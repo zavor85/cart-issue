@@ -1,0 +1,123 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System
+@using System.Linq
+
+
+
+@helper RenderLayout3(LoopItem product, Dictionary <string, Dictionary<string, string>> fieldGroupsToRender, int maxFields = 10) { 
+    var colorService = new ColorSwatchService();
+    string nameColor = Pageview.CurrentParagraph.Item["NameColor"] != null ? Pageview.CurrentParagraph.Item["NameColor"].ToString() : "#222222";
+    nameColor = !nameColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, nameColor) : nameColor;
+
+    string productName = product.GetString("Ecom:Product.Name");
+    productName += !String.IsNullOrEmpty(product.GetString("Ecom:Product.SelectedVariantComboName")) ? ", " + product.GetString("Ecom:Product.SelectedVariantComboName") : "";
+    string productPrice = product.GetString("Ecom:Product.Discount.Price.PriceFormatted") != product.GetString("Ecom:Product.Price.PriceFormatted") ? product.GetString("Ecom:Product.Discount.Price.PriceFormatted") : product.GetString("Ecom:Product.Price.PriceFormatted");
+    string productBeforePrice = product.GetString("Ecom:Product.Discount.Price.PriceFormatted") != product.GetString("Ecom:Product.Price.PriceFormatted") ? product.GetString("Ecom:Product.Price.PriceFormatted") : "";
+
+    <div class="sheet-row">
+        <div class="sheet-row__col sheet-row__col--6"> 
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideName"]))
+            {
+                <h2 class="sheet-product-title sheet-product-title--lg" style="color: @nameColor">@productName</h2>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideNumber"]))
+            {
+                <div class="sheet-product-number">@product.GetString("Ecom:Product.Number")</div>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideShortDescription"]))
+            {
+                <div class="sheet-product-short-description">@product.GetString("Ecom:Product.ShortDescription")</div>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideLongDescription"]))
+            {
+                <div class="sheet-product-long-description">@product.GetString("Ecom:Product.LongDescription")</div>
+            }
+            @{
+                var productCategories = product.GetLoop("ProductCategories");
+
+                foreach (LoopItem categoryGroup in productCategories)
+                {
+                    var categoryFields = categoryGroup.GetLoop("ProductCategoryFields");
+
+                    if (categoryFields.Any(field => !string.IsNullOrEmpty(field.GetString("Ecom:Product.CategoryField.Value"))))
+                    {
+                        <div style="font-size: 20px; font-weight: bold" class="sheet-product-@categoryGroup.GetString("Ecom:Product.Category.Name")">@categoryGroup.GetString("Ecom:Product.Category.Name")</div>
+                    }
+                    
+                    foreach (LoopItem field in categoryFields)
+                    {
+                        string fieldValue = field.GetString("Ecom:Product.CategoryField.Value");
+                        if(!string.IsNullOrEmpty(fieldValue)){
+                            
+                        fieldValue = fieldValue == "True" ? Translate("Yes") : fieldValue;
+                        fieldValue = fieldValue == "False" ? Translate("No") : fieldValue;
+                            
+                        <div class="sheet-product-@field.GetString("Ecom:Product.CategoryField.Label")">@field.GetString("Ecom:Product.CategoryField.Label") - @fieldValue</div>
+
+                        }
+                    }
+                }
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HidePrice"]))
+            {
+                <div class="sheet-product-price">@productPrice</div>
+                <div class="sheet-product-before-price">@productBeforePrice</div>
+            }
+
+            <br />
+            <br />
+            <br />
+
+            @* This helper is found in "ProductDataSheet.cshtml" *@
+            @RenderFields(fieldGroupsToRender, maxFields)
+        </div>
+        <div class="sheet-row__col sheet-row__col--6">
+            <div class="sheet-row">
+                @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideProductImage"]))
+                {
+                    <div class="sheet-row__col sheet-row__col--12"> 
+                        <img class="sheet-row__image" src="/Admin/Public/GetImage.ashx?width=500&amp;height=480&amp;crop=5&amp;Compression=75&amp;DoNotUpscale=True&amp;FillCanvas=True&amp;image=@GetProductImage(product)"/>
+                    </div>
+                } 
+            
+                @{ 
+                    int count = 0;
+                    HashSet<string> images = new HashSet<string>();
+
+                    foreach (LoopItem alternativeImage in product.GetLoop("Ecom:Product.AlternativeImages"))
+                    {
+                        string altImage = alternativeImage.GetString("Ecom:Product.AlternativeImages.Image");
+
+                        if (!string.IsNullOrEmpty(altImage))
+                        {
+                            images.Add(altImage);
+                        }
+                    }
+
+                    foreach (LoopItem detail in product.GetLoop("Details"))
+                    {
+                        string detailImage = detail.GetString("Ecom:Product:Detail.Image.Clean");
+
+                        if (!string.IsNullOrEmpty(detailImage))
+                        {
+                            string ext = Path.GetExtension(detailImage).ToLower();
+                            if (ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".png")
+                            {
+                                images.Add(detailImage);
+                            }
+                        }
+                    }
+
+                    foreach (var extraImage in images) {
+                        if (count < 2) {
+                            <div class="sheet-row__col sheet-row__col--12"> 
+                                <img class="sheet-row__image" src="/Admin/Public/GetImage.ashx?width=500&amp;height=480&amp;crop=5&amp;Compression=75&amp;DoNotUpscale=True&amp;FillCanvas=True&amp;image=@extraImage"/>
+                            </div>
+                        }
+                        count++;
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}

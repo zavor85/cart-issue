@@ -1,0 +1,35 @@
+// -----------------------------------------------------------------------------
+// Contains all styles related to the clean css grid
+// -----------------------------------------------------------------------------
+
+//Basics
+
+.content-row-mixin() when not (@layout-page-center-width = none) {
+    max-width: ~'@{layout-page-center-width}';
+}
+
+.content-container {
+   
+}
+
+
+.content-row:not(.content-row--stretch) {
+    .content-row-mixin();
+}
+
+.content-row__item {
+
+}
+
+.content-row__item__body {
+
+}
+
+
+.articles-paragraph-mixin() when not (@layout-page-center-width = none) {
+    max-width: ~'@{layout-page-center-width}';
+}
+
+.articles-paragraph {
+    .articles-paragraph-mixin();
+}

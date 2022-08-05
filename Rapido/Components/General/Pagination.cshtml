@@ -1,0 +1,83 @@
+﻿@using System.Linq
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@* Component *@
+
+@helper RenderPagination(Dynamicweb.Rapido.Blocks.Components.General.Pagination settings)
+{
+    var pageNumberQueryStringName = Dynamicweb.Rapido.Services.Pagination.GetPageNumberQueryStringName(settings);    // Get the proper 'page number' query string parameter
+    var queryParameters = Dynamicweb.Rapido.Services.Url.GetQueryParameters(pageNumberQueryStringName);              // Get the NameValueCollection from the querystring
+
+    if (settings.NumberOfPages > 1)
+    {
+        string url = HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Authority) + "/Default.aspx";
+        string ariaLabel = !string.IsNullOrWhiteSpace(settings.AriaLabel) ? settings.AriaLabel : Translate("Page navigation");
+        Dictionary<string, int> startAndEndPageNumber = Dynamicweb.Rapido.Services.Pagination.GetStartAndEndPageNumber(settings);
+
+        <div class="pager u-margin-top dw-mod @settings.CssClass" aria-label="@ariaLabel">
+            @if (settings.ShowPagingInfo)
+            {
+                <div class="pager__info dw-mod">
+                    @Translate("Page") @settings.CurrentPageNumber @Translate("of") @settings.NumberOfPages
+                </div>
+            }
+            <ul class="pager__list dw-mod">
+                @if (!string.IsNullOrWhiteSpace(settings.FirstPageUrl) && settings.ShowFirstAndLastControls)
+                {
+                    @Render(new PaginationItem { Link = settings.FirstPageUrl, Icon = settings.FirstIcon })
+                }
+                @if (!string.IsNullOrWhiteSpace(settings.PreviousPageUrl) && settings.ShowNextAndPrevControls)
+                {
+                    @Render(new PaginationItem { Link = settings.PreviousPageUrl, Icon = settings.PrevIcon })
+                }
+                @if (settings.GetPages().Any())
+                {
+                    foreach (var page in settings.GetPages())
+                    {
+                        @Render(page)
+                    }
+                }
+                else
+                {
+                    for (var page = startAndEndPageNumber["StartPage"]; page <= startAndEndPageNumber["EndPage"]; page++)
+                    {
+                        queryParameters = Dynamicweb.Rapido.Services.Url.UpdateQueryStringParameter(queryParameters, pageNumberQueryStringName, page.ToString());
+                        @Render(new PaginationItem { Label = page.ToString(), Link = Dynamicweb.Rapido.Services.Url.BuildUri(url, queryParameters).PathAndQuery, IsActive = (settings.CurrentPageNumber == page) });
+                    }
+                }
+                @if (!string.IsNullOrWhiteSpace(settings.NextPageUrl) && settings.ShowNextAndPrevControls)
+                {
+                    @Render(new PaginationItem { Link = settings.NextPageUrl, Icon = settings.NextIcon })
+                }
+                @if (!string.IsNullOrWhiteSpace(settings.LastPageUrl) && settings.ShowFirstAndLastControls)
+                {
+                    @Render(new PaginationItem { Link = settings.LastPageUrl, Icon = settings.LastIcon })
+                }
+            </ul>
+        </div>
+    }
+}
+
+@helper RenderPaginationItem(PaginationItem settings)
+{
+    if (settings.Icon == null)
+    {
+        settings.Icon = new Icon();
+    }
+
+    settings.Icon.Label = settings.Label;
+    <li class="pager__btn dw-mod">
+        @if (settings.IsActive)
+        {
+            <span class="pager__num pager__num--current dw-mod">
+                @Render(settings.Icon)
+            </span>
+        }
+        else
+        {
+            <a href="@settings.Link" class="pager__num dw-mod">
+                @Render(settings.Icon)
+            </a>
+        }
+    </li>
+}

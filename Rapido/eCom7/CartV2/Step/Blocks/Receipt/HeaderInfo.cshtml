@@ -1,0 +1,66 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage headerInfoPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    headerInfoPage.Add("OrderHeader", new Block
+    {
+        Id = "HeaderInfo",
+        SortId = 20,
+        Design = new Design
+        {
+            CssClass = "grid__col-xs-5"
+        },
+        BlocksList = new List<Block>
+        {
+            new Block
+            {
+                Id = "OrderMainInfo",
+                SortId = 20,
+                Template = RenderOrderMainInfo()
+            }
+        }
+    });
+
+    if (GetBoolean("Ecom:Order.IsRecurringOrder"))
+    {
+        headerInfoPage.Add("HeaderInfo", new Block
+        {
+            Id = "RecurringOrderMessage",
+            SortId = 10,
+            Template = RenderRecurringOrderMessage()
+        });
+    }
+}
+
+@helper RenderRecurringOrderMessage()
+{
+    <p class="u-ta-right u-font-size--xs">@Translate("You have placed a subscription. This is a confirmation of the subscription not the actual order receipt.")</p>
+}
+
+@helper RenderOrderMainInfo()
+{
+    @Render(new Table { 
+        Design = TableDesign.Clean, 
+        CssClass = "table--compact",
+        Rows = new List<TableRow> {
+            new TableRow (
+                new TableCell { CssClass = "u-ta-right u-ta-left--xs", Content = Translate("Order number") },
+                new TableCell { CssClass = "u-ta-right", Content = GetString("Ecom:Order.ID") }
+            ),
+            (!GetString("Ecom:Order.IntegrationID").IsNullOrEmpty() ?
+            new TableRow (
+                new TableCell { CssClass = "u-ta-right u-ta-left--xs", Content = Translate("SO number") },
+                new TableCell { CssClass = "u-ta-right", Content = GetString("Ecom:Order.IntegrationID") }
+                ) : null),
+            new TableRow (
+                new TableCell { CssClass = "u-ta-right u-ta-left--xs", Content = Translate("Order date") },
+                new TableCell { CssClass = "u-ta-right", Content = GetDate("Ecom:Order.Completed").ToString(Pageview.Area.Dateformat + " HH:mm") }
+            )
+        }
+    });
+}

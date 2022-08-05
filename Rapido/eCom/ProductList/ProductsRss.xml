@@ -1,0 +1,52 @@
+﻿<title>
+  <!--@Global:Area.Primarydomain-->
+</title>
+<link>
+  <!--@Global:Area.Primarydomain-->
+</link>
+
+<!--@LoopStart(Products)-->
+<item>
+  <title>
+    <!--@Ecom:Product.Name.JSEncoded()-->
+  </title>
+  <link>
+    <!--@Global:Request.Scheme-->://<!--@Global:Request.Host-->/<!--@Ecom:Product.LinkGroup.Clean.HtmlEncoded()-->
+  </link>
+  <description>
+    <!--@If(Ecom:Product.ShortDescription<>''-->
+    <!--@Ecom:Product.ShortDescription.StripHtml().HtmlEncoded()-->
+    <!--@Else-->
+    <!--@Ecom:Product.LongDescription.HtmlEncoded()-->
+    <!--@EndIf-->
+  </description>
+  <g:image_link>
+    <!--@Global:Request.Scheme-->://<!--@Global:Request.Host--><!--@Ecom:Product.ImageDefault.Default.Clean-->
+  </g:image_link>
+  <g:price>
+    <!--@Ecom:Product.Price.Price-->
+    <!--@Ecom:Product.Price.Currency.Code-->
+  </g:price>
+  <g:sale_price>
+    <!--@Ecom:Product.Discount.Price.Price-->
+    <!--@Ecom:Product.Discount.Price.CurrencyCode-->
+  </g:sale_price>
+  <g:id>
+    <!--@Ecom:Product.Number.JSEncoded()-->
+  </g:id>
+  <g:mpn>
+    <!--@Ecom:Product.ID-->
+  </g:mpn>
+  <g:google_product_category>436</g:google_product_category>
+  <!--@If(Ecom:Product.Stock > 0)-->
+  <g:availability>in stock</g:availability>
+  <!--@Else-->
+  <g:availability>out of stock</g:availability>
+  <!--@EndIf-->
+  <!--@If Defined(Ecom:Product:Field.brand)-->
+  <g:brand>
+    <!--@Ecom:Product:Field.brand.JSEncoded()-->
+  </g:brand>
+  <!--@EndIf(Ecom:Product:Field.brand)-->
+</item>
+<!--@LoopEnd(Products)-->

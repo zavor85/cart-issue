@@ -1,0 +1,215 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using Dynamicweb.Ecommerce.International
+@using System
+@using System.Web
+@using System.Linq
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@{
+    BlocksPage billingAddressCheckoutPage = BlocksPage.GetBlockPage("CheckoutPage");
+    var billingAddressesEditingSetting = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetList("AddressesEditing");
+    bool isBillingAddressEditable = billingAddressesEditingSetting != null && billingAddressesEditingSetting.SelectedValue == "editable";
+    bool isBillingUserAnonymous = string.IsNullOrWhiteSpace(GetGlobalValue("Global:Extranet.UserName"));
+
+    Block billingAddressBlock = new Block()
+    {
+        Id = "BillingAddress",
+        SortId = 10,
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "12"
+        },
+        BlocksList = new List<Block> {
+            new Block {
+                Id = "BillingAddressHeader",
+                SortId = 10,
+                Component = new Heading { Level = 3, Title = Translate("Billing address"), Icon = new Icon { Prefix = "fas", Name = "fa-home", LabelPosition = IconLabelPosition.After } },
+                Design = new Design {
+                    RenderType = RenderType.CardHeader,
+                    CssClass = "u-color-light--bg"
+                }
+            },
+            new Block {
+                Id = "BillingAddressBody",
+                SortId = 20,
+                Design = new Design {
+                    RenderType = RenderType.CardBody,
+                    CssClass = "u-color-light--bg"
+                }
+            }
+        }
+    };
+
+    billingAddressCheckoutPage.Add("AddressContainerRow", billingAddressBlock);
+
+    if (isBillingUserAnonymous)
+    {
+        billingAddressCheckoutPage.Add("BillingAddressBody", new Block
+        {
+            Id = "AlreadyACustomerButton",
+            SortId = 10,
+            Template = RenderAlreadyACustomerButton()
+        });
+
+        if (GetBoolean("Ecom:Cart.CreateUserInCheckout"))
+        {
+            billingAddressCheckoutPage.Add("BillingAddressBody", new Block
+            {
+                Id = "CreateUserInCheckoutHiddens",
+                SortId = 20,
+                Component = new HiddenField { Name = "EcomUserCreateNew", Value = "True" }
+            });
+        }
+    }
+
+    if (isBillingAddressEditable || isBillingUserAnonymous)
+    {
+        billingAddressCheckoutPage.Add("BillingAddressBody", new Block
+        {
+            Id = "EditableBillingAddress",
+            SortId = 30,
+            Template = RenderEditableBillingAddress()
+        });
+    }
+    else
+    {
+        billingAddressCheckoutPage.Add("BillingAddressBody", new Block
+        {
+            Id = "StaticBillingAddress",
+            SortId = 30,
+            Template = RenderStaticBillingAddress()
+        });
+    }
+}
+
+@helper RenderEditableBillingAddress()
+{
+    @Render(new TextField { Label = Translate("Company"), Name = "EcomOrderCustomerCompany", Id = "EcomOrderCustomerCompany", Value = GetString("Ecom:Order.Customer.Company"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerCompany.ErrorMessage") })
+    @Render(new TextField { Label = Translate("Name"), Name = "EcomOrderCustomerName", Id = "EcomOrderCustomerName", Value = GetString("Ecom:Order.Customer.Name"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerName.ErrorMessage") })
+
+    <div class="form__fields-collection form__fields-collection--2-3">
+        @Render(new TextField { Label = Translate("Phone"), Name = "EcomOrderCustomerPhone", Id = "EcomOrderCustomerPhone", Value = GetString("Ecom:Order.Customer.Phone"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerPhone.ErrorMessage") })
+        @Render(new TextField { Label = Translate("Email"), Name = "EcomOrderCustomerEmail", Id = "EcomOrderCustomerEmail", Value = GetString("Ecom:Order.Customer.Email"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerEmail.ErrorMessage") })
+    </div>
+
+    @Render(new TextField { Label = Translate("Address"), Name = "EcomOrderCustomerAddress", Id = "EcomOrderCustomerAddress", Value = GetString("Ecom:Order.Customer.Address"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerAddress.ErrorMessage") })
+
+    <div class="form__fields-collection form__fields-collection--2-3">
+        @Render(new TextField { Label = Translate("Zip"), Name = "EcomOrderCustomerZip", Id = "EcomOrderCustomerZip", Value = GetString("Ecom:Order.Customer.Zip"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerZip.ErrorMessage") })
+        @Render(new TextField { Label = Translate("City"), Name = "EcomOrderCustomerCity", Id = "EcomOrderCustomerCity", Value = GetString("Ecom:Order.Customer.City"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerCity.ErrorMessage") })
+    </div>
+
+    if (GetLoop("CustomerRegions").Count > 0)
+    {
+        SelectField selectState = new SelectField
+        {
+            Id = "EcomOrderCustomerRegion",
+            Name = "EcomOrderCustomerRegion",
+            Label = Translate("State/Region"),
+            OnChange = "Cart.SubmitCart()",
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerRegion.ErrorMessage"),
+            Value = GetString("Ecom:Order.Customer.Region")
+        };
+        selectState.Options.Add(new SelectFieldOption
+        {
+            Label = Translate("Nothing selected"),
+            Value = "",
+            Disabled = true,
+            Checked = true
+        });
+        foreach (LoopItem state in GetLoop("CustomerRegions"))
+        {
+            selectState.Options.Add(new SelectFieldOption { Label = state.GetString("Ecom:CustomerRegion.Name"), Value = state.GetString("Ecom:CustomerRegion.RegionCode") });
+        }
+        @Render(selectState)
+    }
+    else
+    {
+        @Render(new HiddenField { Id = "EcomOrderCustomerRegion", Name = "EcomOrderCustomerRegion" })
+    }
+
+    SelectField selectCountry = new SelectField
+    {
+        Id = "EcomOrderCustomerCountry",
+        Name = "EcomOrderCustomerCountry",
+        Label = Translate("Country"),
+        OnChange = "resetStateField('EcomOrderCustomerRegion');Cart.SubmitCart()",
+        ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerCountry.ErrorMessage")
+    };
+    foreach (LoopItem country in GetLoop("Countries"))
+    {
+        selectCountry.Options.Add(new SelectFieldOption { Label = country.GetString("Ecom:Country.Name"), Value = country.GetString("Ecom:Country.Code2"), Checked = country.GetBoolean("Ecom:Country.IsCustomerCountryOrDefault") });
+    }
+
+    @Render(selectCountry)
+}
+
+@helper RenderStaticBillingField(string name, string value, string cssClass = "", string displayedValue = "")
+{
+    if (string.IsNullOrEmpty(displayedValue))
+    {
+        displayedValue = value;
+    }
+
+    if (!string.IsNullOrEmpty(value))
+    {
+        @Render(new HiddenField { Name = name, Id = name, Value = value })
+        <div class="@cssClass">@displayedValue</div>
+    }
+}
+
+@helper RenderStaticBillingAddress()
+{
+    @RenderStaticBillingField("EcomOrderCustomerName", GetString("Ecom:Order.Customer.Name"), "u-bold")
+    @RenderStaticBillingField("EcomOrderCustomerCompany", GetString("Ecom:Order.Customer.Company"))
+    @RenderStaticBillingField("EcomOrderCustomerAddress", GetString("Ecom:Order.Customer.Address"))
+    @RenderStaticBillingField("EcomOrderCustomerZip", GetString("Ecom:Order.Customer.Zip"), "u-inline")
+    @RenderStaticBillingField("EcomOrderCustomerCity", GetString("Ecom:Order.Customer.City"), "u-inline")
+
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Region")))
+    {
+        var stateName = "";
+        foreach (var state in GetLoop("CustomerRegions"))
+        {
+            if (state.GetString("Ecom:CustomerRegion.RegionCode") == GetString("Ecom:Order.Customer.Region"))
+            {
+                stateName = state.GetString("Ecom:CustomerRegion.Name");
+            }
+        }
+
+        @RenderStaticBillingField("EcomOrderCustomerRegion", GetString("Ecom:Order.Customer.Region"), "", stateName)
+    }
+
+    var countryList = GlobalISO.GetGlobalISOs().Cast<GlobalISO>().GroupBy(x => x.Code2).Select(x => x.FirstOrDefault()).ToDictionary(x => x.Code2, y => y.CountryUK);
+    var countryCode = GetString("Ecom:Order.Customer.Country.Code");
+    var countryName = GetString("Ecom:Order.Customer.Country.Code");
+    if (countryList.ContainsKey(countryCode))
+    {
+        countryName = countryList[countryCode];
+    }
+
+    @RenderStaticBillingField("EcomOrderCustomerCountry", countryCode, "", countryName);
+
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Email")) && !string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Phone")))
+    {
+        <div class="u-margin-bottom"></div>
+    }
+
+    @RenderStaticBillingField("EcomOrderCustomerEmail", GetString("Ecom:Order.Customer.Email"))
+    @RenderStaticBillingField("EcomOrderCustomerPhone", GetString("Ecom:Order.Customer.Phone"))
+
+    if (!GetLoop("Countries").Any(country => country.GetString("Ecom:Country.Code2") == GetString("Ecom:Order.Customer.Country.Code")))
+    {
+        @Render(new NotificationMessage { MessageType = NotificationMessageType.Error, Message = Translate("Your selected billing country is not supported") })
+    }
+}
+
+@helper RenderAlreadyACustomerButton()
+{
+    @Render(new Button { Title = Translate("Already a customer?"), ButtonLayout = ButtonLayout.Secondary, CssClass = "btn--full more", OnClick = "document.getElementById('SignInModalTrigger').checked = !document.getElementById('SignInModalTrigger').checked" })
+}

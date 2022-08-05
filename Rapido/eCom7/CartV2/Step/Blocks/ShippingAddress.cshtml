@@ -1,0 +1,669 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Linq
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Ecommerce.International;
+
+@functions {
+    string addressesViewMode;
+    bool useBillingAddress = true;
+    bool useAnotherAddress = true;
+    bool isBillingOnly = true;
+    bool hasDefault = true;
+}
+
+@{
+    BlocksPage shippingAddressCheckoutPage = BlocksPage.GetBlockPage("CheckoutPage");
+    var addressLoop = GetLoop("UserManagement:User.UserAddresses");
+    hasDefault = addressLoop.FirstOrDefault(a => a.GetBoolean("UserManagement:User.UserAddress.Default")) != null;
+    useAnotherAddress = addressLoop.Count == 1 || (addressLoop.Count > 1 && hasDefault);
+    useBillingAddress = HttpContext.Current.Request.Cookies["UseAnotherAddress"] == null ? !useAnotherAddress : !Converter.ToBoolean(HttpContext.Current.Request.Cookies["UseAnotherAddress"].Value);
+    bool isShippingUserAnonymous = string.IsNullOrWhiteSpace(GetGlobalValue("Global:Extranet.UserName"));
+    var shippingAddressesEditingSetting = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetList("AddressesEditing");
+    addressesViewMode = shippingAddressesEditingSetting != null && !isShippingUserAnonymous ? shippingAddressesEditingSetting.SelectedValue : "editable";
+    isBillingOnly = addressesViewMode == "readonly" && addressLoop.Count == 0;
+
+    //dont render shipping address if shipping provider has content
+    bool shippingProviderHasContent = false;
+    foreach (LoopItem shipping in GetLoop("Shippingmethods"))
+    {
+        if (Converter.ToBoolean(shipping.GetString("Ecom:Cart.Shippingmethod.IsSelected")) && !string.IsNullOrEmpty(shipping.GetString("Ecom:ShippingProvider.Content")))
+        {
+            shippingProviderHasContent = true;
+        }
+    }
+
+    if (!shippingProviderHasContent)
+    {
+        Block shippingAddressBlock = new Block()
+        {
+            Id = "ShippingAddress",
+            SortId = 20,
+            Design = new Design
+            {
+                RenderType = RenderType.Column,
+                Size = "12"
+            },
+            BlocksList = new List<Block> {
+                new Block {
+                    Id = "ShippingAddressHeader",
+                    SortId = 10,
+                    Component = new Heading { Level = 3, Title = Translate("Shipping address"), Icon = new Icon { Prefix = "fas", Name = "fa-map-marker", LabelPosition = IconLabelPosition.After } },
+                    Design = new Design {
+                        RenderType = RenderType.CardHeader,
+                        CssClass = "u-color-light--bg"
+                    }
+                },
+                new Block {
+                    Id = "ShippingAddressBody",
+                    SortId = 20,
+                    Design = new Design {
+                        RenderType = RenderType.CardBody,
+                        CssClass = "u-color-light--bg"
+                    },
+                    BlocksList = new List<Block>
+                    {
+                        new Block
+                        {
+                            Id = "ShippingAddressSelector",
+                            SortId = 10,
+                            Design = new Design { CssClass = isBillingOnly ? "u-hidden" : ""},
+                            Template = RenderShippingAddressSelector()
+                        }
+                    }
+                },
+                new Block
+                {
+                    Id = "ShippingAddressJavascript",
+                    SortId = 30,
+                    Template = RenderAddressesJavascript()
+                }
+            }
+        };
+        shippingAddressCheckoutPage.Add("AddressContainerRow", shippingAddressBlock);
+
+        if (addressesViewMode != "editable")
+        {
+            shippingAddressCheckoutPage.Add("CheckoutBottomSnippets", new Block
+            {
+                Id = "SelectAnotherAddressModal",
+                SortId = 40,
+                Component = new Modal
+                {
+                    Id = "MyAddressesSelector",
+                    Heading = new Heading
+                    {
+                        Icon = new Icon { Prefix = "far", Name = "fa-address-card", LabelPosition = IconLabelPosition.After },
+                        Title = Translate("My addresses")
+                    },
+                    Width = ModalWidth.Lg,
+                    OnClose = useBillingAddress ? "setUseBillingAddress(true)" : ""
+                }
+            });
+
+            if (addressesViewMode != "readonly")
+            {
+                shippingAddressCheckoutPage.Add("CheckoutBottomSnippets", new Block
+                {
+                    //common modal for edit and add
+                    Id = "ManageAddressModal",
+                    SortId = 100,
+                    Component = new Modal
+                    {
+                        Id = "ManageAddress",
+                        Heading = new Heading
+                        {
+                            Icon = new Icon { Prefix = "far", Name = "fa-plus", LabelPosition = IconLabelPosition.After },
+                            Title = Translate("Add address")
+                        },
+                        Width = ModalWidth.Md,
+                        OnClose = "document.querySelector('#MyAddressesSelectorModalTrigger').checked = true;"
+                    }
+                });
+            }
+        }
+
+        if (addressesViewMode != "editable")
+        {
+            var modal = new Modal
+            {
+                Id = "CountryIsNotAvailable",
+                Heading = new Heading
+                {
+                    Title = Translate("Sorry")
+                },
+                Width = ModalWidth.Sm,
+                BodyText = Translate("We cannot ship to this country.")
+            };
+            modal.AddActions(new Button
+            {
+                Title = Translate("Choose another address"),
+                OnClick = "document.getElementById('CountryIsNotAvailableModalTrigger').checked = false;"
+            });
+
+            shippingAddressCheckoutPage.Add("CheckoutBottomSnippets", new Block
+            {
+                //common modal for edit and add
+                Id = "CountryIsNotAvailableModal",
+                SortId = 110,
+                Component = modal
+            });
+        }
+
+        if (useBillingAddress)
+        {
+            shippingAddressCheckoutPage.Add("ShippingAddressBody", new Block
+            {
+                Id = "ShippingAddressFromBillingAddress",
+                SortId = 20,
+                Template = RenderShippingAddressFromBillingAddress()
+            });
+        }
+        else
+        {
+            shippingAddressCheckoutPage.Add("ShippingAddressBody", new Block
+            {
+                Id = "ShippingAddressContainer",
+                SortId = 20,
+                Design = new Design
+                {
+                    CssClass = "js-shipping-address-container"
+                }
+            });
+
+            if (addressesViewMode == "editable")
+            {
+                shippingAddressCheckoutPage.Add("ShippingAddressContainer", new Block
+                {
+                    Id = "EditableShippingAddress",
+                    SortId = 10,
+                    Template = RenderEditableShippingAddress()
+                });
+            }
+            else
+            {
+                shippingAddressCheckoutPage.Add("ShippingAddressContainer", new Block
+                {
+                    Id = "StaticShippingAddress",
+                    SortId = 10,
+                    Template = RenderStaticShippingAddress()
+                });
+                if (!(addressesViewMode == "readonly" && addressLoop.Count == 1))
+                {
+                    shippingAddressCheckoutPage.Add("ShippingAddressContainer", new Block
+                    {
+                        Id = "SelectAnotherAddressButton",
+                        SortId = 20,
+                        Component = new Button
+                        {
+                            Title = Translate("Select shipping address"),
+                            ButtonLayout = ButtonLayout.Secondary,
+                            CssClass = "u-no-margin u-full-width",
+                            OnClick = "showAddressesListModal()"
+                        }
+                    });
+                }
+            }
+        }
+    }
+}
+
+@helper RenderShippingAddressSelector()
+{
+    @Render(new RadioButtonListField
+    {
+        Name = "ShippingAddressSelector",
+        Options = new List<RadioButtonField>
+        {
+            new RadioButtonField
+            {
+                Label = Translate("Ship to the billing address"),
+                Value = "useBillingAddress",
+                Id = "useBillingAddress",
+                Checked = useBillingAddress,
+                OnChange = "changeShippingAddressToBilling()"
+            },
+            new RadioButtonField
+            {
+                Label = Translate("Ship to another address"),
+                Value = "useAnotherAddress",
+                Id = "useAnotherAddress",
+                Checked = !useBillingAddress,
+                OnChange = "setUseBillingAddress(false);" + (addressesViewMode != "editable" ? "showAddressesListModal()" : "Cart.SubmitCart()")
+            }
+        }
+    });
+}
+
+@helper RenderShippingAddressFromBillingAddress()
+{
+    if (isBillingOnly)
+    {
+        @RenderStaticShippingField("EcomOrderDeliveryName", GetString("Ecom:Order.Customer.Name"), "u-bold")
+        @RenderStaticShippingField("EcomOrderDeliveryCompany", GetString("Ecom:Order.Customer.Company"))
+        @RenderStaticShippingField("EcomOrderDeliveryAddress", GetString("Ecom:Order.Customer.Address"))
+        @RenderStaticShippingField("EcomOrderDeliveryZip", GetString("Ecom:Order.Customer.Zip"), "u-inline")
+        @RenderStaticShippingField("EcomOrderDeliveryCity", GetString("Ecom:Order.Customer.City"), "u-inline")
+    
+        if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Region")))
+        {
+            var stateName = "";
+            foreach (var state in GetLoop("CustomerRegions"))
+            {
+                if (state.GetString("Ecom:CustomerRegion.RegionCode") == GetString("Ecom:Order.Customer.Region"))
+                {
+                    stateName = state.GetString("Ecom:CustomerRegion.Name");
+                }
+            }
+    
+            @RenderStaticShippingField("EcomOrderDeliveryRegion", GetString("Ecom:Order.Customer.Region"), "", stateName)
+        }
+    
+        var countryList = GlobalISO.GetGlobalISOs().Cast<GlobalISO>().GroupBy(x => x.Code2).Select(x => x.FirstOrDefault()).ToDictionary(x => x.Code2, y => y.CountryUK);
+        var countryCode = GetString("Ecom:Order.Customer.Country.Code");
+        var countryName = GetString("Ecom:Order.Customer.Country.Code");
+        if (countryList.ContainsKey(countryCode))
+        {
+            countryName = countryList[countryCode];
+        }
+    
+        @RenderStaticShippingField("EcomOrderDeliveryCountry", countryCode, "", countryName);
+    
+        if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Email")) && !string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Phone")))
+        {
+            <div class="u-margin-bottom"></div>
+        }
+    
+        @RenderStaticShippingField("EcomOrderDeliveryEmail", GetString("Ecom:Order.Customer.Email"))
+        @RenderStaticShippingField("EcomOrderDeliveryPhone", GetString("Ecom:Order.Customer.Phone"))
+    } 
+    else
+    {
+        @Render(new HiddenField { Name = "EcomOrderDeliveryCompany", Id = "EcomOrderDeliveryCompany" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryName", Id = "EcomOrderDeliveryName" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryPhone", Id = "EcomOrderDeliveryPhone" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryEmail", Id = "EcomOrderDeliveryEmail" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryAddress", Id = "EcomOrderDeliveryAddress" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryZip", Id = "EcomOrderDeliveryZip" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryCity", Id = "EcomOrderDeliveryCity" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryRegion", Id = "EcomOrderDeliveryRegion" })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryCountry", Id = "EcomOrderDeliveryCountry" })
+    }
+}
+
+@helper RenderStaticShippingField(string name, string value, string cssClass = "", string displayedValue = "")
+{
+    if (string.IsNullOrEmpty(displayedValue))
+    {
+        displayedValue = value;
+    }
+
+    @Render(new HiddenField { Name = name, Id = name, Value = value })
+
+    if (!string.IsNullOrEmpty(displayedValue))
+    {
+        <div class="@cssClass">@displayedValue</div>
+    }
+}
+
+@helper RenderStaticShippingAddress()
+{
+    if (useAnotherAddress && HttpContext.Current.Request.Cookies["UseAnotherAddress"] == null)
+    {
+        var defaultAddress = hasDefault ? GetLoop("UserManagement:User.UserAddresses").FirstOrDefault(a => a.GetBoolean("UserManagement:User.UserAddress.Default")) : GetLoop("UserManagement:User.UserAddresses").FirstOrDefault();
+        
+        @RenderStaticShippingField("EcomOrderDeliveryName", defaultAddress.GetString("UserManagement:User.UserAddress.AccessUserAddress_UserName"), "u-bold")
+        @RenderStaticShippingField("EcomOrderDeliveryCompany", defaultAddress.GetString("UserManagement:User.UserAddress.Company"))
+        @RenderStaticShippingField("EcomOrderDeliveryAddress", defaultAddress.GetString("UserManagement:User.UserAddress.Address"))
+        @RenderStaticShippingField("EcomOrderDeliveryAddress2", defaultAddress.GetString("UserManagement:User.UserAddress.Address2"))
+        @RenderStaticShippingField("EcomOrderDeliveryZip", defaultAddress.GetString("UserManagement:User.UserAddress.Zip"), "u-inline")
+        @RenderStaticShippingField("EcomOrderDeliveryCity", defaultAddress.GetString("UserManagement:User.UserAddress.City"), "u-inline")
+        @RenderStaticShippingField("EcomOrderDeliveryRegion", defaultAddress.GetString("UserManagement:User.UserAddress.State"))
+        @RenderStaticShippingField("EcomOrderDeliveryCountry", defaultAddress.GetString("UserManagement:User.UserAddress.CountryCode"), "", defaultAddress.GetString("UserManagement:User.UserAddress.Culture.CountryName"))
+
+        if (!string.IsNullOrEmpty(GetString("UserManagement:User.DefaultAddress.Phone")))
+        {
+            <div class="u-margin-bottom"></div>
+        }
+
+        @RenderStaticShippingField("EcomOrderDeliveryEmail", defaultAddress.GetString("UserManagement:User.UserAddress.Email"))
+        @RenderStaticShippingField("EcomOrderDeliveryPhone", defaultAddress.GetString("UserManagement:User.UserAddress.Phone"))
+
+        <div class="u-margin-bottom"></div>
+    } else {
+        @RenderStaticShippingField("EcomOrderDeliveryName", GetString("Ecom:Order.Delivery.Name"), "u-bold")
+        @RenderStaticShippingField("EcomOrderDeliveryCompany", GetString("Ecom:Order.Delivery.Company"))
+        @RenderStaticShippingField("EcomOrderDeliveryAddress", GetString("Ecom:Order.Delivery.Address"))
+        @RenderStaticShippingField("EcomOrderDeliveryAddress2", GetString("Ecom:Order.Delivery.Address2"))
+        @RenderStaticShippingField("EcomOrderDeliveryZip", GetString("Ecom:Order.Delivery.Zip"), "u-inline")
+        @RenderStaticShippingField("EcomOrderDeliveryCity", GetString("Ecom:Order.Delivery.City"), "u-inline")
+
+        if (!string.IsNullOrEmpty(GetString("Ecom:Order.Delivery.Region")))
+        {
+            var stateName = "";
+            foreach (var state in GetLoop("DeliveryRegions"))
+            {
+                if (state.GetString("Ecom:DeliveryRegion.RegionCode") == GetString("Ecom:Order.Delivery.Region"))
+                {
+                    stateName = state.GetString("Ecom:DeliveryRegion.Name");
+                }
+            }
+
+            @RenderStaticShippingField("EcomOrderDeliveryRegion", GetString("Ecom:Order.Delivery.Region"), "", stateName)
+        }
+        else
+        {
+            @RenderStaticShippingField("EcomOrderDeliveryRegion", "")
+        }
+
+        foreach (LoopItem country in GetLoop("Countries"))
+        {
+            if (country.GetBoolean("Ecom:Country.IsDeliveryCountryOrDefault"))
+            {
+                @RenderStaticShippingField("EcomOrderDeliveryCountry", country.GetString("Ecom:Country.Code2"), "", country.GetString("Ecom:Country.Name"))
+                break;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(GetString("Ecom:Order.Delivery.Email")) && !string.IsNullOrEmpty(GetString("Ecom:Order.Delivery.Phone")))
+        {
+            <div class="u-margin-bottom"></div>
+        }
+
+        @RenderStaticShippingField("EcomOrderDeliveryEmail", GetString("Ecom:Order.Delivery.Email"))
+        @RenderStaticShippingField("EcomOrderDeliveryPhone", GetString("Ecom:Order.Delivery.Phone"))
+
+        <div class="u-margin-bottom"></div>
+    }
+}
+
+@helper RenderAddressesJavascript()
+{
+    <script>
+        function setUseBillingAddress(useBillingAddress) {
+            RememberState.SetCookie("useAnotherAddress", !useBillingAddress)
+            document.getElementById("useBillingAddress").checked = useBillingAddress;
+            document.getElementById("useBillingAddress").setAttribute("checked", useBillingAddress);
+        }
+
+        function changeShippingAddressToBilling() {
+            setUseBillingAddress(true);
+            document.querySelector(".js-shipping-address-container").classList.add("u-hidden");
+            Cart.FillShippingAddress({
+                Company: "",
+                Name: "",
+                Phone: "",
+                Email: "",
+                Address: "",
+                Zip: "",
+                City: "",
+                Region: "",
+                Country: ""
+            });
+            Cart.SubmitCart()
+        }
+    </script>
+
+    if (addressesViewMode != "editable")
+    {
+        <script>
+            let manageAddressPageId = "@GetPageIdByNavigationTag("AddressesForCheckout")";
+
+            function showLoader(bodyElement) {
+                let minHeightContainer = document.createElement("div");
+                minHeightContainer.className = "u-min-h180px";
+                let loader = document.createElement("div");
+                loader.className = "modal__loader";
+                let spinner = document.createElement("i");
+                spinner.className = "fa-4x fa-circle-notch fa-spin fas u-color-light";
+                loader.appendChild(spinner);
+                minHeightContainer.appendChild(loader);
+                bodyElement.innerHTML = "";
+                bodyElement.appendChild(minHeightContainer);
+            }
+
+            //refresh addresses list
+            function showAddressesListModal() {
+                showLoader(document.querySelector("#MyAddressesSelectorModal .modal__body"));
+                document.querySelector("#MyAddressesSelectorModalTrigger").checked = true;
+                Request.Fetch().get(
+                    "Default.aspx?ID=" + manageAddressPageId,
+                    function (result) {
+                        document.querySelector("#MyAddressesSelectorModal .modal__body").innerHTML = result;
+                    },
+                    function () { },
+                    false
+                );
+            }
+
+            var countries = [];
+
+            @foreach (var country in GetLoop("Countries"))
+            {
+                <text>countries.push("@country.GetString("Ecom:Country.Code2")");</text>
+            }
+
+            function countryIsAvailable(countryCode)
+            {
+                return countries.indexOf(countryCode) != -1;
+            }
+
+            function selectAddress(address) {
+                if (countryIsAvailable(address.Country)) {
+                    Cart.FillShippingAddress(address);
+                    Cart.SubmitCart();
+                } else {
+                    document.getElementById("CountryIsNotAvailableModalTrigger").checked = true;
+                }
+            }
+        </script>
+    }
+
+    if (addressesViewMode == "static")
+    {
+        <script>
+            let countryRegions = {
+
+                @foreach (var country in GetLoop("Countries"))
+                {
+                    var regions = Dynamicweb.Ecommerce.Services.Countries.GetRegions(country.GetString("Ecom:Country.Code2"));
+
+                    if (regions.Count > 0)
+                    {
+                        <text>"@country.GetString("Ecom:Country.Code2")": {</text>
+                    }
+
+                    <text>@string.Join(",", regions.Select(region => "\"" + region.RegionCode + "\": \"" + region.Name + "\""))</text>
+
+                    if (regions.Count > 0)
+                    {
+                        <text>},</text>
+                    }
+                }
+
+            }
+
+            function changeCountry(countryCode) {
+                document.getElementById("countryHidden").value = countryCode;
+                let stateField = document.getElementById("UserManagement_Form_State");
+                stateField.innerHTML = "";
+                let currentRegions = countryRegions[countryCode]
+
+                if (currentRegions != null) {
+                    for (let regionCode in currentRegions) {
+                        let option = document.createElement("option");
+                        option.text = currentRegions[regionCode];
+                        option.value = regionCode;
+                        stateField.add(option);
+                    }
+                    stateField.closest(".js-state-field").classList.remove("u-hidden");
+                } else {
+                    let option = document.createElement("option");
+                    option.value = "";
+                    stateField.add(option);
+                    stateField.closest(".js-state-field").classList.add("u-hidden");
+                }
+            }
+        </script>
+        <script id="AddAddressFormTemplate" type="text/html">
+        </script>
+        <script id="AddAddressHeadingTemplate" type="text/html">
+            @Render(new Heading { Title = Translate("Add address"), Icon = new Icon { Prefix = "far", Name = "fa-plus", LabelPosition = IconLabelPosition.After } })
+        </script>
+        <script id="EditAddressHeadingTemplate" type="text/html">
+            @Render(new Heading { Title = Translate("Edit address"), Icon = new Icon { Prefix = "fas", Name = "fa-pencil", LabelPosition = IconLabelPosition.After } })
+        </script>
+        <script>
+            //get add address form
+            document.addEventListener("DOMContentLoaded", function () {
+                Request.Fetch().get(
+                    "Default.aspx?ID=" + manageAddressPageId + "&ManageAddressesFormAction=Add",
+                    function (result) {
+                        document.querySelector("#AddAddressFormTemplate").innerHTML = result;
+                        document.querySelector("#ManageAddressModal .modal__body").innerHTML = document.getElementById("AddAddressFormTemplate").innerHTML;
+                    },
+                    function () { },
+                    false
+                );
+            });
+
+            function openAddAddressModal() {
+                //get already saved template to prevent additional loading
+                document.getElementById("MyAddressesSelectorModalTrigger").checked = false;
+                document.querySelector("#ManageAddressModal .modal__header").innerHTML = document.getElementById("AddAddressHeadingTemplate").innerHTML;
+                document.querySelector("#ManageAddressModal .modal__body").innerHTML = document.getElementById("AddAddressFormTemplate").innerHTML;
+                regionLabels.LocalizeRegionLabels("UserManagement_Form_State", "UserManagement_Form_Country", true);
+                document.getElementById("ManageAddressModalTrigger").checked = true;
+            }
+
+            //open edit modal
+            function openEditAddressModal(addressId) {
+                document.getElementById("MyAddressesSelectorModalTrigger").checked = false;
+                showLoader(document.querySelector("#ManageAddressModal .modal__body"));
+                document.querySelector("#ManageAddressModal .modal__header").innerHTML = document.getElementById("EditAddressHeadingTemplate").innerHTML;
+                document.getElementById("ManageAddressModalTrigger").checked = true;
+                Request.Fetch().post(
+                    "Default.aspx?ID=" + manageAddressPageId,
+                    {
+                        "ManageAddressesFormAction": "Update",
+                        "SelectedAddressId": addressId
+                    },
+                    function (result) {
+                        document.querySelector("#ManageAddressModal .modal__body").innerHTML = result;
+                        regionLabels.LocalizeRegionLabels("UserManagement_Form_State", "UserManagement_Form_Country", true);
+                    },
+                    function () { },
+                    false
+                );
+            }
+
+            //save address (add / edit)
+            function saveAddress(mode) {
+                let form = document.getElementById("AddressForm");
+                let formData = new FormData(form);
+                if (!form.checkValidity()) {
+                    // Create the temporary button, click and remove it
+                    var tmpSubmit = document.createElement("button");
+                    form.appendChild(tmpSubmit);
+                    tmpSubmit.click();
+                    form.removeChild(tmpSubmit);
+                } else {
+                    Request.Fetch().post(
+                        "Default.aspx?ID=" + manageAddressPageId + "&ManageAddressesFormAction=Add",
+                        formData,
+                        function (result) {
+                            document.getElementById("ManageAddressModalTrigger").checked = false;
+                            showAddressesListModal();
+                        },
+                        function () { },
+                        false
+                    );
+                }
+            }
+
+            //delete
+            function deleteAddress(addressId, button) {
+                Request.Fetch().post(
+                    "Default.aspx?ID=" + manageAddressPageId,
+                    {
+                        SelectedAddressId: addressId,
+                        ManageAddressesFormAction: "Delete"
+                    },
+                    function (result) {
+                        button.closest(".media-list-item").remove();
+                    },
+                    function () { },
+                    false
+                );
+            }
+        </script>
+    }
+}
+
+@helper RenderEditableShippingAddress()
+{
+    @Render(new TextField { Label = Translate("Company"), Name = "EcomOrderDeliveryCompany", Id = "EcomOrderDeliveryCompany", Value = GetString("Ecom:Order.Delivery.Company"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryCompany.ErrorMessage") })
+    @Render(new TextField { Label = Translate("Name"), Name = "EcomOrderDeliveryName", Id = "EcomOrderDeliveryName", Value = GetString("Ecom:Order.Delivery.Name"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryName.ErrorMessage") })
+
+    <div class="form__fields-collection form__fields-collection--2-3">
+        @Render(new TextField { Label = Translate("Phone"), Name = "EcomOrderDeliveryPhone", Id = "EcomOrderDeliveryPhone", Value = GetString("Ecom:Order.Delivery.Phone"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryPhone.ErrorMessage") })
+        @Render(new TextField { Label = Translate("Email"), Name = "EcomOrderDeliveryEmail", Id = "EcomOrderDeliveryEmail", Value = GetString("Ecom:Order.Delivery.Email"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryEmail.ErrorMessage") })
+    </div>
+
+    @Render(new TextField { Label = Translate("Address"), Name = "EcomOrderDeliveryAddress", Id = "EcomOrderDeliveryAddress", Value = GetString("Ecom:Order.Delivery.Address"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryAddress.ErrorMessage") })
+
+    <div class="form__fields-collection form__fields-collection--2-3">
+        @Render(new TextField { Label = Translate("Zip"), Name = "EcomOrderDeliveryZip", Id = "EcomOrderDeliveryZip", Value = GetString("Ecom:Order.Delivery.Zip"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryZip.ErrorMessage") })
+        @Render(new TextField { Label = Translate("City"), Name = "EcomOrderDeliveryCity", Id = "EcomOrderDeliveryCity", Value = GetString("Ecom:Order.Delivery.City"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryCity.ErrorMessage") })
+    </div>
+
+    if (GetLoop("DeliveryRegions").Count > 0)
+    {
+        SelectField selectState = new SelectField
+        {
+            Id = "EcomOrderDeliveryRegion",
+            Name = "EcomOrderDeliveryRegion",
+            Label = Translate("State/Region"),
+            OnChange = "Cart.SubmitCart()",
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryRegion.ErrorMessage"),
+            Value = GetString("Ecom:Order.Delivery.Region")
+        };
+        selectState.Options.Add(new SelectFieldOption
+        {
+            Label = Translate("Nothing selected"),
+            Value = "",
+            Disabled = true,
+            Checked = true
+        });
+        foreach (LoopItem state in GetLoop("DeliveryRegions"))
+        {
+            selectState.Options.Add(new SelectFieldOption { Label = state.GetString("Ecom:DeliveryRegion.Name"), Value = state.GetString("Ecom:DeliveryRegion.RegionCode") });
+        }
+        @Render(selectState)
+    }
+    else
+    {
+        @Render(new HiddenField { Id = "EcomOrderDeliveryRegion", Name = "EcomOrderDeliveryRegion" })
+    }
+
+    SelectField selectCountry = new SelectField
+    {
+        Id = "EcomOrderDeliveryCountry",
+        Name = "EcomOrderDeliveryCountry",
+        Label = Translate("Country"),
+        OnChange = "resetStateField('EcomOrderDeliveryRegion');Cart.SubmitCart()",
+        ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryCountry.ErrorMessage")
+    };
+
+    foreach (LoopItem country in GetLoop("Countries"))
+    {
+        selectCountry.Options.Add(new SelectFieldOption { Label = country.GetString("Ecom:Country.Name"), Value = country.GetString("Ecom:Country.Code2"), Checked = country.GetBoolean("Ecom:Country.IsDeliveryCountryOrDefault") });
+    }
+
+    @Render(selectCountry)
+}

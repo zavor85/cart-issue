@@ -1,0 +1,156 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System.Web
+@using Dynamicweb.Content.Data
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage facetsSearchPage = BlocksPage.GetBlockPage("SearchResults");
+}
+
+@{
+    bool renderTopFacets = Pageview.AreaSettings.GetItem("Layout").GetString("SearchResultsFacetsViewMode") == "Top" || Pageview.Device.ToString() == "Mobile";
+
+    facetsSearchPage.Add("SearchResultsTemplate", new Block
+    {
+        Id = "SearchResultsFacets",
+        SortId = 10,
+        Template = renderTopFacets ? RenderTopFacets() : RenderLeftFacets()
+    });
+
+    facetsSearchPage.Add("SearchResultsContent", new Block
+    {
+        Id = "SearchResultsFacetSelections",
+        SortId = 20,
+        Template = RenderFacetSelections()
+    });
+    
+    facetsSearchPage.Add("SearchResultsScripts", new Block
+    {
+        Id = "FacetsScripts",
+        SortId = 40,
+        Template = RenderFacetsScripts()
+    });
+
+    facetsSearchPage.Add("SearchResultsScripts", new Block
+    {
+        Id = "FacetSelectionsScripts",
+        SortId = 50,
+        Template = RenderFacetSelectionsScripts()
+    });    
+
+    facetsSearchPage.Add("SearchResultsScripts", new Block
+    {
+        Id = "FacetsInitJavascript",
+        SortId = 60,
+        Template = RenderFacetsInitJavascript()
+    });
+}
+
+@helper RenderTopFacets()
+{
+    <div class="grid__col-12">
+        <input type="checkbox" id="CheckFacetGroups" class="js-remember-state u-hidden" data-expand="CheckFacetGroups" />
+        <div class="grid grid--external-bleed-x dw-mod expandable--collapsed facets-container facets-container--top" data-trigger="CheckFacetGroups">
+            {{#FacetGroups}}
+                <div class="grid__col-lg-3 grid__col-md-3 grid__col-sm-4 grid__col-xs-12">
+                    <input type="checkbox" id="OptionsGroup_{{counter}}" class="dropdown-trigger" />
+                    <div class="dropdown dw-mod">
+                        <label class="dropdown__header dropdown__btn dw-mod" for="OptionsGroup_{{counter}}">{{name}}</label>
+                        <div id="FacetOptions" class="dropdown__content dropdown__content--padding dw-mod">
+                            {{#FacetOptions}}
+                                {{#ifCond template "===" "Checkboxes"}}
+                                    {{>Checkboxes}}
+                                {{/ifCond}}
+                            {{/FacetOptions}}
+                        </div>
+                        <label class="dropdown-trigger-off" for="OptionsGroup_{{counter}}"></label>
+                    </div>
+                </div>
+            {{/FacetGroups}}
+        </div>
+        <label for="CheckFacetGroups" class="btn btn--primary btn--full dw-mod js-expand-hide facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Select filters")</label>
+        <label for="CheckFacetGroups" class="btn btn--primary btn--full dw-mod expandable--collapsed facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Close filters")</label>
+    </div>
+}
+
+@helper RenderLeftFacets()
+{
+    <div class="grid__col-3">
+        <h2>@Translate("Filters")</h2>
+        <input type="checkbox" id="CheckFacetGroups" class="js-remember-state u-hidden" data-expand="CheckFacetGroups" />
+        <div class="facets-container facets-container--left expandable--collapsed" data-trigger="CheckFacetGroups">
+            {{#FacetGroups}}
+                <input type="checkbox" id="OptionsGroup_{{counter}}" class="expand-trigger js-remember-state" {{defaultState}} />
+
+                <div class="expand-box expand-container dw-mod">
+                    <label class="expand-box__header expand-container__btn dw-mod" for="OptionsGroup_{{counter}}">{{name}}</label>
+                    <div id="FacetOptions" class="expand-box__content expand-container__content expand-container__content--limit-height dw-mod">
+                        {{#FacetOptions}}
+                            {{>Checkboxes}}
+                        {{/FacetOptions}}
+                    </div>
+                </div>
+            {{/FacetGroups}}
+        </div>
+        <label for="CheckFacetGroups" class="btn btn--primary btn--full dw-mod js-expand-hide facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Select filters")</label>
+        <label for="CheckFacetGroups" class="btn btn--primary btn--full dw-mod expandable--collapsed facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Close filters")</label>
+    </div>
+}
+
+@helper RenderFacetSelections()
+{
+    <text>
+        {{#if FacetSelections}}
+            <div class="buttons-collection u-margin-bottom" id="selectedFacets">
+                {{#FacetSelections}}
+                    {{>(lookup . 'template')}}
+                {{/FacetSelections}}
+            </div>
+        {{/if}}
+    </text>
+}
+
+@helper RenderFacetsScripts()
+{
+    <script id="Checkboxes" type="text/x-template">
+        <div class="form__field-group u-no-margin dw-mod">
+            <input type="checkbox" class="{{selected}} checkbox-facet__checkbox form__control dw-mod" onclick="Facets.UpdateFacets(this);" id="{{queryParameter}}{{value}}" name="{{queryParameter}}" value="[{{value}}]" {{selected}} {{disabled}}>
+            <label class="{{disabled}} checkbox-facet dw-mod" data-filter-value="{{label}}" for="{{queryParameter}}{{value}}">
+                <span class="checkbox-facet__label dw-mod">{{label}}</span>
+                <span class="checkbox-facet__count dw-mod">({{count}})</span>
+            </label>
+        </div>
+    </script>
+}
+
+@helper RenderFacetSelectionsScripts()
+{
+    @*Facet selections*@
+    <script id="SelectedFilter" type="text/x-template">
+        <button type="button" class="btn btn--tag" data-check="checked" onclick="Facets.UpdateFacets(this);" name="{{queryParameter}}" value="[{{value}}]" title="@Translate("Remove filter")">
+            {{group}}: {{label}} <i class="fas fa-times"></i>
+        </button>
+    </script>
+
+    <script id="ResetFilters" type="text/x-template">
+        <button type="button" class="btn btn--tag" onclick="Facets.ResetFacets();">
+            @Translate("Reset all filters") <i class="fas fa-redo"></i>
+        </button>
+    </script>
+}
+
+@helper RenderFacetsInitJavascript()
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function (event) {
+            document.getElementById("searchResults").addEventListener('contentLoaded', function (e) {
+                if (getTarget(e).id === "searchResults") {
+                    Facets.Init("selectedFacets", "searchResults");
+                }
+            });
+        });
+    </script>
+}

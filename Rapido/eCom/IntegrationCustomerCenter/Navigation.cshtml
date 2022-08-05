@@ -1,0 +1,89 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage navigationBlocksPage = BlocksPage.GetBlockPage("Navigation");
+}
+
+@{
+    var page = new Block
+    {
+        Id = "Page",
+        SortId = 10,
+        BlocksList = new List<Block>
+        {
+            new Block
+            {
+                Id = "NavigationContainer",
+                SortId = 10,
+                Design = new Design
+                {
+                    CssClass = "u-clearfix"
+                },
+                BlocksList = new List<Block>
+                {
+                    new Block
+                    {
+                        Id = "Header",
+                        SortId = 10,
+                        Component = new Heading {
+                            Level = 2,
+                            Title = GetGlobalValue("Global:Page.Name"),
+                            CssClass = "u-pull--left",
+                            Icon = new Icon { Prefix = "fas", Name = "fa-list", LabelPosition = IconLabelPosition.After }
+                        }
+                    },
+                    new Block
+                    {
+                        Id = "NavigationButtons",
+                        SortId = 20,
+                        Template = RenderNavigationButtons()
+                    }
+                }
+            },
+            new Block
+            {
+                Id = "PageContent",
+                SortId = 20,
+                Template = RenderPageContent()
+            }
+        }
+    };
+
+    navigationBlocksPage.Add(page);
+}
+
+@helper RenderNavigationButtons()
+{
+    <div class="u-pull--right">
+        @foreach (LoopItem page in GetLoop("Ecom:IntegrationCustomerCenter.PagesLoop"))
+        {
+            bool isActive = page.GetString("Ecom:IntegrationCustomerCenter.PageMenuName") == GetString("Ecom:IntegrationCustomerCenter.PageMenuName");
+            @Render(new Link {
+                Href = page.GetString("Ecom:IntegrationCustomerCenter.PageLink"),
+                ButtonLayout = ButtonLayout.Secondary,
+                Title = page.GetString("Ecom:IntegrationCustomerCenter.PageMenuName"),
+                CssClass = "btn--condensed " + (isActive ? "btn--active" : "")
+            })
+        }
+    </div>
+}
+
+@helper RenderPageContent() 
+{
+    @GetValue("Ecom:IntegrationCustomerCenter.PageContent")
+}
+
+@Include("Blocks/Navigation/Custom__Blocks.cshtml")
+
+@* Include the Rendering helpers *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(navigationBlocksPage.BlocksRoot.BlocksList)
+
+

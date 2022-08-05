@@ -1,0 +1,55 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage recurringOrderInfoPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.PaymentMethod.RecurringSupport")) && !string.IsNullOrWhiteSpace(GetString("Ecom:Order.Recurring.IntervalUnit")))
+    {
+        recurringOrderInfoPage.Add("OrderInfoBlocks", new Block
+        {
+            Id = "RecurringOrderInfo",
+            SortId = 20,
+            Template = RenderRecurringOrderInfo()
+        });
+    }
+}
+
+@helper RenderRecurringOrderInfo()
+{
+    var recurringIntervals = new Dictionary<int, string> { { 0, Translate("Days") }, { 1, Translate("Weeks") }, { 2, Translate("Months") }, };
+
+    var table = new Table { 
+        CssClass = "u-no-margin u-border-bottom",
+        Rows = new List<TableRow> {
+            new TableRow (
+                new TableCell { 
+                    Colspan = 2, 
+                    Content = Render(new Heading { CssClass = "u-no-margin", Title = Translate("Recurring order settings"), Level = 2 }).ToString() 
+                }
+            ),
+            new TableRow (
+                Translate("Recurring every"), 
+                GetString("Ecom:Order.Recurring.Interval") + " " + recurringIntervals[GetInteger("Ecom:Order.Recurring.IntervalUnit")]
+            ),
+            new TableRow (
+                Translate("Recurring start date"), 
+                GetDate("Ecom:Order.Recurring.StartDate.Clean").ToString(Pageview.Area.Dateformat + " HH:mm")
+            )
+        }
+    };
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.Recurring.EndDate.Clean")))
+    {
+        table.Rows.Add(new TableRow (
+            Translate("Recurring end date"), 
+            GetDate("Ecom:Order.Recurring.EndDate.Clean").ToString(Pageview.Area.Dateformat + " HH:mm")
+        ));
+    }
+
+    @Render(table)
+}

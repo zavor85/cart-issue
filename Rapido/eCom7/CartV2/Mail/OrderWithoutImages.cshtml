@@ -1,0 +1,169 @@
+﻿@inherits RazorTemplateBase<RazorTemplateModel<Template>>
+@using Dynamicweb.Rendering;
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using Dynamicweb.Security;
+@using Dynamicweb.Ecommerce.Orders
+
+@MasterPageFile("../../../EmailMaster.cshtml")
+@Include("../../../EmailHelpers.cshtml")
+
+@CreatePreheader(GetString("Ecom:Order.ReceiptURL"))
+
+<table bgcolor="#FFFFFF" border="0" cellpadding="0" cellspacing="0" width="500" id="emailBody">
+    @RenderHeaderSection()
+    @RenderMessage()
+    @RenderOrderList()
+    @RenderGiftcards()
+    @RenderComments()
+    @RenderReviewButton()
+    @RenderCustomerDetails()
+    @RenderPaymentAndShipping()
+    @RenderFooterSection()
+</table>
+
+@* CONTENT HELPERS *@
+
+@helper RenderHeaderSection()
+{
+    @RenderHeaderImage();
+
+    Column info = new Column();
+    info.header = Translate("Shipping confirmation");
+    info.text.Add(Translate("Order no.") + " " + GetString("Ecom:Order.ID") + " - " + GetString("Ecom:Order.Completed"));
+    
+    if (!GetString("Ecom:Order.IntegrationID").IsNullOrEmpty())
+    {
+        info.text.Add(Translate("SO no.") + ": " + GetString("Ecom:Order.IntegrationID"));
+    }
+
+    info.align = "center";
+
+    @CreateRow(info);
+
+    @CreateRowDivider();
+
+    @RenderRecurringDetails();
+    @RenderVouchers();
+}
+
+@helper RenderMessage()
+{
+    Column message = new Column();
+    message.text.Add(Translate("Hi") + " " + GetString("Ecom:Order.Customer.Name") + ",");
+    message.text.Add("");
+    message.text.Add(Translate("Thank you for shopping with us. If you would like to view the status of your order or make any changes to it, please visit My Orders on") + " <a title='" + Translate("My Orders") + "' href='" + Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host") + "'>" + Dynamicweb.Context.Current.Request.Url.Scheme + "://" + GetGlobalValue("Global:Request.Host") + "</a>");
+
+    @CreateRow(message);
+    @CreateRowDivider()
+}
+
+@helper RenderCustomerDetails()
+{
+    @RenderAddresses(Translate("Billing address"), Translate("Shipping address"), "Order");
+}
+
+@helper RenderOrderList()
+{
+    foreach (LoopItem orderline in GetLoop("OrderLines").Where(o => o.GetInteger("Ecom:Order:OrderLine.Type") != (int)OrderLineType.Tax).ToList())
+    {
+        @RenderOrderline(orderline, false);
+    }
+
+    @RenderSummary();
+}
+
+@helper RenderSummary()
+{
+    bool hasTaxSettings = Dynamicweb.Rapido.Services.Countries.HasTaxSettings(GetString("Ecom:Order.ID"));
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+    Column summaryLeft = new Column();
+    Column summaryRight = new Column();
+    summaryRight.align = "right";
+
+    string subtotal = GetString("Ecom:Order.PriceWithoutFees.PriceFormatted");
+    if (hasTaxSettings)
+    {
+        subtotal = Dynamicweb.Ecommerce.Services.Currencies.Format(Dynamicweb.Ecommerce.Common.Context.Currency, (GetDouble("Ecom:Order.PriceWithoutFees.PriceWithVAT") - GetDouble("Ecom:Order.Taxes.Total.PriceWithVAT")), true);
+    }
+
+    //subtotal
+    if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideSubtotal")) {
+        summaryLeft.text.Add("<strong style='font-size:120%;'>" + Translate("Subtotal") + "</strong>");
+        summaryRight.text.Add("<strong style='font-size:120%;'>" + subtotal.Replace(" ", "&nbsp;") + "</strong>");
+    }
+
+    //payment
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.PaymentMethod")))
+    {
+        summaryLeft.text.Add(Translate("Payment method") + " (" + Translate(GetString("Ecom:Order.PaymentMethod")) + ")");
+        summaryRight.text.Add(GetString("Ecom:Order.PaymentFee.PriceFormatted"));
+    }
+
+    //shipping
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethod")))
+    {
+        summaryLeft.text.Add(Translate("Shipping method") + " (" + Translate(GetString("Ecom:Order.ShippingMethod")) + ")");
+        summaryRight.text.Add(GetString("Ecom:Order.ShippingFee.PriceFormatted"));
+    }
+
+    //taxes
+    if (hasTaxSettings)
+    {
+        string totalTaxes = GetDouble("Ecom:Order.Taxes.Total.Price") != 0 ? GetString("Ecom:Order.Taxes.Total") : "-";
+
+        summaryLeft.text.Add(Translate("Sales Tax"));
+        summaryRight.text.Add(totalTaxes);
+    }
+
+    if (GetDouble("Ecom:Order.RewardTotalPoints") > 0)
+    {
+        summaryLeft.text.Add(Translate("Earnings"));
+        summaryRight.text.Add(GetDouble("Ecom:Order.RewardTotalPoints") + " " + Translate("points"));
+    }
+
+    @CreateRow(summaryLeft, summaryRight);
+
+    //total
+    Column totalsLeft = new Column();
+    Column totalsRight = new Column();
+    totalsRight.align = "right";
+
+    totalsLeft.subheader = Translate("Total");
+    totalsRight.subheader = GetString("Ecom:Order.Price.PriceFormatted");
+
+    @CreateRow(totalsLeft, totalsRight, new RowSettings { backgroundColor = "#e4e4e4" });
+
+    //bottom vat and taxes
+    Column bottomLeft = new Column();
+    bottomLeft.textColor = "#a8a8a8";
+    Column bottomRight = new Column();
+    bottomRight.align = "right";
+    bottomRight.textColor = "#a8a8a8";
+
+    //vat or taxes
+    if (!hasTaxSettings)
+    {
+        bottomLeft.text.Add(Translate("VAT") + " (" + GetString("Ecom:Order.PriceWithoutFees.VATPercentFormatted") + ")");
+        bottomRight.text.Add(GetString("Ecom:Order.OrderLines.Total.PriceVAT"));
+
+        //total with/witout vat
+        if (isPricesWithVATEnabled)
+        {
+            bottomLeft.text.Add(Translate("Total price without VAT"));
+            bottomRight.text.Add(GetString("Ecom:Order.OrderLines.Total.PriceWithoutVAT"));
+        }
+        else
+        {
+            bottomLeft.text.Add(Translate("Total price with VAT"));
+            bottomRight.text.Add(GetString("Ecom:Order.OrderLines.Total.PriceWithVAT"));
+        }
+    }
+
+    @CreateRow(bottomLeft, bottomRight);
+}
+
+@helper RenderReviewButton()
+{
+    @RenderButton(GetString("Ecom:Order.ReceiptURL"), "Review order online");
+}

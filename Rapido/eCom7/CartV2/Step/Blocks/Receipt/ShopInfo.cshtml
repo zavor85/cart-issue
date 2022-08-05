@@ -1,0 +1,58 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage shopInfoPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    if (Pageview.AreaSettings.GetItem("Settings").GetItem("Address") != null && !string.IsNullOrWhiteSpace(Pageview.AreaSettings.GetItem("Settings").GetItem("Address").GetString("StreetAddress")))
+    {
+        shopInfoPage.Add("OrderFooter", new Block
+        {
+            Id = "ShopInfo",
+            SortId = 30,
+            Design = new Design
+            {
+                CssClass = "grid__col-lg-auto grid__col-md-auto grid__col-xs-6"
+            },
+            Template = RenderShopInfo()
+        });
+    }
+}
+
+
+@helper RenderShopInfo()
+{
+    string businessName = "";
+    string businessCountry = "";
+    string businessCity = "";
+    string businessRegion = "";
+    string businessZip = "";
+    string businessAddress = "";
+    string businessCVR = "";
+    var addressSettings = Pageview.AreaSettings.GetItem("Settings").GetItem("Address");
+
+    if (addressSettings != null)
+    {
+        businessName = addressSettings.GetString("Name");
+        businessCountry = addressSettings.GetString("Country");
+        businessCity = addressSettings.GetString("City");
+        businessRegion = addressSettings.GetString("Region");
+        businessZip = addressSettings.GetString("PostalCode");
+        businessAddress = addressSettings.GetString("StreetAddress");
+        businessCVR = addressSettings.GetString("CVRNumber");
+    }
+    
+    @Render(new Heading { CssClass = "u-margin-bottom", Title = Translate("Shop information"), Level = 5, Icon = new Icon { Prefix = "fas", Name = "fa-building", LabelPosition = IconLabelPosition.After } })
+
+    <div>@businessName</div>
+    <div>@businessAddress</div>
+    <div>@businessZip @businessCity, @businessCountry</div>
+    if (!string.IsNullOrWhiteSpace(businessCVR))
+    {
+        <div>@Translate("Business number"): @businessCVR</div>
+    }
+}

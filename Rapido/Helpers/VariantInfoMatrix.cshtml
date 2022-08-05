@@ -1,0 +1,254 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rendering
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+
+@* Component - Variant Info Matrix. This replaces the old Variant Matrix with a much cleaner approach *@
+
+@helper RenderVariantInfoMatrix(List<LoopItem> variantInfos, string productId, string pageId, double totalPrice = 0, string actionType = "update") {
+    string cartIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon").SelectedValue : "fas fa-shopping-cart";
+    bool hideAddToCartButton = Pageview.AreaSettings.GetItem("ProductPage").GetBoolean("hideAddToCartButton");
+
+    string currencyCode = Dynamicweb.Ecommerce.Common.Context.Currency.Code;
+    string countryCode = Pageview.Area.CultureInfo != null ? Pageview.Area.CultureInfo.Name : "en-US";
+
+    int loopCount = 0;
+    int dimensionsCount = 0;
+    bool firstRun = true;
+    List<string> headerLabels = new List<string>();
+
+    //Collect the missing data needed to render matrixes
+    foreach (var variantInfoFirst in variantInfos)
+    {
+        dimensionsCount = 1;
+
+        foreach (var variantInfoSecond in variantInfoFirst.GetLoop("VariantInfos"))
+        {
+            dimensionsCount = 2;
+
+            if (firstRun) {
+                headerLabels.Add(variantInfoSecond.GetString("OptionName"));
+            }
+
+            foreach (var variantInfoThird in variantInfoSecond.GetLoop("VariantInfos"))
+            {
+                dimensionsCount = 3;
+            }
+        }
+
+        firstRun = false;
+    }   
+
+    @*One dimension*@
+    if (dimensionsCount == 1)
+    {
+        int totalQuantity = 0;
+
+        <table cellspacing="0" class="table matrix js-matrix dw-mod">
+            <thead class="matrix__head dw-mod">
+                <tr>
+                    @foreach (var variantInfoFirst in variantInfos)
+                    {
+                        <td class="u-bold u-ta-center" width="80" >
+                            <div>@variantInfoFirst.GetString("OptionName")</div>
+                            <small>@variantInfoFirst.GetString("VariantId")</small>
+                        </td>
+                    }
+                    <td width="80px" align="right" class="matrix-label-field-right dw-mod">@Translate("Totals")</td>
+                    <td>&nbsp;</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    @foreach (var variantInfoFirst in variantInfos)
+                    {
+                        double price = Dynamicweb.Ecommerce.Services.Products.GetProductById(productId, variantInfoFirst.GetString("VariantId"), Dynamicweb.Ecommerce.Common.Context.LanguageID).GetPrice(Dynamicweb.Ecommerce.Common.Context.Currency.Code, Dynamicweb.Ecommerce.Common.Context.Country.Code2).Price;
+                        
+                        loopCount++;
+                        totalQuantity += variantInfoFirst.GetInteger("Quantity");
+
+                        <td class="matrix__input-cell dw-mod">
+                            @if (variantInfoFirst.GetBoolean("IsProduct"))
+                            {
+                                <input type="hidden" name="ProductLoopCounter@(loopCount)" value="@(loopCount)" />
+                                <input type="hidden" name="ProductID@(loopCount)" value="@productId" />
+                                <input type="hidden" name="VariantID@(loopCount)" value="@variantInfoFirst.GetString("VariantId")" />
+                                <input type="number" name="Quantity@(loopCount)" value="@variantInfoFirst.GetString("Quantity")" data-price="@price" min="0" step="1" oninput="validity.valid||(value='');" class="matrix-input-field dw-mod" onchange="Matrix.UpdateQuantities(this)" data-row-id="ONE">
+                            } else {
+                                <div class="matrix__cell-disabled dw-mod"></div>
+                            }
+                        </td>
+                    }
+                    <td class="u-va-middle">
+                        <div class="u-bold u-ta-right matrix-label-field-right dw-mod" data-row-total="ONE">
+                            @totalQuantity
+                        </div>
+                    </td>
+                    <td class="u-bold u-va-middle u-ta-right matrix-label-field-right dw-mod">
+                        <div class="js-total-price" data-currency-code="@currencyCode" data-country-code="@countryCode"></div>
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="@(variantInfos.Count + 2)">&nbsp;</td>
+                </tr>
+                @if (!hideAddToCartButton)
+                {
+                    <tr>
+                        <td colspan="@(variantInfos.Count + 2)" class="u-ta-right">
+                            <div class="u-padding--lg">
+                                @if (actionType == "update") {
+                                    @Render(new Button { OnClick = "Matrix.UpdateCart(this, '" + pageId + "');", Title = Translate("Update"), ButtonLayout = ButtonLayout.Tertiary, Icon = new Icon { Prefix = "fal", Name = "fa-redo", LabelPosition = IconLabelPosition.After }, CssClass = "u-no-margin" })
+                                } else if (actionType == "justadd") {
+                                    @Render(new Button { OnClick = "Matrix.AddToCart(this, '" + pageId + "');", Title = Translate("Add"), ButtonLayout = ButtonLayout.Tertiary, CssClass = "u-no-margin" })
+                                } else {
+                                    @Render(new Button { OnClick = "Matrix.AddToCart(this, '" + pageId + "');", Title = Translate("Add to cart"), ButtonLayout = ButtonLayout.Tertiary, Icon = new Icon { Name = cartIcon, LabelPosition = IconLabelPosition.After }, CssClass = "u-no-margin" })
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tfoot>
+        </table>
+    }
+
+    @*Two dimensions*@
+    if (dimensionsCount == 2)
+    {
+        Dictionary<string, int> columnTotals = new Dictionary<string, int>();
+        int counter = 0;
+        int totalProducts = 0;
+        int totalColumns = 0;
+
+        <table class="table matrix js-matrix dw-mod" cellspacing="0">
+            <thead class="matrix__head dw-mod">
+                <tr>
+                    <td width="160">&nbsp;</td>
+                    @foreach (string label in headerLabels)
+                    {
+                        <td class="u-bold u-ta-center" width="80">@label</td>
+                    }
+                    <td align="right" width="80" class="matrix-label-field-right dw-mod">@Translate("Totals")</td>
+                    <td>&nbsp;</td>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var variantInfoFirst in variantInfos)
+                {
+                    int totalRowQuantity = 0;
+                    counter += variantInfoFirst.GetInteger("Quantity");
+                    totalColumns = variantInfoFirst.GetLoop("VariantInfos").Count;
+
+                    <tr>
+                        <td class="matrix-label-field-left dw-mod">
+                            <div class="u-pull--left">
+                                <div>@variantInfoFirst.GetString("OptionName")</div>
+                                <small>@variantInfoFirst.GetString("VariantId")</small>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(variantInfoFirst.GetString("Image"))) {
+                                <div class="matrix-option-image u-pull--right dw-mod" onclick="Matrix.ShowOptionImageModal(this)" data-img-src="/files/@variantInfoFirst.GetString("Image")">
+                                    @Render(new Image { 
+                                        Path = variantInfoFirst.GetString("Image"), 
+                                        ImageDefault = new ImageSettings {
+                                            Width = 28,
+                                            Height = 28
+                                        },
+                                        ImageMedium = new ImageSettings {
+                                            Width = 28,
+                                            Height = 28
+                                        },
+                                        ImageSmall = new ImageSettings {
+                                            Width = 28,
+                                            Height = 28
+                                        }
+                                    })
+                                </div>
+                            }
+                        </td>
+                        @foreach (var variantInfoSecond in variantInfoFirst.GetLoop("VariantInfos"))
+                        {
+                            loopCount++;
+                            totalRowQuantity += variantInfoSecond.GetInteger("Quantity");
+
+                            string optionName = variantInfoSecond.GetString("OptionName");
+                            int optionQuantity = variantInfoSecond.GetInteger("Quantity");
+                            if (columnTotals.ContainsKey(optionName)) {
+                                columnTotals[optionName] += optionQuantity;
+                            } else {
+                                columnTotals.Add(optionName, optionQuantity);
+                            }
+
+                            <td class="matrix__input-cell dw-mod">
+                                @if (variantInfoSecond.GetBoolean("IsProduct")) {
+                                    double price = Dynamicweb.Ecommerce.Services.Products.GetProductById(productId, variantInfoSecond.GetString("VariantId"), Dynamicweb.Ecommerce.Common.Context.LanguageID).GetPrice(Dynamicweb.Ecommerce.Common.Context.Currency.Code, Dynamicweb.Ecommerce.Common.Context.Country.Code2).Price;
+
+                                    <input type="hidden" name="ProductLoopCounter@(loopCount)" value="@(loopCount)" />
+                                    <input type="hidden" name="ProductID@(loopCount)" value="@productId" />
+                                    <input type="hidden" name="VariantID@(loopCount)" value="@variantInfoSecond.GetString("VariantId")" />
+                                    <input type="number" name="Quantity@(loopCount)" value="@variantInfoSecond.GetString("Quantity")" data-price="@price" min="0" step="1" oninput="validity.valid||(value='');" class="matrix-input-field dw-mod" onchange="Matrix.UpdateQuantities(this)" data-row-id="@variantInfoFirst.GetString("OptionName")" data-column-id="@variantInfoSecond.GetString("OptionName")">
+                                } else {
+                                    <div class="matrix__cell-disabled dw-mod"></div>
+                                }
+                            </td>
+                        }
+                        <td class="u-va-middle matrix-label-field-right dw-mod">
+                            <div class="u-bold u-ta-right" data-row-total="@variantInfoFirst.GetString("OptionName")">
+                                @totalRowQuantity
+                            </div>
+                        </td>
+                        <td>&nbsp;</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="u-bold u-va-middle matrix-label-field-left dw-mod">@Translate("Totals")</td>
+                    @foreach (var item in columnTotals)
+                    {
+                        totalProducts += item.Value;
+
+                        <td>
+                            <div class="u-bold u-ta-center u-padding--lg" data-column-total="@item.Key">
+                                @item.Value
+                            </div>
+                        </td>
+                    }
+                    <td class="u-bold u-va-middle u-ta-right matrix-label-field-right dw-mod" align="right">
+                        <div class="js-total-quantity">@totalProducts</div>
+                    </td>
+                    <td class="u-bold u-va-middle u-ta-right matrix-label-field-right dw-mod">
+                        <div class="js-total-price" data-currency-code="@currencyCode" data-country-code="@countryCode"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="@(totalColumns + 4)" class="u-ta-right u-no-padding">
+                        <div class="u-padding--lg">
+                            @if (actionType == "update") {
+                                @Render(new Button { OnClick = "Matrix.UpdateCart(this, '" + pageId + "');", Title = Translate("Update"), ButtonLayout = ButtonLayout.Tertiary, Icon = new Icon { Prefix = "fal", Name = "fa-redo", LabelPosition = IconLabelPosition.After }, CssClass = "u-no-margin" })
+                            } else {
+                                @Render(new Button { OnClick = "Matrix.AddToCart(this, '" + pageId + "');", Title = Translate("Add to cart"), ButtonLayout = ButtonLayout.Tertiary, Icon = new Icon { Name = cartIcon, LabelPosition = IconLabelPosition.After }, CssClass = "u-no-margin" })
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+}
+
+
+    Modal optionColorImage = new Modal {
+        Id = "OptionColorImage",
+        BodyTemplate = @Render(new Image { Path = "/Files/Images/placeholder.gif", Id = "OptionColorImageElement", DisableImageEngine = true, DisableLazyLoad = true }),
+        Width = ModalWidth.Full
+    };
+
+    @Render(optionColorImage)
+}

@@ -1,0 +1,139 @@
+﻿@inherits RazorTemplateBase<RazorTemplateModel<Template>>
+@using Dynamicweb.Rendering;
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using Dynamicweb.Security;
+@using Dynamicweb.Ecommerce.Orders
+
+@MasterPageFile("../../../EmailMaster.cshtml")
+@Include("../../../EmailHelpers.cshtml")
+
+@CreatePreheader(GetString("Ecom:Order.ReceiptURL"))
+
+<table bgcolor="#FFFFFF" border="0" cellpadding="0" cellspacing="0" width="500" id="emailBody">
+    @RenderHeaderSection()
+    @RenderMessage()
+    @RenderOrderList()
+    @RenderGiftcards()
+    @RenderComments()
+    @RenderReviewButton()
+    @RenderFooterSection()
+</table>
+
+@* CONTENT HELPERS *@
+
+@helper RenderHeaderSection()
+{
+    @RenderHeaderImage();
+
+    Column info = new Column();
+    info.header = Translate("Quote information");
+    info.text.Add(Translate("Quote no.") + " " + GetString("Ecom:Order.ID"));
+    info.align = "center";
+
+    @CreateRow(info);
+
+    @CreateRowDivider();
+}
+
+@helper RenderMessage()
+{
+    Column message = new Column();
+    message.text.Add(Translate("Hi") + " " + GetString("Ecom:Order.Customer.Name"));
+    message.text.Add("");
+    message.text.Add(Translate("Thank you for submitting a request for a quote – our staff will review it as soon as possible. You will be notified as soon as the status of your quote inquiry changes."));
+
+    @CreateRow(message);
+}
+
+@helper RenderOrderList()
+{
+    foreach (LoopItem orderline in GetLoop("OrderLines").Where(o => o.GetInteger("Ecom:Order:OrderLine.Type") != (int)OrderLineType.Tax).ToList())
+    {
+        @RenderOrderline(orderline);
+
+        @CreateRowDivider();
+    }
+
+    @RenderSummary();
+}
+
+
+@helper RenderSummary()
+{
+    bool hasTaxSettings = Dynamicweb.Rapido.Services.Countries.HasTaxSettings(GetString("Ecom:Order.ID"));
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+    Column summaryLeft = new Column();
+    Column summaryRight = new Column();
+    summaryRight.align = "right";
+
+    string subtotal = GetString("Ecom:Order.PriceWithoutFees.PriceFormatted");
+    if (hasTaxSettings)
+    {
+        subtotal = Dynamicweb.Ecommerce.Services.Currencies.Format(Dynamicweb.Ecommerce.Common.Context.Currency, (GetDouble("Ecom:Order.PriceWithoutFees.PriceWithVAT") - GetDouble("Ecom:Order.Taxes.Total.PriceWithVAT")), true);
+    }
+
+    //subtotal
+    summaryLeft.text.Add("<strong style='font-size:120%;'>" + Translate("Subtotal") + "</strong>");
+    summaryRight.text.Add("<strong style='font-size:120%;'>" + subtotal.Replace(" ", "&nbsp;") + "</strong>");
+
+    //taxes
+    if (hasTaxSettings)
+    {
+        string totalTaxes = GetDouble("Ecom:Order.Taxes.Total.Price") != 0 ? GetString("Ecom:Order.Taxes.Total") : "-";
+
+        summaryLeft.text.Add(Translate("Sales Tax"));
+        summaryRight.text.Add(totalTaxes);
+    }
+
+    if (GetDouble("Ecom:Order.RewardTotalPoints") > 0)
+    {
+        summaryLeft.text.Add(Translate("Earnings"));
+        summaryRight.text.Add(GetDouble("Ecom:Order.RewardTotalPoints") + " " + Translate("points"));
+    }
+
+    @CreateRow(summaryLeft, summaryRight);
+
+    //total
+    Column totalsLeft = new Column();
+    Column totalsRight = new Column();
+    totalsRight.align = "right";
+
+    totalsLeft.subheader = "<strong style='font-size:140%;'>" + Translate("Total") + "</strong>";
+    totalsRight.subheader = "<strong style='font-size:140%;'>" + GetString("Ecom:Order.Price.PriceFormatted") + "</strong>";
+
+    @CreateRow(totalsLeft, totalsRight, new RowSettings { backgroundColor = "#e4e4e4" });
+
+    //bottom vat and taxes
+    Column bottomLeft = new Column();
+    bottomLeft.textColor = "#a8a8a8";
+    Column bottomRight = new Column();
+    bottomRight.align = "right";
+    bottomRight.textColor = "#a8a8a8";
+
+    //vat
+    if (!hasTaxSettings)
+    {
+        bottomLeft.text.Add(Translate("VAT") + " (" + GetString("Ecom:Order.PriceWithoutFees.VATPercentFormatted") + ")");
+        bottomRight.text.Add(GetString("Ecom:Order.OrderLines.Total.PriceVAT"));
+
+        //total with/witout vat
+        if (isPricesWithVATEnabled)
+        {
+            bottomLeft.text.Add(Translate("Total price without VAT"));
+            bottomRight.text.Add(GetString("Ecom:Order.OrderLines.Total.PriceWithoutVAT"));
+        }
+        else
+        {
+            bottomLeft.text.Add(Translate("Total price with VAT"));
+            bottomRight.text.Add(GetString("Ecom:Order.OrderLines.Total.PriceWithVAT"));
+        }
+    }
+
+    @CreateRow(bottomLeft, bottomRight);
+}
+
+@helper RenderReviewButton()
+{
+    @RenderButton(GetString("Ecom:Order.ReceiptURL"), "Review quote online");
+}

@@ -1,0 +1,36 @@
+﻿@using System.Reflection
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+
+@* Component *@
+
+@helper RenderIcon(Icon settings)
+{
+    if (settings != null)
+    {
+        string color = settings.Color != null ? "style=\"color: " + settings.Color + "\"" : "";
+
+        if (settings.Name != null)
+        {
+            if (string.IsNullOrEmpty(settings.Label))
+            {
+                <i class="@settings.Prefix @settings.Name @settings.CssClass" @color></i>
+            }
+            else
+            {
+                if (settings.LabelPosition == IconLabelPosition.Before)
+                {
+                    <div class="u-flex u-flex--align-items-center @settings.CssClass">@settings.Label <i class="@settings.Prefix @settings.Name u-margin-left" @color></i></div>
+                }
+                else
+                {
+                    <div class="u-flex u-flex--align-items-center @settings.CssClass"><i class="@settings.Prefix @settings.Name u-margin-right--lg u-w20px" @color></i>@settings.Label</div>
+                }
+            }
+        }
+        else if (!string.IsNullOrEmpty(settings.Label))
+        {
+            @settings.Label
+        }
+    }
+}

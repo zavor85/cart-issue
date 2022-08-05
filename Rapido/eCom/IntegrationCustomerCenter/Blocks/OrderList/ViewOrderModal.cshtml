@@ -1,0 +1,54 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage viewOrderModalPage = BlocksPage.GetBlockPage("OrderList");
+}
+
+@{
+    Modal modal = new Modal
+    {
+        Id = "Order",
+        Width = ModalWidth.Iframe,
+        Heading = new Heading { Title = Translate("Order details") },
+        BodyTemplate = RenderViewOrderModal()
+    };
+
+    Block viewOrderModal = new Block
+    {
+        Id = "ViewOrderModal",
+        SortId = 30,
+        Component = modal
+    };
+
+    viewOrderModalPage.Add(viewOrderModal);
+
+    Block viewOrderModalScript = new Block
+    {
+        Id = "ViewOrderModalScript",
+        SortId = 20,
+        Template = RenderViewOrderModalScript()
+    };
+
+    viewOrderModalPage.Add(viewOrderModalScript);
+}
+
+@helper RenderViewOrderModal()
+{
+    <iframe src="about:blank" class="modal__iframe"></iframe>
+}
+
+@helper RenderViewOrderModalScript()
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            window.orderModal = new IframeModal({
+                modalId: "OrderModal",
+                linkPrefix: "/Admin/public/CustomerCenter/RequestExternalPdf.aspx?type=OpenOrder&id="
+            });
+        });
+    </script>
+}

@@ -1,0 +1,63 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Ecommerce.Orders
+@using Dynamicweb.Ecommerce.Orders.SalesDiscounts
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage vouchersPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    string voucherCode = GetString("Ecom:Order.Customer.VoucherCode");
+    if (!string.IsNullOrWhiteSpace(voucherCode))
+    {
+        vouchersPage.Add("OrderInfoBlocks", new Block
+        {
+            Id = "Vouchers",
+            SortId = 40,
+            Template = RenderVouchers(voucherCode)
+        });
+    }
+}
+
+@helper RenderVouchers(string voucherCode)
+{
+    string orderId = GetString("Ecom:Order.ID");
+    Order order = new OrderService().GetById(orderId);
+
+    IEnumerable<string> codes = new List<string>();
+
+    if (order.VoucherUseType.HasFlag(VoucherUseCategoryType.Discount))
+    {
+        codes = voucherCode.Split(new string[] { ",", ";", " " }, StringSplitOptions.RemoveEmptyEntries);
+    }
+    else
+    {
+        codes = new string[] { voucherCode.Trim() };
+    }
+
+    bool hasUsedVouchers = false;
+    List<string> voucherCodes = new List<string>();
+    foreach (string code in codes)
+    {
+        Voucher vouch = Voucher.GetVoucherByCode(code);
+        if (vouch != null && vouch.DateUsed.HasValue && string.Equals(vouch.UsedOrderId, orderId, StringComparison.OrdinalIgnoreCase))
+        {
+            voucherCodes.Add(code);
+            hasUsedVouchers = true;
+        }
+    }
+
+    if (hasUsedVouchers)
+    {
+        <div class="u-padding">
+            @Render(new Heading { CssClass = "u-no-margin", Title = Translate("Vouchers"), Level = 2 })
+            @foreach (string code in voucherCodes)
+            {
+                <div class="u-padding-bottom">@Translate("Voucher") <span class=u-bold>@code</span> @Translate("has been used").</div>
+            }
+        </div>
+    }
+}

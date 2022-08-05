@@ -1,0 +1,53 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage shippingAddressPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.Delivery.Address")))
+    {
+        shippingAddressPage.Add("OrderFooter", new Block
+        {
+            Id = "ShippingAddress",
+            SortId = 20,
+            Design = new Design
+            {
+                CssClass = "grid__col-lg-auto grid__col-md-auto grid__col-xs-6"
+            },
+            Template = RenderShippingAddress()
+        });
+    }
+}
+
+
+@helper RenderShippingAddress()
+{
+    string stateRegion = !String.IsNullOrEmpty(GetString("Ecom:Order.Delivery.Region")) ? GetString("Ecom:Order.Delivery.Region") + ", " : "";
+
+    @Render(new Heading { CssClass = "u-margin-bottom", Title = Translate("Shipping address"), Level = 5, Icon = new Icon { Prefix = "fas", Name = "fa-truck", LabelPosition = IconLabelPosition.After } })
+
+    <div>@GetString("Ecom:Order.Delivery.Company")</div>
+    <div>@GetString("Ecom:Order.Delivery.Name")</div>
+    <div>@GetString("Ecom:Order.Delivery.Address")</div>
+    <div>@GetString("Ecom:Order.Delivery.Address2")</div>
+    <div>@GetString("Ecom:Order.Delivery.Zip") @GetString("Ecom:Order.Delivery.City")</div>
+    
+    if ( !string.IsNullOrWhiteSpace(stateRegion) ) {
+        <div>@stateRegion</div>
+    }
+
+    <div>@GetString("Ecom:Order.Delivery.Country")</div>
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.Delivery.Email")))
+    {
+        <div>@Translate("Email"): @GetString("Ecom:Order.Delivery.Email")</div>
+    }
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.Delivery.Phone")))
+    {
+        <div>@Translate("Phone"): @GetString("Ecom:Order.Delivery.Phone")</div>
+    }
+}

@@ -1,0 +1,76 @@
+﻿@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+
+@helper RenderPrice(Price settings)
+{
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+    string currentPriceClass = "";
+    string beforeDiscountPriceClass = "";
+    string vatPriceClass = "";
+    
+    switch (settings.Style) 
+    {
+        case PriceStyle.ProductList:
+            currentPriceClass = "price--product-list";
+            vatPriceClass = "vat-price--product-list";
+            break;
+        case PriceStyle.ProductPage:
+            currentPriceClass = "price--product-page";
+            vatPriceClass = "vat-price--product-page";
+            break;
+    }
+
+    if (settings.Size == PriceSize.Small) 
+    {
+        currentPriceClass += " price--micro";
+        beforeDiscountPriceClass += " before-price--micro";
+        vatPriceClass += " price--micro";
+    }
+    
+    <div class="price-wrap @settings.CssClass dw-mod" @ComponentMethods.AddAttributes(settings.ExtraAttributes)>
+        @if (pointShopOnly)
+        {
+            if (settings.PointPrice > 0)
+            {
+                <div class="price @currentPriceClass dw-mod">
+                    <span class="u-color--loyalty-points">@settings.PointPrice</span> @Translate("points")
+                </div>
+                if (settings.ShowNotEnoughPointsMessage)
+                {
+                    <small class="help-text u-no-margin">@Translate("Not enough points to buy this")</small>
+                }
+            }
+            else
+            {
+                @Translate("Not available")
+            }
+        }
+        else
+        {
+            <div class="price @currentPriceClass dw-mod">@settings.CurrentPrice</div>
+            if (settings.CurrentPrice != settings.BeforeDiscountPrice)
+            {
+                <div class="before-price @beforeDiscountPriceClass dw-mod">@settings.BeforeDiscountPrice</div>
+            }
+            if (settings.ShowVATPrice)
+            {
+                <div class="vat-price u-margin-top @vatPriceClass dw-mod">
+                    @if (isPricesWithVATEnabled)
+                    {
+                        <span>@Translate("excl. VAT")</span><span> (@settings.PriceWithoutVAT)</span>
+                    }
+                    else
+                    {
+                        <span>@Translate("incl. VAT")</span><span> (@settings.PriceWithVAT)</span>
+                    }
+                </div>
+            }
+            if (!string.IsNullOrEmpty(settings.PriceRRP))
+            {
+                <div><small>@Translate("RRP") @settings.PriceRRP</small></div>
+            }
+        }
+    </div>
+}

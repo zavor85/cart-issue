@@ -1,0 +1,28 @@
+﻿@using System.Reflection
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+
+@* Component *@
+
+@helper RenderNotificationMessage(NotificationMessage settings)
+{
+    if (!string.IsNullOrEmpty(settings.Message))
+    {
+        var attributes = new Dictionary<string, string>();
+        if (!string.IsNullOrEmpty(settings.Id)) { attributes.Add("id", settings.Id); }
+
+        string messageTypeClass = Enum.GetName(typeof(NotificationMessageType), settings.MessageType).ToLower();
+        string messageLayoutClass = Enum.GetName(typeof(NotificationMessageLayout), settings.MessageLayout).ToLower();
+        string minHeightClass = settings.Icon != null ? "u-min-h70px" : "";
+
+        <div class="notification-message-@messageTypeClass notification-message-@messageLayoutClass @messageLayoutClass @minHeightClass @settings.CssClass u-full-width  dw-mod" @ComponentMethods.AddAttributes(attributes)>
+            @if (settings.Icon != null) {
+                settings.Icon.Label = !string.IsNullOrEmpty(settings.Icon.Label) ? settings.Message + settings.Icon.Label : settings.Message;
+                @Render(settings.Icon)
+            } else {
+                @settings.Message
+            }
+        </div>
+    }
+}

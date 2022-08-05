@@ -1,0 +1,51 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage paymentAndShippingPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    paymentAndShippingPage.Add("OrderFooter", new Block
+    {
+        Id = "PaymentAndShipping",
+        SortId = 40,
+        Design = new Design
+        {
+            CssClass = "grid__col-lg-auto grid__col-md-auto grid__col-xs-6"
+        },
+        Template = RenderPaymentAndShipping()
+    });
+}
+
+@helper RenderPaymentAndShipping()
+{
+    @Render(new Heading { CssClass = "u-margin-bottom", Title = Translate("Payment and shipping"), Level = 5, Icon = new Icon { Prefix = "fas", Name = "fa-credit-card", LabelPosition = IconLabelPosition.After } })
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.PaymentMethod")))
+    {
+        <div>@Translate("Payment method"): @Translate(GetString("Ecom:Order.PaymentMethod"))</div>
+    }
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.ShippingMethod")))
+    {
+        <div>@Translate("Shipping method"): @Translate(GetString("Ecom:Order.ShippingMethod"))</div>
+    }
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.TransactionCardNumber")))
+    {
+        <div>@Translate("Card no.") @GetString("Ecom:Order.TransactionCardNumber")</div>
+    }
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.TransactionNumber")))
+    {
+        <div class="u-word-break--break-all">@Translate("Transaction no.") @GetString("Ecom:Order.TransactionNumber")</div>
+    }
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.TransactionStatus")))
+    {
+        <div>@Translate("Transaction state"): @GetString("Ecom:Order.TransactionStatus")</div>
+    }
+}

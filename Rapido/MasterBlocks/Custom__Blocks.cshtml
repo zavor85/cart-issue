@@ -1,0 +1,61 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+
+@{ 
+    BlocksPage masterCustomBlocksPage = BlocksPage.GetBlockPage("Master");
+
+    var CustomMobileNavigationMenu = masterCustomBlocksPage.GetBlockById("MobileNavigationMenu");
+    if (CustomMobileNavigationMenu != null)
+    {
+        CustomMobileNavigationMenu.Template = CustomRenderMobileNavigationMenu();
+    }
+}
+
+@helper CustomRenderMobileNavigationMenu()
+{
+    bool isSlidesDesign = Model.Area.Item.GetItem("Layout").GetItem("MobileNavigation").GetList("Design").SelectedValue == "Slides";
+    string menuTemplate = isSlidesDesign ? "BaseMenuForMobileSlides.xslt" : "BaseMenuForMobileExpandable.xslt";
+    string levels = !String.IsNullOrEmpty(Model.Area.Item.GetItem("Layout").GetItem("MobileNavigation").GetString("Levels")) ? Model.Area.Item.GetItem("Layout").GetItem("MobileNavigation").GetString("Levels") : "3";
+    bool renderPagesInToolBar = Model.Area.Item.GetItem("Layout").GetItem("Header").GetBoolean("RenderPagesInToolBar");
+    int startLevel = 1;
+
+    @RenderNavigation(new
+    {
+        id = "mobilenavigation",
+        cssclass = "menu menu-mobile dwnavigation",
+        startLevel = @startLevel,
+        ecomStartLevel = @startLevel,
+        endlevel = @levels,
+        expandmode = "all",
+        template = @menuTemplate
+    })
+
+    if (isSlidesDesign) 
+    {
+        <script>
+            function goToLevel(level) {
+                document.getElementById('mobileNavigationWrapper').style.left = -(level * 100) + "%";
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                goToLevel(document.getElementById('mobileNavigationWrapper').querySelectorAll('input[type=radio]:checked').length);
+            });
+        </script>
+    }
+
+    if (renderPagesInToolBar)
+    {
+        @RenderNavigation(new
+        {
+            id = "topToolsMobileNavigation",
+            cssclass = "menu menu-mobile dwnavigation",
+            template = "ToolsMenuForMobile.xslt"
+        })
+    }
+
+   
+}

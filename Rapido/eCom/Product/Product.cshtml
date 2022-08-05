@@ -1,0 +1,403 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using System.Web
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using System
+@using System.IO
+@using Dynamicweb.Core
+@using System.Web
+@using System.Globalization
+@using System.Web.UI.HtmlControls
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Ecommerce
+@using System.Collections.Generic
+@using System.Net
+@using System.Text
+@using System.Xml
+
+@using Dynamicweb.Ecommerce.Products
+@using Dynamicweb.Ecommerce.Orders
+@using Dynamicweb.Ecommerce.International
+
+
+
+@functions {
+    List<LoopItem> downloadDocuments = new List<LoopItem>
+    ();
+    //downloadDocuments variable, will be defined in Fields.cshtml and used in ProductAssets.cshtml
+
+    BlocksPage productsPage = BlocksPage.GetBlockPage("Product");
+
+    public static string ToPascalCase(string str)
+    {
+        return CultureInfo.InvariantCulture.TextInfo
+        .ToTitleCase(str.ToLowerInvariant())
+        .Replace("-", "")
+        .Replace("_", "")
+        .Replace(" ", "");
+    }
+}
+
+
+@*
+    0 samme som gruppen
+    1 Ikke med fragtmand
+    2 Levering til kantsten
+    3 Levering, ind/opbæring
+    4 Levering, ind/opbæring, bortskaffelse
+    5 Levering, montering
+    6 Levering, montering, bortskaffelse
+
+    @Translate(ShipOptionTranslationText)
+*@
+@{
+    double ShipOption = 0;
+    double.TryParse(GetString("Ecom:Product:Field.ShippingOptions.Value"), out ShipOption);
+    if (ShipOption == 0)
+    {
+        foreach (var grp in GetLoop("AssociatedGroups"))
+        {
+            double ShipOpt;
+            double.TryParse(grp.GetString("Ecom:Group:Field.ShippingOptions.Value"), out ShipOpt);
+            if (ShipOpt > ShipOption) { ShipOption = ShipOpt; }
+        }
+    }
+    string ShipOptionTranslationText = "Produkt_ShippingOption" + ShipOption;
+}
+
+
+
+
+
+
+
+
+
+@{
+
+
+
+    // static Dynamicweb.Ecommerce.Products.Group DeliveryServices = Dynamicweb.Ecommerce.Products.GroupService.GetGroup("GROUP895");
+    // IEnumerable<Dynamicweb.Ecommerce.Products.Group> DeliveryServices = New Dynamicweb.Ecommerce.Products.GroupService.GetGroup("GROUP895");
+
+
+    // Country currency = new Dynamicweb.Ecommerce.International.CurrencyService();
+
+    // Country SomeOrder = Dynamicweb.Ecommerce.Orders.Order.VatCountry;
+
+
+    // string Contry = Dynamicweb.Ecommerce.International.Country;
+
+    //Country country = new Dynamicweb.Ecommerce.International.Country();
+    //IEnumerable<string> LanID = country.GetAvailableLanguageIds();
+
+    //OrderService orderService = new Dynamicweb.Ecommerce.Orders.OrderService();
+    //String orderLine = new Dynamicweb.Ecommerce.Orders.Order(Pageview.Area.EcomCurrencyId,Pageview.Area.EcomCountryCode,Pageview.Area.EcomLanguageId);
+
+
+    //IEnumerable<Order> oList = orderService.GetAll();
+    //Order ouList = orderService.GetOrderForCurrentUser("CART1459");
+
+
+    //Ecom:Product.Currency .Code
+    //Ecom:Product.LanguageID
+    // foreach (LoopItem orList in oList){}
+
+    // foreach(var orList in oList){ <text>@orList.Id</text> }
+    // foreach(var olList in orderLine){ <text>.</text> }
+
+}
+
+
+
+@*
+    @ouList
+
+    @Pageview.Area.EcomLanguageId
+    @Pageview.Area.EcomCurrencyId
+    @Pageview.Area.EcomCountryCode
+
+    @GetGlobalValue("Global:eCommerce.Currency")
+    @GetGlobalValue("Global:eCommerce.Cart.CartIsPresent")
+    @GetGlobalValue("Global:eCommerce.Order.OrderLines.TotalProductQuantity")
+*@
+
+
+
+
+
+
+
+@{
+    string productBlocksPosition = Pageview.AreaSettings.GetItem("ProductPage").GetList("ImageSectionPosition") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("ImageSectionPosition").SelectedValue : "thumbs-image-info";
+    bool productInfoOnTheRight = productBlocksPosition.LastIndexOf("info") == productBlocksPosition.Length - 4;
+
+    Block productTop = new Block()
+    {
+        Id = "Top",
+        SortId = 10,
+        SkipRenderBlocksList = true,
+        Template = RenderProductTop()
+    };
+    productsPage.Add(productTop);
+
+    Block productMainInfo = new Block()
+    {
+        Id = "MainInformation",
+        SortId = productInfoOnTheRight ? 20 : 10,
+        Design = new Design
+        {
+            Size = "auto",
+            RenderType = RenderType.Column
+        }
+    };
+    productsPage.Add("Top", productMainInfo);
+
+    //Optional mini tabs block
+    Block miniTabsBlock = new Block()
+    {
+        Id = "MiniTabs",
+        SortId = 40,
+        Template = RenderProductMiniTabs(),
+        SkipRenderBlocksList = true
+    };
+    productsPage.Add("MainInformation", miniTabsBlock);
+    //-----
+
+    Block productTabsBlock = new Block()
+    {
+        Id = "Tabs",
+        SortId = 20,
+        Template = RenderProductTabs(),
+        SkipRenderBlocksList = true
+    };
+    productsPage.Add(productTabsBlock);
+
+    Block productDetailsBlock = new Block()
+    {
+        Id = "Section",
+        SortId = 30
+    };
+    productsPage.Add(productDetailsBlock);
+
+    Block productSnippetsBlock = new Block()
+    {
+        Id = "Snippets",
+        SortId = 40
+    };
+    productsPage.Add(productSnippetsBlock);
+}
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/EcommerceComponents.cshtml")
+
+@* Include the Blocks for the page *@
+@Include("Blocks/MainImage.cshtml")
+@Include("Blocks/MainInformation.cshtml")
+@Include("Blocks/ProductAssets.cshtml")
+@Include("Blocks/GeneratePDF.cshtml")
+@Include("Blocks/Description.cshtml")
+@Include("Blocks/Fields.cshtml")
+@Include("Blocks/Video.cshtml")
+@Include("Blocks/Related.cshtml")
+@Include("Blocks/VariantsList.cshtml")
+@Include("Blocks/VariantsMatrix.cshtml")
+@Include("Blocks/Snippets.cshtml")
+@Include("Blocks/BottomSnippets.cshtml")
+@Include("Blocks/Custom__Blocks.cshtml")
+
+<div class="product__info dw-mod u-margin-bottom--lg js-product">
+    <div class="grid grid--align-content-start">
+        @* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+        @RenderBlockList(productsPage.BlocksRoot.BlocksList)
+    </div>
+</div>
+
+@helper RenderProductTop()
+{
+    List<Block> subBlocks = productsPage.GetBlockListById("Top").OrderBy(item => item.SortId).ToList();
+
+    <div class="product__top paragraph-container paragraph-container--full-width dw-mod">
+        <div class="center-container dw-mod">
+            <div class="grid">
+                @RenderBlockList(subBlocks)
+            </div>
+        </div>
+    </div>
+}
+
+@helper RenderProductMiniTabs()
+{
+    List<Block> subBlocks = productsPage.GetBlockListById("MiniTabs").OrderBy(item => item.SortId).ToList();
+
+    if (subBlocks.Count > 0)
+    {
+        <div class="grid__col-12 product__info tabs u-no-padding u-margin-bottom--lg dw-mod">
+            @{
+                bool firstTab = true;
+                foreach (Block item in subBlocks)
+                {
+                    string isChecked = firstTab ? "checked" : "";
+                    firstTab = false;
+
+                    <input type="radio" class="tabs__trigger" name="productMiniTabs" id="@item.Id" onchange="bLazy.revalidate()" @isChecked />
+                }
+            }
+
+            <div class="tabs__list dw-mod">
+                @foreach (Block item in subBlocks)
+                {
+                    <label for="@item.Id" class="tabs__label dw-mod">@item.Name</label>
+                }
+            </div>
+
+            <div class="tabs__blocks dw-mod">
+                @foreach (Block item in subBlocks)
+                {
+                    string hidePadding = item.Design.HidePadding ? "u-no-padding" : "";
+
+                    if (item.Design.RenderType != RenderType.Hide)
+                    {
+                        <div class="tabs__block u-border dw-mod" id="Block__@item.Id">
+                            <block class="product__block paragraph-container product__block--bordered dw-mod">
+                                <div class="center-container dw-mod">
+                                    @RenderBlock(item)
+                                </div>
+                            </block>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+}
+
+@helper RenderProductTabs()
+{
+    List<Block> subBlocks = productsPage.GetBlockListById("Tabs").OrderBy(item => item.SortId).ToList();
+
+    if (Pageview.Device.ToString() != "Mobile")
+    {
+        <div class="grid__col-12 product__info product__info--tabs tabs dw-mod">
+            @{
+                bool firstTab = true;
+                foreach (Block item in subBlocks)
+                {
+                    string isChecked = firstTab ? "checked" : "";
+                    firstTab = false;
+
+                    <input type="radio" class="tabs__trigger" name="productTabs" id="@item.Id" onchange="bLazy.revalidate()" @isChecked />
+                }
+            }
+
+            <div class="tabs__list dw-mod">
+                @foreach (Block item in subBlocks)
+                {
+                    if (item.Design.RenderType != RenderType.Hide)
+                    {
+                        <label for="@item.Id" class="tabs__label dw-mod">@item.Name</label>
+                    }
+                }
+            </div>
+
+            <div class="tabs__blocks dw-mod">
+                @foreach (Block item in subBlocks)
+                {
+                    if (item.Design.RenderType != RenderType.Hide)
+                    {
+                        <div class="tabs__block dw-mod" id="Block__@item.Id">
+                            <section class="product__section paragraph-container paragraph-container--full-width product__section--bordered dw-mod">
+                                <div class="center-container u-padding--lg dw-mod">
+                                    @RenderBlock(item)
+                                </div>
+                            </section>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        foreach (Block item in subBlocks)
+        {
+            if (item.Design.RenderType != RenderType.Hide)
+            {
+                <div class="center-container dw-mod">
+                    <div class="padding-position-left padding-size-sm">
+                        @Render(new Heading { Title = item.Name, Level = 2 })
+                    </div>
+
+                    @RenderBlock(item)
+                </div>
+            }
+        }
+    }
+
+
+    <script async>
+
+        //scroll to Energy Class Image or Datasheet
+
+        var hash = location.hash.substr(1);
+
+        if (hash == "Block__CustomFields" || hash == "EnergyClassImage") {
+            document.getElementById("CustomFields").click();
+
+            //code before the pause
+            setTimeout(function () {
+                document.getElementById(hash).scrollIntoView({ behavior: 'smooth' });
+            }, 1000);
+
+
+
+        }
+
+        if (hash == "Block__Specifikationer") {
+
+            document.getElementById("Specifikationer").click();
+
+            //code before the pause
+            setTimeout(function () {
+                document.getElementById(hash).scrollIntoView({ behavior: 'smooth' });
+            }, 1000);
+
+        }
+
+
+        function scrollToDataBlad() {
+
+
+            setTimeout(function () {
+                document.getElementById("CustomFields").click();
+            }, 100);
+
+            //code before the pause
+            setTimeout(function () {
+                document.getElementById("Block__CustomFields").scrollIntoView({ behavior: 'smooth' });
+            }, 200);
+
+
+        }
+
+        function scrollToSpecifications() {
+
+
+            setTimeout(function () {
+                document.getElementById("Specifikationer").click();
+            }, 100);
+
+            //code before the pause
+            setTimeout(function () {
+                document.getElementById("Block__Specifikationer").scrollIntoView({ behavior: 'smooth' });
+            }, 200);
+
+
+        }
+
+    </script>
+
+}

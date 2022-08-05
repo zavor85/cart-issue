@@ -1,0 +1,64 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@using System.Web
+
+@{ 
+    string[] targets = HttpContext.Current.Request.QueryString["target"] != null ? HttpContext.Current.Request.QueryString["target"].Split(',') : null;
+}
+
+@if (targets != null)
+{
+    foreach (string target in targets)
+    {
+        if (target == "ProductLine")
+        {
+            <div data-template="ProductLine">
+                <table class="table table--clean">
+                    <tr>
+                        <td>
+                            @{
+                                Image productImage = new Image
+                                {
+                                    Path = GetProductImage(),
+                                    Id = "Image_" + GetString("Ecom:Product.ID"),
+                                    Title = GetString("Ecom:Product.Name"),
+                                    ImageDefault = new ImageSettings
+                                    {
+                                        Width = 70,
+                                        Height = 70,
+                                        Crop = 5,
+                                        FillCanvas = true
+                                    }
+                                };
+                            }
+                            @Render(productImage)
+                        </td>
+                        <td class="u-va-middle">@GetString("Ecom:Product.Name")</td>
+                        <td class="u-va-middle">@GetString("Ecom:Product.Number")</td>
+                    </tr>
+                </table>
+            </div>
+        }
+
+        if (target == "VariantMatrix")
+        {
+            List<LoopItem> variantInfos = GetLoop("VariantInfos");
+            string productId = GetString("Ecom:Product.ID");
+            string pageId = Pageview.Page.ID.ToString();
+
+            <div data-template="VariantMatrix">
+                @RenderVariantInfoMatrix(variantInfos, productId, pageId, 0, "justadd")
+            </div>
+        }
+    }
+}
+
+@Include("../../GetProductImage.cshtml")
+@Include("../../Helpers/VariantInfoMatrix.cshtml")
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/EcommerceComponents.cshtml")

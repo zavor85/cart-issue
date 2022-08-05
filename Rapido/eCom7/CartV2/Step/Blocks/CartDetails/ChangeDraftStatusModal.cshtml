@@ -1,0 +1,91 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+
+@functions {
+    BlocksPage changeDraftStatusPage = BlocksPage.GetBlockPage("CartDetails");
+}
+
+@{
+    var changeDraftStatusModal = new Modal {
+        Id = "ChangeDraftStatus",
+        Heading = new Heading { Title = Translate("Draft status") },
+        Width = ModalWidth.Lg,
+        BodyTemplate = RenderChangeDraftStatusModalBody(),
+    };
+
+    changeDraftStatusModal.AddActions(
+        new Button {
+            ButtonLayout = ButtonLayout.Secondary,
+            Title = Translate("Cancel"),
+            OnClick = "document.getElementById('ChangeDraftStatusModalTrigger').checked = false;"
+        },
+        new Button {
+            ButtonLayout = ButtonLayout.Primary,
+            Title = Translate("Save"),
+            OnClick = "document.getElementById('ChangeDraftStatusForm').submit();"
+        }
+    );
+
+    changeDraftStatusPage.Add("PageContainer", new Block {
+        Id = "ChangeDraftStatusModal",
+        SortId = 30,
+        Component = changeDraftStatusModal
+    });
+
+    changeDraftStatusPage.Add("BottomSnippets", new Block {
+        Id = "ChangeDraftStatusScript",
+        SortId = 30,
+        Template = RenderChangeDraftStatusModalScript()
+    });
+}
+
+
+
+@helper RenderChangeDraftStatusModalBody() {
+    <form id="ChangeDraftStatusForm" method="post" action="Default.aspx?ID=@GetPageIdByNavigationTag("OrderDraft")&CartId=@GetString("Ecom:Order.ID")">
+        <h5 class="u-margin-bottom">@Translate("Select draft status")</h5>
+
+        @RenderDraftStatusSelect()
+    </form>
+}
+
+
+@helper RenderChangeDraftStatusModalScript() {
+    <script>
+        function changeDraftStatusModal() {
+            document.getElementById("ChangeDraftStatusModalTrigger").checked = true;
+        }
+    </script>
+}
+
+
+@helper RenderDraftStatusSelect() {
+    var order = Dynamicweb.Ecommerce.Services.Orders.GetById(GetString("Ecom:Order.ID"));
+    var draftStates = Dynamicweb.Ecommerce.Orders.OrderState.GetAllCartStates(order.OrderState.OrderFlowId);
+
+    if ( draftStates != null ) {
+        SelectField select = new SelectField {
+            Name = "StateId",
+            Id = "StateID",
+            Label = Translate("Draft status"),
+            Required = true
+        };
+
+        foreach ( Dynamicweb.Ecommerce.Orders.OrderState state in draftStates ) {
+            bool selected = GetString("Ecom:Order.StateID") == state.Id;
+
+            select.Options.Add(new SelectFieldOption {
+                Value = state.Id,
+                Label = state.Name,
+                Checked = selected
+            });
+        }
+                    
+        @Render(select)
+    }
+}

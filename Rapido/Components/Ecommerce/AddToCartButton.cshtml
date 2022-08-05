@@ -1,0 +1,48 @@
+﻿@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+
+@* Component *@
+
+@helper RenderAddToCartButton(AddToCartButton settings)
+{
+    if (!settings.HideTitle)
+    {
+        if (string.IsNullOrEmpty(settings.Title))
+        {
+            if (settings.BuyForPoints)
+            {
+                settings.Title = Translate("Buy with points");
+            }
+            else
+            {
+                settings.Title = Translate("Add to cart");
+            }
+        }
+    }
+    else
+    {
+        settings.Title = "";
+    }
+
+    if (settings.Icon == null)
+    {
+        settings.Icon = new Icon();
+        settings.Icon.LabelPosition = Dynamicweb.Rapido.Blocks.Components.General.IconLabelPosition.After;
+    }
+
+    if (string.IsNullOrEmpty(settings.Icon.Name))
+    {
+        settings.Icon.Name = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon").SelectedValue;
+    }
+
+    settings.OnClick = "Cart.AddToCart(event, { " +
+        "id: '" + settings.ProductId + "'," +
+        (!string.IsNullOrEmpty(settings.VariantId) ? "variantId: '" + settings.VariantId + "'," : "") +
+        (!string.IsNullOrEmpty(settings.UnitId) ? "unitId: '" + "VO84" + "'," : "") + // settings.UnitId changed to "VO84"
+                       " stockLocationId: '" + "{{stockLocationId}}" + "',"  +
+        (settings.BuyForPoints ? "buyForPoints: true," : "") +
+        (!string.IsNullOrEmpty(settings.ProductInfo) ? "productInfo: " + settings.ProductInfo + "," : "") +
+        "quantity: " + (string.IsNullOrEmpty(settings.QuantitySelectorId) ? "1" : "parseFloat(document.getElementById('" + settings.QuantitySelectorId + "').value)") +
+    "});" + settings.OnClick;
+    
+    @RenderButton(settings)
+}

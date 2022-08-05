@@ -1,0 +1,66 @@
+[
+  {
+    "Id": "Full",
+    "Name": "Full",
+    "Template": "FullRow.cshtml",
+    "ColumnCount": 1,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_Full.svg"
+  },
+  {
+    "Id": "2Columns",
+    "Name": "2 Columns",
+    "Template": "2ColumnRow.cshtml",
+    "ColumnCount": 2,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_2-column.svg"
+  },
+  {
+    "Id": "3Columns",
+    "Name": "3 Columns",
+    "Template": "3ColumnRow.cshtml",
+    "ColumnCount": 3,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_3-column.svg"
+  },
+  {
+    "Id": "4Columns",
+    "Name": "4 Columns",
+    "Template": "4ColumnRow.cshtml",
+    "ColumnCount": 4,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_4-column.svg"
+  },
+  {
+    "Id": "6Columns",
+    "Name": "6 Columns",
+    "Template": "6ColumnRow.cshtml",
+    "ColumnCount": 6,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_6-column.svg"
+  },
+  {
+    "Id": "1-2Split",
+    "Name": "1-2 Split",
+    "Template": "1-2SplitRow.cshtml",
+    "ColumnCount": 2,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_1-2-split.svg"
+  },
+  {
+    "Id": "2-1Split",
+    "Name": "2-1 Split",
+    "Template": "2-1SplitRow.cshtml",
+    "ColumnCount": 2,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_2-1-split.svg"
+  },
+  {
+    "Id": "1-2-1Split",
+    "Name": "1-2-1 Split",
+    "Template": "1-2-1SplitRow.cshtml",
+    "ColumnCount": 3,
+    "ItemType": "ContentRow",
+    "Thumbnail": "/Files/Templates/Designs/Rapido/Images/VisualEditor/DW_Row_1-2-1-split.svg"
+  }
+]

@@ -1,0 +1,364 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Services
+
+
+@functions{ 
+    BlocksPage productRelatedPage = BlocksPage.GetBlockPage("Product");
+}
+
+@{ 
+    string relatedProductsLayout = Pageview.AreaSettings.GetItem("ProductPage").GetList("RelatedProductsLayout") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("RelatedProductsLayout").SelectedValue : "Section";
+    relatedProductsLayout = relatedProductsLayout == "Ribbon" || string.IsNullOrEmpty(relatedProductsLayout) ? "Section" : relatedProductsLayout;
+    bool relatedShowStock = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowStockAndShipping");
+    bool showAddToDownloadButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToDownloadButton");
+    bool relatedShowPrice = !Pageview.AreaSettings.GetItem("ProductList").GetBoolean("HidePrice");
+    bool relatedShowFavoriteButton = !Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("HideFavoriteButton") && Pageview.User != null;
+    bool relatedPointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool relatedShowCartButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToCartButton");
+    bool relatedShowViewButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowViewButton");
+    string relatedCartIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon").SelectedValue : "fas fa-shopping-cart";
+    string relatedMoreText = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("ViewMoreText")) ? Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("ViewMoreText") : "View";
+    bool relatedShowNumber = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowProductNumber");
+    string relatedImageZoomOnHover = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("HoverImageZoom") ? "image-hover--zoom" : "";
+
+    int relatedProductsPageSize = 4;
+
+    if (Pageview.Device.ToString() == "Mobile")
+    {
+        relatedProductsPageSize = 1;
+    }
+
+    if (Pageview.Device.ToString() == "Tablet")
+    {
+        relatedProductsPageSize = 3;
+    }
+
+    int relatedProductsColumnWidth = 12 / relatedProductsPageSize;
+
+    if (relatedProductsLayout != "hide")
+    {
+        var i = 0;
+        foreach (LoopItem relatedGroup in GetLoop("ProductRelatedGroups"))
+        {
+            string relatedGroupId = ToPascalCase(relatedGroup.GetString("Ecom:Product:RelatedGroup.Name"));
+            string baseFeedPageUrl = "/Default.aspx?ID=" + GetPageIdByNavigationTag("ProductsPage") + "&PageSize=" + relatedProductsPageSize + "&ProdID=" + GetString("Ecom:Product.ID") + "&feed=true";
+            string relatedFeed = baseFeedPageUrl + "&" + relatedGroupId + "=" + GetString("Ecom:Product.ID")+ GetString("Ecom:Product.VariantID") + "&GroupName=" + relatedGroupId;
+            string relatedGroupName = relatedProductsLayout != "maininformation" ? relatedGroup.GetString("Ecom:Product:RelatedGroup.Name") : "";
+
+            i++;
+
+            Block detailsRelated = new Block()
+            {
+                Name = relatedGroupName,
+                Id = relatedGroupId,
+                SortId = 70 + i,
+                Template = RenderRelatedProducts(relatedGroupName, relatedGroupId, relatedFeed, relatedProductsLayout),
+                Design = new Design
+                {
+                    Size = "12",
+                    RenderType = RenderType.Column,
+                    HidePadding = true
+                }
+            };
+
+            productRelatedPage.Add(relatedProductsLayout, detailsRelated);
+        }
+    }
+}
+
+@helper RenderRelatedProducts(string name, string groupId, string relatedFeedUrl, string layout)
+{
+    string ribbonClasses = Pageview.AreaSettings.GetItem("ProductPage").GetList("RelatedProductsLayout").SelectedValue == "Ribbon" ? "product__section--ribbon paragraph-container paragraph-container--full-width" : "";
+    ribbonClasses = layout == "Tabs" ? "" : ribbonClasses;
+    string ribbonSubClasses = Pageview.AreaSettings.GetItem("ProductPage").GetList("RelatedProductsLayout").SelectedValue == "Ribbon" ? "center-container--ribbon" : "";
+
+    <div class="product__section @ribbonClasses dw-mod">
+        <div class="center-container @ribbonSubClasses dw-mod">
+            @if (layout == "Section") {
+               @Render(new Heading { Title = name, Level = 2 })
+            }
+            <div class="js-handlebars-root" id="ProductList_@groupId" data-template="ProductContainer" data-pre-render-template="ProductPreRenderContainer" data-json-feed="@relatedFeedUrl" data-preloader="overlay"></div>
+        </div>
+    </div>
+}
+
+@* Script templates for related products *@
+ <script id="ProductPreRenderContainer" type="text/x-template">
+    <div class="u-h600px u-full-width">
+        <div class="grid">
+            <div class="grid__col-12">
+                <div class="pre-render-element pre-render-element--md"></div>
+            </div>
+        </div>
+    </div>
+</script>
+
+@helper RenderGridViewPriceInfo()
+{
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool showPrice = !Pageview.AreaSettings.GetItem("ProductList").GetBoolean("HidePrice");
+    bool showCartButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToCartButton");
+    bool showVATPrice = Pageview.AreaSettings.GetItem("ProductList").GetBoolean("ShowBothPricesWithWithoutVAT");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+
+    if (showPrice && Dynamicweb.Rapido.Services.User.IsPricesAllowed())
+    {
+        if (pointShopOnly)
+        {
+            <text>
+                {{#if havePointPrice}}
+                    <div class="price price--product-list dw-mod">{{points}} @Translate("points")</div>
+                    @if (showCartButton)
+                    {
+                        <text>
+                            {{#unless canBePurchasedWithPoints}}
+                                <small class="help-text u-no-margin">@Translate("Not enough points to buy this")</small>
+                            {{/unless}}
+                        </text>
+                    }
+                {{else}}
+                    @Translate("Not available")
+                {{/if}}
+            </text>
+        }
+        else
+        {
+            <div class="price price--product-list dw-mod">{{price}}</div>
+            <div class="before-price {{onSale}} dw-mod">{{discount}}</div>
+            if (showVATPrice)
+            {
+                <div class="vat-price vat-price--product-list u-margin-top dw-mod">
+                    @if (isPricesWithVATEnabled)
+                    {
+                        <span>@Translate("excl. VAT")</span><span> ({{priceWithoutVAT}})</span>
+                    }
+                    else
+                    {
+                        <span>@Translate("incl. VAT")</span><span> ({{priceWithVAT}})</span>
+                    }
+                </div>
+            }
+            <text>
+                {{#if priceRRP}}
+                    <div><small>@Translate("RRP") {{priceRRP}}</small></div>
+                {{/if}}
+            </text>
+        }
+    }
+}
+
+@helper RenderProductGridItemAddToCart() { 
+    var gridViewSettings = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView");
+    var ecommerceSettings = Pageview.AreaSettings.GetItem("Ecommerce");
+
+    bool pointShopOnly = ecommerceSettings.GetBoolean("PointShopOnly");
+    bool showCartButton = gridViewSettings.GetBoolean("ShowAddToCartButton");
+    bool showViewButton = gridViewSettings.GetBoolean("ShowViewButton");
+    string viewMoreText = gridViewSettings.GetString("ViewMoreText");
+    viewMoreText = !string.IsNullOrEmpty(viewMoreText) ? viewMoreText : "View";
+    string wrapperClass = "buttons-collection--center";
+    int columnsCount = gridViewSettings.GetList("Columns") != null ? Converter.ToInt32(gridViewSettings.GetList("Columns").SelectedValue) : 4;
+    bool hideButtonText = columnsCount >= 4 || Pageview.Device.ToString() == "Mobile" || Pageview.Device.ToString() == "Tablet";
+
+    if (pointShopOnly && columnsCount <= 4) 
+    {
+        hideButtonText = false;
+    }
+
+    var viewBtn = new Link
+    {
+        Href = "{{link}}",
+        Id = "CartButton_{{id}}",
+        Title = Translate(viewMoreText),
+        OnClick = "{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}",
+        ButtonLayout = ButtonLayout.Secondary,
+        CssClass = "u-no-margin"
+    };
+
+    if (Dynamicweb.Rapido.Services.User.IsBuyingAllowed())
+    {
+        var addToCartBtn = new AddToCart
+        {
+            WrapperCssClass = wrapperClass,
+            AddButton = new AddToCartButton
+            {
+                ProductId = "{{productId}}",
+                VariantId = "{{variantid}}",
+                UnitId = "{{unitId}}",
+                ProductInfo = "{{productInfo}}",
+                BuyForPoints = pointShopOnly,
+                HideTitle = hideButtonText,
+                OnClick = "{{facebookPixelAction}}",
+                ExtraAttributes = new Dictionary<string, string>
+                {
+                    { "{{disabledBuyButton}}", "" }
+                }
+            }
+        };
+
+        if (!pointShopOnly) 
+        {
+            addToCartBtn.QuantitySelector = new QuantitySelector
+            {
+                Id = "Quantity{{id}}"
+            };
+        }
+
+        if (showCartButton && Dynamicweb.Rapido.Services.User.IsBuyingAllowed())
+        {
+            if (!showViewButton)
+            {
+                @Render(addToCartBtn)
+            }
+            else
+            {
+                <text>{{#if hideAddToCartButton}}</text>
+                    <div>@Render(viewBtn)</div>
+                <text>{{else}}</text>
+                    @Render(addToCartBtn)
+                <text>{{/if}}</text>
+            }
+        }
+        else if (showViewButton)
+        {
+            <div>@Render(viewBtn)</div>
+        }
+    }
+    else if (showViewButton)
+    {
+        <div>@Render(viewBtn)</div>
+    }
+}
+
+<script id="ProductContainer" type="text/x-template">
+    {{#.}}
+        <div class="u-min-h400px u-full-width">
+            <div class="grid">
+                <div class="grid__col-45px grid__col--bleed-x">
+                    <div class="grid__cell grid__cell--align-middle-left">
+                        @{
+                            Button prevButton = new Button { Icon = new Icon { Prefix = "fas", Name = "fa-chevron-left fa-2x", LabelPosition = IconLabelPosition.After }, ButtonLayout = ButtonLayout.Clean, CssClass = "btn--condensed {{prevdisabled}} u-position-relative", OnClick = "HandlebarsBolt.UpdateContent('ProductList_{{groupName}}', '{{prevPage}}')" };
+                            prevButton.ExtraAttributes.Add("", "{{prevdisabled}}");
+                        }
+                        @Render(prevButton)
+                    </div>
+                </div>
+                <div class="grid__col-auto grid__col--bleed-x">
+                    <div id="ProductsContainer" data-template="ProductGridItemContainer" class="grid product-list dw-mod" data-save-cookie="true">
+                        {{#ProductsContainer}}
+                            <div id="Product{{productId}}" class="grid__col-@relatedProductsColumnWidth product-list__grid-item @relatedImageZoomOnHover dw-mod">
+                                {{#Product}}
+                                    <div class="grid__col--auto js-product-scroll-trigger u-no-padding u-full-height" data-params="{{googleImpression}}">
+                                        <div class="grid__cell product-list__grid-item__image dw-mod {{noImage}}">
+                                            <a href="{{link}}" 
+                                               onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" 
+                                               class="u-block u-position-relative image-hover__wrapper dw-mod">
+                                                @Render(new Image { Path = "{{image}}", ImageDefault = new ImageSettings { Width = 300, Height = 300, Crop = 5, FillCanvas = true, DoNotUpscale = true }, Title = "{{name}}", CssClass = "grid__cell-img grid__cell-img--centered u-min-h180px" })
+                                                {{#StickersContainers}}
+                                                    {{>StickersContainer}}
+                                                {{/StickersContainers}}
+                                            </a>
+                                            @if (relatedShowFavoriteButton)
+                                            {
+                                                <div class="favorites favorites--for-grid-view u-pull--right {{hasVariants}} dw-mod" {{hasVariants}}>
+                                                    {{#Favorite}}
+                                                        {{>FavoriteTemplate}}
+                                                    {{/Favorite}}
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <div class="grid__cell product-list__grid-item__price-info dw-mod">
+                                            <a href="{{link}}" onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" title="{{name}}" class="u-color-inherit">
+                                                @Render(new Heading { Title = "{{name}}", Level = 6, CssClass = "u-condensed-text u-bold" })
+                                            </a>
+
+                                            @if (relatedShowNumber)
+                                            {
+                                                <div class="item-number dw-mod">{{number}}</div>
+                                            }
+          
+                                            @RenderGridViewPriceInfo()
+                                        </div>
+
+                                        <div class="product-list__grid-item__footer dw-mod">
+                                            @RenderProductGridItemAddToCart()
+
+                                            @if (User.IsStockInfoAllowed() && relatedShowStock)
+                                            {
+                                                <div class="u-margin-top">
+                                                    <div><span class="stock-icon {{stockState}} u-no-margin dw-mod" title="{{stockText}}"></span> {{stockText}}</div>
+                                                    <div>
+                                                        {{#if deliveryText}}
+                                                            {{deliveryText}}
+                                                        {{else}}
+                                                        -
+                                                        {{/if}}
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            @if (showAddToDownloadButton && Pageview.User != null)
+                                            {
+                                                Button addButton = new Button { Title = "<span class='js-button-text'>" + Translate("Add") + "</span>", ButtonLayout = ButtonLayout.Primary, CssClass = "u-no-margin u-margin-top btn--condensed dw-mod js-add-to-downloads", Icon = new Icon { Prefix = "fas", Name = "fa-plus", CssClass = "js-button-icon", LabelPosition = IconLabelPosition.After } };
+                                                addButton.ExtraAttributes.Add("data-product-id", "{{productId}}");
+                                                @Render(addButton)
+                                            }
+                                        </div>
+                                    </div>
+                                {{/Product}}
+                            </div>
+                        {{/ProductsContainer}}
+                    </div>
+                </div>
+                <div class="grid__col-45px grid__col--bleed-x">
+                    <div class="grid__cell grid__cell--align-middle-right">
+                        @{
+                            Button nextButton = new Button { Icon = new Icon { Prefix = "fas", Name = "fa-chevron-right fa-2x", LabelPosition = IconLabelPosition.After }, ButtonLayout = ButtonLayout.Clean, CssClass = "btn--condensed {{nextdisabled}} u-position-relative", OnClick = "HandlebarsBolt.UpdateContent('ProductList_{{groupName}}', '{{nextPage}}')" };
+                            nextButton.ExtraAttributes.Add("", "{{nextdisabled}}");
+                        }
+                        @Render(nextButton)
+                    </div>
+                </div>
+            </div>
+        </div>
+    {{/.}}
+</script>
+
+<script id="StickersContainer" type="text/x-template">
+    <div class="stickers-container stickers-container--{{{convertStickerPositionToClassName Position}}} dw-mod">
+        {{#Stickers}}
+            {{>Sticker}}
+        {{/Stickers}}
+    </div>
+</script>
+
+<script id="Sticker" type="text/x-template">
+    @Render(new Sticker { Title = "{{Title}}", CssClass = "{{CssClass}}" })
+</script>
+
+<script>
+    @{
+        bool relatedUseGoogleTagManager = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleTagManagerID"));
+
+        if (relatedUseGoogleTagManager)
+        {
+            <text>
+                document.addEventListener("DOMContentLoaded", function (event) {
+                    Scroll.AddIsInViewportListener(".js-product-scroll-trigger", function (elem) {
+                        let googleImpression = JSON.parse(elem.getAttribute("data-params"));
+                        googleImpression.list = "Related products";
+                        googleEnchantImpression(googleImpression);
+                        elem.classList.remove("js-product-scroll-trigger");
+                    });
+                });
+            </text>
+        }
+    }
+</script>

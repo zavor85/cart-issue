@@ -1,0 +1,140 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage topInfoPage = BlocksPage.GetBlockPage("CartDetails");
+}
+
+@{
+    topInfoPage.Add("Head", new Block
+    {
+        Id = "Info",
+        SortId = 20,
+        Template = RenderTopInfo(),
+        Design = new Design {
+            RenderType = RenderType.Column,
+            Size = "6"
+        }
+    });
+}
+
+@helper RenderTopInfo() {
+    var customerName = GetString("Ecom:Order.Customer.Name");
+    var customerMail = GetString("Ecom:Order.Customer.Email");
+    var customerAddress = GetString("Ecom:Order.Customer.Address");
+    var customerZip = GetString("Ecom:Order.Customer.Zip");
+    var customerCity = GetString("Ecom:Order.Customer.City");
+
+    var paymentMethod = GetString("Ecom:Order.PaymentMethod");
+    var shippingMethod = GetString("Ecom:Order.ShippingMethod");
+    
+    var order = Dynamicweb.Ecommerce.Services.Orders.GetById(GetString("Ecom:Order.ID"));
+
+    <div class="grid">
+
+        @if ( !string.IsNullOrWhiteSpace(customerName) ) {
+            <div class="grid__col-sm-6 grid__col-lg-4">
+                <h6>@Translate("Customer")</h6>
+                <p>@customerName</p>
+            </div>
+        }
+
+        @if ( !string.IsNullOrWhiteSpace(customerMail) ) {
+            <div class="grid__col-sm-6 grid__col-lg-4">
+                <h6>@Translate("Email invoice to")</h6>
+                <p>@customerMail</p>
+            </div>
+        }
+
+        <div class="grid__col-sm-6 grid__col-lg-4">
+            <h6>@Translate("Status")</h6>
+
+            @Render(new Button {
+                AltText = Translate("Change status"),
+                Title = $"<div>{order.OrderState.Name}</div>",
+                ButtonLayout = ButtonLayout.LinkClean,
+                ButtonType = ButtonType.Button,
+                OnClick = "changeDraftStatusModal()",
+                Icon = new Icon {
+                    Name = "fa-pen",
+                    Prefix = "fal",
+                    CssClass = "u-align-left"
+                }
+            })
+        </div>
+
+        <div class="grid__col-sm-6 grid__col-lg-4">
+            <h6>@Translate("Delivery address")</h6>
+
+            @if ( !string.IsNullOrWhiteSpace(customerAddress) ) {
+                @Render(new Button {
+                    AltText = Translate("Change delivery"),
+                    Title = $"<div>{customerAddress}</div>",
+                    ButtonLayout = ButtonLayout.LinkClean,
+                    ButtonType = ButtonType.Button,
+                    OnClick = "changeDeliveryAddressModal()",
+                    Icon = new Icon {
+                        Name = "fa-pen",
+                        Prefix = "fal",
+                        CssClass = "u-align-left"
+                    }
+                })
+            }
+
+            @if ( !string.IsNullOrWhiteSpace(customerZip + customerCity) ) {
+                <div>
+                    @if ( !string.IsNullOrWhiteSpace(customerZip) ) {
+                        <span>@customerZip</span>
+                    }
+
+                    @if ( !string.IsNullOrWhiteSpace(customerCity) ) {
+                        <span>@customerCity</span>
+                    }
+                </div>
+            }
+        </div>
+
+
+        @if ( !string.IsNullOrWhiteSpace(paymentMethod) ) {
+            <div class="grid__col-sm-6 grid__col-lg-4">
+                <h6>@Translate("Payment method")</h6>
+
+                @Render(new Button {
+                    AltText = Translate("Change payment"),
+                    Title = $"<div>{paymentMethod}</div>",
+                    ButtonLayout = ButtonLayout.LinkClean,
+                    ButtonType = ButtonType.Button,
+                    OnClick = "changePaymentMethodModal()",
+                    Icon = new Icon {
+                        Name = "fa-pen",
+                        Prefix = "fal",
+                        CssClass = "u-align-left"
+                    }
+                })
+            </div>
+        }
+
+        @if ( !string.IsNullOrWhiteSpace(shippingMethod) ) {
+            <div class="grid__col-sm-6 grid__col-lg-4">
+                <h6>@Translate("Delivery method")</h6>
+
+                @Render(new Button {
+                    AltText = Translate("Change delivery"),
+                    Title = $"<div>{shippingMethod}</div>",
+                    ButtonLayout = ButtonLayout.LinkClean,
+                    ButtonType = ButtonType.Button,
+                    OnClick = "changeDeliveryMethodModal()",
+                    Icon = new Icon {
+                        Name = "fa-pen",
+                        Prefix = "fal",
+                        CssClass = "u-align-left"
+                    }
+                })
+            </div>
+        }
+
+    </div>
+}

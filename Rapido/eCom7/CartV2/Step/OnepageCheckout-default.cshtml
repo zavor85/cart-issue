@@ -1,0 +1,242 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Core
+@using System.Linq
+
+@{
+    var settings = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout");
+    var userLoggedIn = Pageview.User != null;
+
+    var hidePayment = settings.GetBoolean("HidePayment");
+    var hideShipping = settings.GetBoolean("HideShipping");
+    var hideTermsAndConditions = settings.GetBoolean("HideTermsAndConditions");
+
+    var billingAddressesEditing = settings.GetList("AddressesEditing");
+
+    var paymentMethods = GetLoop("Paymethods");
+    var shippingMethods = GetLoop("Shippingmethods");
+    
+    string currentStep = GetString("CartV2.CurrentStepButtonName");
+    List<LoopItem> steps = GetLoop("StepButtons");
+    var title = steps.FirstOrDefault(x => x.GetString("Step.ButtonName") == currentStep);
+}
+
+<form id="AjaxContainer" method="post" class="checkout" data-request="@GetPageIdByNavigationTag("CartAjax")">
+    <header class="checkout__header u-flex u-flex--column u-flex--align-center u-margin-top--lg u-margin-bottom--lg">
+        <h1>@title.GetString("Step.Name")</h1>
+
+        <div class="checkout__header-steps u-margin-top--lg">
+            @{ 
+                int count = 0;
+                var stepButtons = GetLoop("StepButtons");
+                var disableStep = false;
+            }
+            @foreach (LoopItem step in stepButtons) {
+                string active = (GetString("CartV2.CurrentStepButtonName") == step.GetString("Step.ButtonName") ? "is-active" : "");
+                count++;
+
+                Button stepButton = new Button {
+                    Name = step.GetString("Step.ButtonName"),
+                    ButtonLayout = ButtonLayout.None,
+                    ButtonType = ButtonType.Submit,
+                    Title = $"<span><strong>{step.GetString("Step.Number")}.</strong>&nbsp;</span>{step.GetString("Step.Name")}",
+                    CssClass = $"checkout__header-steps-item {active}",
+                    Disabled = disableStep,
+                    ExtraAttributes = new Dictionary<string, string>{
+                        { "formnovalidate", "true" },
+                    }
+                };
+
+                disableStep = (GetString("CartV2.CurrentStepButtonName") == step.GetString("Step.ButtonName")) ? true : false;
+
+                if (count != stepButtons.Count) {
+                    stepButton.Icon = new Icon
+                    {
+                        LabelPosition = IconLabelPosition.Before,
+                        Prefix = "fal",
+                        Name = "fa-arrow-right"
+                    };
+                }
+
+                @Render(stepButton)
+            }
+        </div>
+    </header>
+
+    <div class="checkout__list">
+        <div class="card">
+            @foreach (LoopItem error in GetLoop("ValidationErrors")) {
+                @Render(new NotificationMessage { 
+                    Message = error.GetString("Ecom:Cart.ValidationError.ErrorMessage"), 
+                    MessageType = NotificationMessageType.Error, 
+                    MessageLayout = NotificationMessageLayout.Box, 
+                    CssClass = "u-margin-bottom--lg", 
+                    Icon = new Icon { Prefix = "fas", Name = "fa-exclamation-triangle", LabelPosition = IconLabelPosition.After } 
+                })
+            }
+
+            <fieldset class="card__item u-position-relative js-filter">
+                @if ( userLoggedIn ) {
+                    <div id="AjaxAddresses" class="checkout-input__wrapper"></div>
+                } else {
+                    @RenderAddresses()
+                }
+            </fieldset>
+
+
+            @if ( shippingMethods != null && !hideShipping ) {
+                <fieldset class="card__item u-position-relative">
+                    <div id="AjaxShipping" class="checkout-input__wrapper"></div>  
+                </fieldset>
+
+                 
+                <fieldset class="card__item u-position-relative">
+                    <div id="AjaxParcel" class="checkout-input__wrapper"></div> 
+                </fieldset>
+            }
+
+
+            @if ( paymentMethods != null && !hidePayment ) {
+                <fieldset class="card__item u-position-relative">
+                    <div id="AjaxPayment" class="checkout-input__wrapper"></div>
+                </fieldset>
+            }
+
+            @if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideComment")) {
+                @Render(new TextareaField {
+                    Name = "EcomOrderCustomerComment",
+                    Id = "EcomOrderCustomerComment",
+                    Value = GetString("Ecom:Order.Customer.Comment"),
+                    Label = $"{Translate("Comment")} <small>({Translate("Optional")})</small>",
+                    Rows = 8,
+                    ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerComment.ErrorMessage"),
+                })
+            }
+
+            @{
+                string termsPage = GetPageIdByNavigationTag("TermsAndConditions").ToString();
+
+                if (!hideTermsAndConditions) {
+                    @Render(new CheckboxField {
+                        Name = "EcomOrderCustomerAccepted",
+                        Id = "EcomOrderCustomerAccepted",
+                        Label = $"{Translate("I accept")} <a href=\"/Default.aspx?ID={termsPage}\" target=\"_blank\">{Translate("the terms and conditions")}</a>",
+                        Required = true,
+                        OnChange = "Cart.EnableSubmitButtons(this);",
+                    })
+                } else {
+                     @Render(new HiddenField { Name = "EcomOrderCustomerAccepted", Id = "EcomOrderCustomerAccepted", Value = "1" })
+                }
+            }
+
+            @RenderSubmitButton()
+
+        </div>
+
+        <aside class="checkout__sidebar">
+            <div class="checkout__sidebar-item card">
+                <div id="AjaxSummary" class="checkout-input__wrapper"></div>
+            </div>
+        </aside>
+    </div>
+
+</form>
+
+<script>
+    function FillCustomerAddressFields(name, address, zipCode, city, country, email, phone) {
+        document.querySelector("#EcomOrderDeliveryName").value = name;
+        document.querySelector("#EcomOrderDeliveryZip").value = zipCode;
+        document.querySelector("#EcomOrderDeliveryCity").value = city;
+        document.querySelector("#EcomOrderDeliveryCountry").value = country;
+        document.querySelector("#EcomOrderDeliveryAddress").value = address;
+        document.querySelector("#EcomOrderDeliveryEmail").value = email;
+        document.querySelector("#EcomOrderDeliveryPhone").value = phone;
+    }
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function (e) {
+        document.getElementById("Page").classList.add("u-color-light-gray--bg");
+
+        // Clear query string
+        (function () {
+            var uri = window.location.toString();
+            if (uri.indexOf("?") > 0) {
+                var clean_uri = uri.substring(0, uri.indexOf("?"));
+                window.history.replaceState({}, document.title, clean_uri);
+            }
+        })();
+    });
+</script>
+
+@helper RenderSubmitButton() {
+    @Render(new Button{
+        Title = Translate("Place order"),
+        ButtonType = ButtonType.Submit,
+        ButtonLayout = ButtonLayout.Primary,
+        Disabled = true,
+        Name = GetString("CartV2.NextStepButtonName"),
+        CssClass = "u-no-margin u-margin-top--lg u-full-width",
+        OnClick = "Buttons.LockButton(event, false, false)",
+        Icon = new Icon{
+            Name = "fa-arrow-right",
+            Prefix = "fal",
+        }
+    })
+}
+
+@RenderScript()
+
+@helper RenderScript() {
+    bool useGoogleTagManager = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleTagManagerID"));
+
+    if ( !useGoogleTagManager ) {
+        return;
+    }
+
+    List<LoopItem> steps = GetLoop("StepButtons");
+    var currentStepItem = steps.FirstOrDefault(x => x.GetString("Step.ButtonName") == GetString("CartV2.CurrentStepButtonName"));
+    var currentStep = currentStepItem.GetInteger("Step.Number");
+
+    <script>
+        dataLayer.push({
+            "event": "checkout",
+            "ecommerce": {
+                "currencyCode": "@Pageview.Area.EcomCurrencyId",
+                "checkout": {
+                    "actionField": {"step": @currentStep},
+                    "products": [
+                        @foreach (LoopItem orderline in GetLoop("OrderLines").Where(o => o.GetBoolean("Ecom:Order:OrderLine.IsProduct") == true).ToList())
+                        {
+                            var groupObject = Dynamicweb.Ecommerce.Services.ProductGroups.GetGroup(orderline.GetString("Ecom:Product.PrimaryOrFirstGroupID"));
+                            <text>
+                            {
+                                "name": "@orderline.GetString("Ecom:Order:OrderLine.ProductName")",
+                                "id": "@orderline.GetString("Ecom:Product.ID")",
+                                "price": "@orderline.GetDouble("Ecom:Order:OrderLine.UnitPrice.Price")",
+                                "brand": "@orderline.GetString("Ecom:Product:Field.brand.Value")",
+                                "category": "@(groupObject != null ? groupObject.Name : "")",
+                                "variant": "@orderline.GetString("Ecom:Order:OrderLine.ProductVariantID")",
+                                "quantity": @orderline.GetInteger("Ecom:Order:OrderLine.Quantity")
+                            },
+                            </text>
+                        }
+                    ]
+                }
+            }
+        });
+    </script>
+}
+
+
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../../Components/GridBuilder.cshtml")
+@Include("../../../Components/GeneralComponents.cshtml")
+
+@Include("OnepageItems/BillingAndShipping.cshtml")
+@Include("OnepageItems/OrderSummary.cshtml")
+@Include("OnepageItems/ShippingMethods.cshtml")
+@Include("OnepageItems/ParcelShop.cshtml")
+@Include("OnepageItems/PaymentMethods.cshtml")

@@ -1,0 +1,47 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Core
+@using System.Linq
+
+@helper RenderTest1() {
+    
+
+    @Render(new TextField {
+                Name = "EcomOrderCustomerComment",
+                Id = "EcomOrderCustomerComment",
+                Value = GetString("Ecom:Order.Customer.Comment"),
+                Label = Translate("Some custom order field"),
+                ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerComment.ErrorMessage"),
+            })
+
+    var count = 0;
+
+    foreach (LoopItem orderline in GetLoop("OrderLines"))
+    {
+        count++;
+
+     
+        <input type="radio" id="option@(count)" value="@orderline.GetString("Ecom:Product.ID")" onclick="document.getElementById('EcomOrderCustomerComment').value = this.value" data-bind-reactive="Test1" name="testx"> 
+        <label for="option@(count)">@orderline.GetString("Ecom:Product.ID")</label>
+    }
+
+
+    if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Comment")) && !GetString("Ecom:Order.Customer.Comment").Contains("Done")){
+        <div>Pop up:</div>
+        <div> All options for product : @GetString("Ecom:Order.Customer.Comment")</div>
+        <div>
+            <input value="Done 1" id="optiona" type="radio" name="testy" onclick="document.getElementById('EcomOrderCustomerComment').value = this.value" data-bind-reactive="Test1" >
+            <label for="optiona">Option1</label>
+
+            <input value="Done 2" id="optionb" type="radio" name="testy" onclick="document.getElementById('EcomOrderCustomerComment').value = this.value" data-bind-reactive="Test1" >
+            <label for="optionb">Option2</label>
+
+
+        </div>
+    }
+    
+
+   
+}
+

@@ -1,0 +1,25 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+@MasterPageFile("PrintablePapers.cshtml")
+
+@using System.Web;
+
+@{ 
+    string size = !String.IsNullOrEmpty(GetParentSettingsItem("PageSize")) ? GetParentSettingsItem("PageSize").ToLower() : "a4";
+    string orientation = "portrait";
+}
+
+<body class="@size @orientation paper-body">
+    <style>
+        @@page {
+            size: @size @orientation;
+        }
+    </style>
+    <script src="/Files/Templates/Designs/Rapido/js/source/QueryArray.js"></script>
+
+    <div class="paper-tools exclude-in-print">
+        <button class="paper-tools__action-btn" onclick="print()" title="@Translate("Print")"><i class="fas fa-print"></i></button>
+        <button class="paper-tools__action-btn" onclick="QueryArray.setParameterInCurrentURL('pdf', true)" title="@Translate("Download")"><i class="fas fa-download"></i></button>
+    </div>
+
+    @Model.Placeholder("dwcontent", "content", "default:true;sort:1")
+</body>

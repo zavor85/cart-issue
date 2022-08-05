@@ -1,0 +1,41 @@
+﻿//These are here to support backward compatibility until a major release is made
+
+.mini-cart-orderlines {
+}
+
+//use .mini-cart-orderline__name
+.mini-cart-orderlines__name {
+    width: 150px;
+    color: @font-color;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+
+    &.mini-cart-orderlines__name--small {
+        font-size: 90%;
+    }
+}
+
+//not need anymore
+.paragraph-card-footer {
+    border:1px solid @gray-light;
+    border-top:none;
+    background-color: @white; 
+    padding: @reflex-cell-spacing-md;
+}
+
+//not need anymore
+.product-list__grid-item__price-info--short {
+    min-height: 65px;
+    height: 65px;
+    transition: 0.2s all ease-out;  
+}
+
+//not need anymore
+&.mini-cart__counter {
+    &.mini-cart__counter--lg {
+        right: 0;
+        top: 2px;
+    }
+}

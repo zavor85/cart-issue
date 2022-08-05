@@ -1,0 +1,44 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Core
+@using System.Linq
+
+@helper RenderShippingMethods() {
+    <h2 class="u-margin-bottom--lg">@Translate("Select your delivery method")</h2>
+
+    @RenderShippingMethodsSelect()
+}
+
+@helper RenderShippingMethodsSelect() {
+    foreach ( LoopItem shipping in GetLoop("Shippingmethods") ) {
+		if(10000 >= shipping.GetDouble("Ecom:Cart.ShippingMethod.Price")){
+      double Pr = shipping.GetDouble("Ecom:Cart.ShippingMethod.Price");
+       
+			bool selected = Converter.ToBoolean(shipping.GetString("Ecom:Cart.Shippingmethod.IsSelected"));
+			string name = shipping.GetString("Ecom:Cart.Shippingmethod.Name");
+			string description = shipping.GetString("Ecom:Cart.Shippingmethod.Description");
+
+			string priceValue = shipping.GetString("Ecom:Cart.ShippingMethod.Price.Price.Value");
+			string price = ( priceValue != "0" ? shipping.GetString("Ecom:Cart.ShippingMethod.Price") : Translate("Free"));
+
+
+			string icon = shipping.GetString("Ecom:Cart.Shippingmethod.Icon");
+			string iconClean = shipping.GetString("Ecom:Cart.Shippingmethod.Icon.Clean");
+			string label = $"<span style=\"width: calc(100% - 40px)\">{name} <strong>- {price}</strong>" + ( !string.IsNullOrWhiteSpace(description) ? $"<small class=\"checkout-input__item-description\">{description}</small>" : "" ) + "</span>" + ( !string.IsNullOrEmpty(icon) ? $"<span class=\"checkout-input__item-icon\"><img src=\"{iconClean}\"></span>" : "" );
+
+			@Render(new RadioButtonField {
+				Name = "EcomCartShippingmethodId",
+				Id = "EcomCartShippingmethodId_" + shipping.GetString("Ecom:Cart.Shippingmethod.ID"),
+				Value = shipping.GetString("Ecom:Cart.Shippingmethod.ID"),
+				Checked = selected,
+				Label = label,
+				WrapperCssClass = "form__field-group--bordered",
+				ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomCartShippingmethodId.ErrorMessage"),
+				ExtraAttributes = new Dictionary<string, string>{
+					{ "data-bind-reactive", "Parcel, Summary" },
+				}
+			})                
+		}
+    }
+}

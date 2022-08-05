@@ -1,0 +1,40 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Core
+@using System.Linq
+
+@helper RenderPaymentMethods() {
+    <h2 class="u-margin-bottom--lg">@Translate("Choose payment method")</h2>
+
+    @RenderPaymentMethodsSelect()
+}
+
+
+@helper RenderPaymentMethodsSelect() {
+    foreach ( LoopItem payment in GetLoop("Paymethods") ) {
+        bool selected = Converter.ToBoolean(payment.GetString("Ecom:Cart.Paymethod.IsSelected"));
+        string name = payment.GetString("Ecom:Cart.Paymethod.Name");
+        string description = payment.GetString("Ecom:Cart.Paymethod.Description");
+
+        string priceValue = payment.GetString("Ecom:Cart.Paymethod.Price.Price.Value");
+        string price = ( priceValue != "0" ? payment.GetString("Ecom:Cart.Paymethod.Price") : Translate("Free"));
+
+        string icon = payment.GetString("Ecom:Cart.Paymethod.Icon");
+        string iconClean = payment.GetString("Ecom:Cart.Paymethod.Icon.Clean");
+        string label = $"<span>{name} <strong>- {price}</strong>" + ( !string.IsNullOrWhiteSpace(description) ? $"<small class=\"checkout-input__item-description\">{description}</small>" : "" ) + "</span>" + ( !string.IsNullOrEmpty(icon) ? $"<span class=\"checkout-input__item-icon\"><img src=\"{iconClean}\"></span>" : "" );
+
+        @Render(new RadioButtonField {
+            Name = "EcomCartPaymethodId",
+            Id = "EcomCartPaymethodId_" + payment.GetString("Ecom:Cart.Paymethod.ID"),
+            Value = payment.GetString("Ecom:Cart.Paymethod.ID"),
+            Checked = selected,
+            Label = label,
+            WrapperCssClass = "form__field-group--bordered",
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomCartPaymethodId.ErrorMessage"),
+            ExtraAttributes = new Dictionary<string, string>{
+                { "data-bind-reactive", "Shipping, Summary" },
+            }
+        })
+    }
+}

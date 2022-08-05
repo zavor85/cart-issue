@@ -1,0 +1,46 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage headerQuoteInfoPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    headerQuoteInfoPage.Add("OrderHeader", new Block
+    {
+        Id = "HeaderInfo",
+        SortId = 20,
+        Design = new Design
+        {
+            CssClass = "grid__col-xs-5"
+        },
+        BlocksList = new List<Block>
+        {
+            new Block
+            {
+                Id = "OrderMainInfo",
+                SortId = 20,
+                Template = RenderOrderMainInfo()
+            }
+        }
+    });
+}
+
+@helper RenderOrderMainInfo()
+{
+    @Render(new Table { 
+        Design = TableDesign.Clean, 
+        CssClass = "table--compact",
+        Rows = new List<TableRow> {
+            new TableRow (
+                new TableCell { CssClass = "u-ta-right u-ta-left--xs", Content = Translate("Quote number") }, 
+                new TableCell { CssClass = "u-ta-right", Content = GetString("Ecom:Order.ID") }
+            ),
+            new TableRow (
+                new TableCell { CssClass = "u-ta-right u-ta-left--xs", Content = Translate("Quote date") },
+                new TableCell { CssClass = "u-ta-right", Content = GetDate("Ecom:Order.Date").ToString(Pageview.Area.Dateformat + " HH:mm") }
+            )
+        }
+    })
+}

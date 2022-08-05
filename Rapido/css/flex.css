@@ -1,0 +1,709 @@
+﻿.site.dw-mod{
+    background-attachment: fixed;
+    background-position: top;
+    background-repeat: no-repeat;
+  	background-size: 100% auto;
+}
+
+#ProductsContainer input[type="number"]:invalid,#PriceAndActions input[type="number"]:invalid {
+	border-color: red;
+	background-color: rgba(255,0,0,0.05);
+}
+
+
+
+
+
+
+.mega-menu__list-image{
+    max-width: 150px;
+}
+
+#no-stock-notification {
+    width: 100%;
+}
+
+#no-stock-notification-form{
+    width: 100%;
+}
+
+#no-stock-notification-form input[type="submit"]{
+    color: #f8f8f8;
+    font-size: 18px;
+    font-weight: 400;
+    border-width: 1px;
+    border-color: #d32c36;
+    border-radius: 0.5rem;
+    background-color: #d32c36;
+}
+
+#no-stock-action-form label{
+    background-color: transparent;
+}
+
+#no-stock-notification,
+#no-stock-notification-form{
+    display: none;
+}
+
+#no-stock-notification-thank-you{
+    width: 100%;
+}
+
+
+input[type="submit"]{
+    cursor: pointer;
+}
+#topnavigation.menu{
+  margin: 0 auto;
+}
+
+#no-stock-notification .btn--primary{
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.mega-menu__header-container__text.dw-mod{
+    font-weight: bold;
+}
+
+.mega-menu__link.dw-mod{
+    padding: .1em 1.2em;
+}
+
+.mega-menu__link.dw-mod.show-all{
+    font-weight: 500;
+}
+
+.mega-menu__link.dw-mod.show-all:before{
+    font-family: "Font Awesome 5 Pro","Font Awesome 5 Free";
+    font-weight: 900;
+    content: '';
+    margin-left: 0;
+    margin-right: .4em;
+    color: #D32C36;
+}
+
+
+.main-navigation-mobile .menu__link{
+    padding: 16px 0.2em;
+}
+
+.main-navigation-mobile .menu__item--top-level.dw-mod:not(.menu__item--icon) {
+    padding: 0 5px;
+}
+
+
+
+
+
+#Block__MasterDesktopMenu .mega-menu{
+    display: block;
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+  
+#Block__MasterDesktopMenu .is-mega.active > .mega-menu{
+    opacity: 1;
+    height: auto;
+}
+
+#EnergyClassImage{
+    max-width: 300px;
+    margin: 0 0 0 auto;
+}
+
+
+.product__price-wrap .link-to-datablad{
+    position: relative;
+    padding-top: 20px;
+    margin-bottom: 10px;
+}
+
+.product__price-wrap .link-to-datablad span.class:before{
+    border-width: 22px 22px 22px 0;
+    left: auto;
+    right: -22px;
+}
+
+.product__price-wrap .link-to-datablad span.datablad{
+    bottom: auto;
+    top:0;
+    left: 0px;
+}
+
+
+.link-to-datablad{
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    box-sizing:border-box;
+    font-size: 16px;
+}
+
+.link-to-datablad:hover{
+    color: white;
+}
+
+.link-to-datablad a{
+    color: white;
+    font-weight: bold;
+    font-size: 28px;
+}
+
+.link-to-datablad span.datablad a{
+    color: #D32C36;
+    font-size: 11px;
+}
+
+
+.link-to-datablad a:hover{
+    color: white;
+}
+
+.link-to-datablad span.datablad{
+    position: absolute;
+    top: auto;
+    font-size: 11px;
+    margin-top: 4px;
+    right: auto;
+    color: #D32C36;
+    left: 22px;
+    bottom: 0;
+}
+
+.link-to-datablad span.class{
+    background: gray;
+    padding: 0 10px;
+    min-width: 50px;
+    text-align: center;
+    margin-left: 22px;
+    font-size: 28px;
+    position: relative;
+}
+
+.link-to-datablad span.class:before{
+    content: "";
+    display: block;
+    border-style: solid;
+    border-width: 23px 23px 23px 0;
+    margin-left: 0px;
+    border-color: transparent gray transparent transparent;
+    position: absolute;
+    left:0;
+    top:0;
+}
+
+.product__price-wrap .link-to-datablad span.class:before{
+    border-width: 22px 0 22px 22px;
+    border-color: transparent transparent transparent gray;
+}
+
+.link-to-datablad .label-left {
+    color: #000;
+    background-color: #fff;
+    font-size: 11px;
+    width: 15px;
+    border: 1px solid #808080;
+    border-left: 0;
+    text-align: center;
+    line-height: 14px;
+    height: 46px; 
+    font-weight: bold;
+    margin-top: -1px;
+    margin-bottom: -1px;
+}
+
+.product-list__grid-item .link-to-datablad{
+    position: relative;
+    padding-bottom: 20px;
+    justify-content: right;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    z-index: 89;
+}
+
+.product-list__grid-item .link-to-datablad a:first-child{
+    display: flex;
+}
+
+.product-list__list-item .link-to-datablad a:first-child{
+    display: flex;
+}
+
+
+.product-list__grid-item .link-to-datablad span.datablad{
+    bottom: 0;
+    top: auto;
+}
+
+.product-list__grid-item .link-to-datablad span.class:before{
+    left: -22px;
+}
+
+.product-list__grid-item .link-to-datablad span.class{
+    position: relative;
+   
+}
+
+.product__price-wrap .link-to-datablad span.class{
+    margin-left: 0;
+}
+
+.product-list__list-item .link-to-datablad{
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.product-list__list-item .link-to-datablad span.class:before{
+    left: -22px;
+}
+
+.product-list__grid-item .link-to-datablad span.datablad{
+    display: block;
+    width: 100%;
+    text-align: right;
+    left:0;
+}
+
+
+
+/* A+++ - D */
+
+.link-to-datablad.class-AAAA span.class{
+    background-color: #00923F;
+}
+
+.link-to-datablad.class-AAAA span.class:before{
+    border-color: transparent #00923F transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-AAAA span.class:before{
+    border-color: transparent transparent transparent #00923F;
+}
+
+
+.link-to-datablad.class-AAA span.class{
+    background-color: #1DA838;
+}
+
+.link-to-datablad.class-AAA span.class:before{
+    border-color: transparent #1DA838 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-AAA span.class:before{
+    border-color: transparent transparent transparent #1DA838;
+}
+
+.link-to-datablad.class-AA span.class{
+    background-color: #9DCD17;
+}
+
+.link-to-datablad.class-AA span.class:before{
+    border-color: transparent #9DCD17 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-AA span.class:before{
+    border-color: transparent transparent transparent #9DCD17;
+}
+
+
+.link-to-datablad.class-A span.class{
+    background-color: #FFF500;
+}
+
+.link-to-datablad.class-A span.class:before{
+    border-color: transparent #FFF500 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-A span.class:before{
+    border-color: transparent transparent transparent #FFF500;
+}
+
+
+.link-to-datablad.class-B span.class{
+    background-color: #F3AE00;
+}
+
+.link-to-datablad.class-B span.class:before{
+    border-color: transparent #F3AE00 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-B span.class:before{
+    border-color: transparent transparent transparent #F3AE00;
+}
+
+
+.link-to-datablad.class-C span.class{
+    background-color: #E46713;
+}
+
+.link-to-datablad.class-C span.class:before{
+    border-color: transparent #E46713 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-C span.class:before{
+    border-color: transparent transparent transparent #E46713;
+}
+
+
+.link-to-datablad.class-D span.class{
+    background-color: #DA251D;
+}
+
+.link-to-datablad.class-D span.class:before{
+    border-color: transparent #DA251D transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-D span.class:before{
+    border-color: transparent transparent transparent #DA251D;
+}
+
+
+
+
+/* A - G */
+
+.link-to-datablad.class-A.type-1 span.class{
+    background-color: #00A551;
+}
+
+.link-to-datablad.class-A.type-1 span.class:before{
+    border-color: transparent #00A551 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-A.type-1 span.class:before{
+    border-color: transparent transparent transparent #00A551;
+}
+
+.link-to-datablad.class-B.type-1 span.class{
+    background-color: #55B444;
+}
+
+.link-to-datablad.class-B.type-1 span.class:before{
+    border-color: transparent #55B444 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-B.type-1 span.class:before{
+    border-color: transparent transparent transparent #55B444;
+}
+
+.link-to-datablad.class-C.type-1 span.class{
+    background-color: #BFD630;
+}
+
+.link-to-datablad.class-C.type-1 span.class:before{
+    border-color: transparent #BFD630 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-C.type-1 span.class:before{
+    border-color: transparent transparent transparent #BFD630;
+}
+
+.link-to-datablad.class-D.type-1 span.class{
+    background-color: #FDF100;
+}
+
+.link-to-datablad.class-D.type-1 span.class:before{
+    border-color: transparent #FDF100 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-D.type-1 span.class:before{
+    border-color: transparent transparent transparent #FDF100;
+}
+
+.link-to-datablad.class-E.type-1 span.class{
+    background-color: #FBB812;
+}
+
+.link-to-datablad.class-E.type-1 span.class:before{
+    border-color: transparent #FBB812 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-E.type-1 span.class:before{
+    border-color: transparent transparent transparent #FBB812;
+}
+
+
+.link-to-datablad.class-F.type-1 span.class{
+    background-color: #F26F1F;
+}
+
+.link-to-datablad.class-F.type-1 span.class:before{
+    border-color: transparent #F26F1F transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-F.type-1 span.class:before{
+    border-color: transparent transparent transparent #F26F1F;
+}
+
+
+.link-to-datablad.class-G.type-1 span.class{
+    background-color: #EC1A23;
+}
+
+.link-to-datablad.class-G.type-1 span.class:before{
+    border-color: transparent #EC1A23 transparent transparent;
+}
+
+.product__price-wrap .link-to-datablad.class-G.type-1 span.class:before{
+    border-color: transparent transparent transparent #EC1A23;
+}
+
+
+#onepage-shipping-address > fieldset,
+#onepage-shipping-address > div{
+    display: none;
+}
+
+
+#onepage-shipping-address > div:last-child{
+    display: block;
+    margin-top: 1em;
+}
+
+
+#onepage-shipping-address > div.chose-delivery-address{
+    display: block;
+}
+
+#onepage-shipping-address.active > fieldset,
+#onepage-shipping-address.active > div{
+    display: block;
+}
+
+#onepage-shipping-address .chose-delivery-address{
+    padding: 20px 25px;
+    padding-bottom: 0;
+}
+
+#onepage-shipping-address .chose-delivery-address .form__field-group .form__field-group:last-child{
+    margin-bottom: 0;
+}
+
+
+/* Swiper */
+
+
+.swiper-slide .product-list__grid-item__price-info{
+    height: auto;
+}
+
+.swiper-slide .product-list__grid-item__footer .btn{
+    box-sizing: border-box;
+}
+
+.swiper-slide.product-list__grid-item .product-list__grid-item__footer{
+    align-self: flex-end;
+    display: flex;
+    margin-top: auto;
+    width: 100%;
+    margin-bottom: 0;
+    padding: 0;
+    justify-content: center;
+    padding-top: 12px;
+}
+
+.swiper-slide.product-list__grid-item .product-list__grid-item__footer .u-ta-center{
+    width: 100%;
+}
+
+.swiper-slide.product-list__grid-item .js-product-scroll-trigger{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.swiper-slide .image-hover__wrapper img{
+    box-sizing: border-box;
+} 
+
+
+.swiper-slide > div{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* Blog */
+
+.article__paragraph {
+    font-size: 16px;
+}
+
+.article-list__item-header.u-truncate-text{
+    white-space: normal;
+}
+
+
+.rowItemContent-8842,
+.rowItemContent-8847,
+.rowItemContent-8848{
+    min-height: 350px;
+}
+
+.product__info  .product__section td{
+    word-break: break-all;
+}
+
+
+/* Shop */
+
+/* Fix show more position */
+
+#productList #ProductsContainer{
+    flex-grow: initial;
+}
+
+
+#Block__MainInformation > div[id^=Block] .grid__col-md-12,
+#Block__Specifikationer .grid__col-md-12{
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    border-bottom: 1px dotted;
+}
+
+#Block__Specifikationer .center-container .grid--bleed{
+    max-width: 1200px;
+}
+
+
+#Block__Specifikationer .center-container .grid--bleed .grid__col-md-4.grid__col-sm-12{
+    margin-bottom: 1.6em;
+}
+
+
+#no-stock-action-form input[type="radio"]:checked+label:not(.btn--tag)::before,
+#no-stock-action-form input[type="radio"]+label:not(.btn--tag):hover::before{
+    background-color: #D32C36;
+    box-shadow: 0 0 0 2px #D32C36, inset 0 0 0 3px #f6f6f6;
+}
+
+
+#Block__CustomFields .fa-file-pdf,
+#Block__CustomFields .fa-file-pdf:before{
+    font-size: 34px;
+}
+
+
+#Block__CustomFields .table--no-top-border tr:first-child th,
+#Block__CustomFields .table--no-top-border tr:first-child td{
+    border-top:0
+}
+
+
+div[parentgrpname="Mærker"]{
+    width: 16.666%;
+    align-items: center;
+    flex-direction: row;
+    text-align: center;
+}
+
+div[parentgrpname="Mærker"] .mega-menu__list-wrap{
+    width: calc(100% - 20px);
+    margin: 0 10px;    
+    border: 2px solid #ececec;
+    padding: 0;
+    margin-bottom: 0;
+}
+
+div[parentgrpname="Mærker"] .mega-menu__list-image{
+    width: 100%;
+    margin-bottom: 0;
+}
+
+div[parentgrpname="Mærker"] .mega-menu__header-container__text.dw-mod{
+    font-size: 1.6rem;
+   
+}
+
+.menu__item .link-to-category{
+    margin-left: auto;
+    display: block;
+    margin-right: 30px;
+    margin-bottom: 4px;
+    font-size: 16px;
+}
+
+
+/* Services Delivery*/ 
+
+.open-deliveryservices-pop{
+    cursor: pointer;
+    font-weight: bold;
+    color: #D32C36;
+}
+
+
+@media only screen and (max-width: 1024px) {
+    .content-row--4col .margin-sm{
+        margin: 0.5em;
+    }
+    .content-row--4col.padding-size-md{
+        padding: 0.5em;
+    }
+
+   
+}
+
+@media only screen and (max-width: 992px) {
+    .content-row__item__body h1{
+        font-size: 32px;
+    }
+
+    .site.dw-mod{
+        background-size: cover;
+    }
+
+    .content-row--4col{
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .buttons-collection>*:not(:first-child){
+        margin-top: 0.4em;
+    }
+
+    .buttons-collection>*:not(:last-child) {
+        margin-right: 0.4em;
+        margin-left: 0.4em;
+    }
+}
+
+
+@media only screen and (max-width: 500px) {
+    .product-list__grid-item__footer{
+        padding: 0.5em 0;
+    }
+    .product-list__grid-item__price-info{
+        padding: 0.5em;
+    }
+
+    .price--product-list.dw-mod{
+        font-size: 19px;
+    }
+
+    input[type=number] {
+        width: 50px;
+        max-width: 80px;
+    }
+
+    .buttons-collection>*:not(:last-child) {
+        margin-right: 0.4em;
+    }
+
+    .footer__card-type{
+        margin-top: 3px;
+        margin-bottom: 3px;
+    }
+
+    .content-row--4col{
+        grid-template-columns: 1fr;
+    }
+
+    
+}
+
+

@@ -1,0 +1,158 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Ecommerce.International;
+
+@functions {
+    BlocksPage addressesPage = BlocksPage.GetBlockPage("Cart");
+}
+
+@{
+    addressesPage.Add(new Block {
+        Id = "MyAddressesList",
+        SortId = 10,
+        Template = RenderMyAddresses()
+    });
+}
+
+@helper RenderMyAddresses()
+{
+    var shippingAddressesEditingSetting = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetList("AddressesEditing");
+    var addressesViewMode = shippingAddressesEditingSetting != null ? shippingAddressesEditingSetting.SelectedValue : "editable";
+   
+    <div class="grid">
+        @if (addressesViewMode == "static")
+        {
+            <div class="grid__col-sm-4">
+                @Render(new Button {
+                    Title = Translate("Add new address"),
+                    ButtonLayout = ButtonLayout.None,
+                    CssClass = "media-list-item__add-new media-list-item__add-new--column",
+                    OnClick = "openAddAddressModal()"
+                })
+            </div>
+        }
+        @foreach (LoopItem address in GetLoop("UserManagement:User.UserAddresses").OrderByDescending(address => address.GetString("UserManagement:User.UserAddress.Default")).ToList())
+        {
+            var addressId = address.GetString("UserManagement:User.UserAddress.ID");
+
+            //Get address info
+            var addressInfo = new List<string>();
+            var countryList = GlobalISO.GetGlobalISOs().Cast<GlobalISO>().GroupBy(x => x.Code2).Select(x => x.FirstOrDefault()).ToDictionary(x => x.Code2, y => y.CountryUK);
+            var name = address.GetString("UserManagement:User.UserAddress.AccessUserAddress_UserName");
+            var address1 = address.GetString("UserManagement:User.UserAddress.Address");
+            var company = address.GetString("UserManagement:User.UserAddress.Company");
+            var zip = address.GetString("UserManagement:User.UserAddress.Zip");
+            var city = address.GetString("UserManagement:User.UserAddress.City");
+            var regionCode = address.GetString("UserManagement:User.UserAddress.State");
+            var regionName = "";
+            var countryCode = address.GetString("UserManagement:User.UserAddress.CountryCode");
+
+            var region = Dynamicweb.Ecommerce.Services.Countries.GetRegion(countryCode, regionCode);
+            if (region != null) {
+                regionName = region.Name;
+            }
+
+            addressInfo.Add(name);
+            addressInfo.Add(company); 
+            addressInfo.Add(address1);
+            addressInfo.Add(zip + (!string.IsNullOrEmpty(zip) ? " " : "") + city);
+            addressInfo.Add(regionName);
+
+            if (countryList.ContainsKey(countryCode))
+            {
+                addressInfo.Add(countryList[countryCode]);
+            }
+            addressInfo = addressInfo.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+
+            //Get user info
+            var userInfo = new List<string>();
+            var email = address.GetString("UserManagement:User.UserAddress.Email");
+            var phone = address.GetString("UserManagement:User.UserAddress.Phone");
+            string userIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("SignInProfileIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("SignInProfileIcon").SelectedValue : "fas fa-user";
+
+            if (!string.IsNullOrEmpty(email))
+            {
+                userInfo.Add(email);
+            }
+
+            if (!string.IsNullOrEmpty(phone))
+            {
+                userInfo.Add(phone);
+            }
+            //get user info end
+
+            string addressTitle = !string.IsNullOrEmpty(address.GetString("UserManagement:User.UserAddress.Description")) ? address.GetString("UserManagement:User.UserAddress.Description") : address1;
+
+            var manageAdressesItem = new MediaListItem
+            {
+                Title = Render(new Heading
+                {
+                    Title = addressTitle,
+                    Level = 5,
+                    CssClass = "u-no-margin u-no-padding u-bold"
+                }).ToString(),
+                Status = address.GetBoolean("UserManagement:User.UserAddress.Default") ? Translate("Default") : "",
+                CssClass = "grid__col-sm-4 media-list-item--compact",
+                InfoTable = new Table
+                {
+                    CssClass = "media-list-item__parameters-table--user-address"
+                },
+                SelectButton = new Button
+                {
+                    ButtonLayout = ButtonLayout.Primary,
+                    Title = Translate("Ship to this address"),
+                    OnClick = "selectAddress({" +
+                        "Company: '" + company + "'," +
+                        "Name: '" + name + "'," +
+                        "Phone: '" + phone + "'," +
+                        "Email: '" + email + "'," +
+                        "Address: '" + address1 + "'," +
+                        "Zip: '" + zip + "'," +
+                        "City: '" + city + "'," +
+                        "Region: '" + regionCode + "'," +
+                        "Country: '" + countryCode + "'" +
+                    "});setUseBillingAddress(false)",
+                    CssClass = "u-full-width"
+                }
+            };
+
+            if (addressesViewMode == "static")
+            {
+                manageAdressesItem.AddAction(new Button
+                {
+                    Title = Translate("Edit"),
+                    OnClick = "openEditAddressModal(" + address.GetString("UserManagement:User.UserAddress.ID") + ")"
+                });
+
+                if (!address.GetBoolean("UserManagement:User.UserAddress.Default") && address.GetString("UserManagement:User.UserAddress.ID") != Converter.ToString(Pageview.User.ID))
+                {
+                    manageAdressesItem.AddAction(new Button
+                    {
+                        ButtonLayout = ButtonLayout.None,
+                        Id = "DeleteWarning_" + address.GetString("UserManagement:User.UserAddress.ID") + "_",
+                        Title = Translate("Delete"),
+                        ConfirmTitle = Translate("Warning"),
+                        ConfirmText = Translate("Are you sure you wish to delete this address?"),
+                        OnClick = "deleteAddress(" + addressId + ", this);"
+                    });
+                }
+            }
+
+            addressInfo.AddRange(userInfo.ToArray());
+
+            foreach (var item in addressInfo)
+            {
+                manageAdressesItem.InfoTable.Rows.Add(new TableRow(item));
+            }
+
+            @Render(manageAdressesItem)
+        }
+    </div>
+}
+
+@* Include the Rendering helpers *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+
+@RenderBlockList(addressesPage.BlocksRoot.BlocksList)

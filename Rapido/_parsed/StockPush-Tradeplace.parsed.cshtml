@@ -1,0 +1,181 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+
+@using System
+@using System.Collections.Generic
+@using System.IO;
+@using System.Linq
+@using System.Text
+@using System.Web;
+@using System.Web.UI.WebControls
+@using System.Xml
+@using System.Xml.Linq
+@using System.Xml.Schema
+@using Dynamicweb
+@using Dynamicweb.Ecommerce
+@using Dynamicweb.Ecommerce.Products;
+@using Dynamicweb.Ecommerce.Stocks;
+
+
+@{
+    var path = "/Files/Files/Integration/TRADEPLACE/StockPush/PROD/";
+    var dateTimeNow = DateTime.Now.ToString("ddMMyy-HHmmss");
+    string fileName = $"StockPush{dateTimeNow}.xml";
+    string physicalPath = Dynamicweb.Core.SystemInformation.MapPath(path);
+    string fullFilePath = physicalPath + fileName;
+    DirectoryInfo stockPushDirectory = new DirectoryInfo(physicalPath);
+    if (!stockPushDirectory.Exists)
+    {
+        stockPushDirectory.Create();
+    }
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"===============================================================================================================================");
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log("TradePlace PROD StockPush");
+
+    var inputStream = HttpContext.Current.Request.InputStream;
+    if (inputStream.Position > 0)
+    {
+        inputStream.Position = 0;
+    }
+    
+    var settings = new XmlReaderSettings();
+    settings.XmlResolver = new XmlUrlResolver();
+    settings.DtdProcessing = DtdProcessing.Ignore;
+	settings.ValidationType = ValidationType.DTD;
+    settings.IgnoreWhitespace = true;
+    
+    XmlDocument doc = new XmlDocument();
+    XDocument document = new XDocument();
+    string docText = string.Empty;
+    try
+    {
+        var xmlReader = XmlReader.Create(inputStream, settings);
+        //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"xmlReader created {xmlReader.Name}");
+        doc.Load(xmlReader);
+        //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"XmlDoc loaded {doc.Name}");
+        doc.Save(fullFilePath);
+        //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"xml saved {doc.Name}");
+        xmlReader.Close();
+        inputStream.Close();
+        //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"Streams closed");
+        document = XDocument.Load(fullFilePath);
+        //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"XDocument loaded {fullFilePath}");
+        if (document.ToString().Contains(" xmlns=\"http://xml.tradeplace.com/schemas/TradeXML/1.0.0/TradeXML.dtd\" productionMode=\"production\""))
+        {
+            docText = document.ToString().Replace(" xmlns=\"http://xml.tradeplace.com/schemas/TradeXML/1.0.0/TradeXML.dtd\" productionMode=\"production\"", "");
+            //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"docText Replaced");
+        }
+        else
+        {
+            Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"ERROR XMLNS NOT EXIST");
+            return;
+        }
+
+        using (var stringReader = new StringReader(docText))
+        {
+            document = XDocument.Load(stringReader, LoadOptions.None);
+            //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"document loaded with string reader");
+
+        }
+        document.Save(fullFilePath);
+        //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"document saved {fullFilePath}");
+        
+        doc.Load(fullFilePath);
+        //Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"doc loaded {fullFilePath}");
+    }
+    catch (Exception ex)
+    {
+        Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"Exception thrown: {ex.Message}");
+    }
+
+    XmlNode brand = doc.SelectSingleNode("TradeplaceMessage/TransportEnvelope/Routing/From");
+    if (brand != null)
+    {
+        if (brand.InnerText.ToLower().Contains("bsh"))
+        {
+            Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log("TradePlace Bosch and Siemens StockPush Started");
+        }
+        else if(brand.InnerText.ToLower().Contains("electrolux"))
+        {
+            Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log("TradePlace Electrolux StockPush Started");
+        }
+    }
+    
+    XmlNodeList nodeList = doc.SelectNodes("TradeplaceMessage/BusinessMessage/StockPush/StockPushLineItems/StockPushLineItem");
+
+    ProductService productService = new Dynamicweb.Ecommerce.Products.ProductService();
+    StockService stock = new Dynamicweb.Ecommerce.Stocks.StockService();
+	int productCounter = 0;
+	int localStockId = 4;
+    int tradePlaceStockId = 3;
+	DateTime defaultDate = DateTime.MinValue;
+    StockLocation stockLocationTradeplace = stock.GetStockLocation(tradePlaceStockId);
+
+
+    foreach (XmlNode node in nodeList)
+    {
+         XmlNode EAN = node.SelectSingleNode("Material[@materialQualifier = 'EAN']");
+         XmlNode ID = node.SelectSingleNode("Material[@materialQualifier = 'OEM']");
+         XmlNode inStock = node.SelectSingleNode("InStock");
+         XmlNode expectedStockDate = node.SelectSingleNode("ExpectedStockDate");
+         XmlNode year = node.SelectSingleNode("ExpectedStockDate/Year");
+         XmlNode month = node.SelectSingleNode("ExpectedStockDate/Month");
+         XmlNode day = node.SelectSingleNode("ExpectedStockDate/Day");
+
+
+         Product product = productService.GetProductById(ID.InnerText, "", "LANG2");
+         if (product != null && product.EAN == EAN.InnerText)
+         {
+            if(product.Units.Count == 0)
+            {
+                stock.SaveStockUnit(new StockUnit() {ProductId = product.Id, VariantId = "", ProductNumber = "", Description = "", ExpectedDelivery = defaultDate, StockLocationId = localStockId, StockQuantity = 0, UnitId = "VO84"});
+                stock.SaveStockUnit(new StockUnit() {ProductId = product.Id, VariantId = "", ProductNumber = "", Description = "", ExpectedDelivery = defaultDate, StockLocationId = tradePlaceStockId, StockQuantity = 0, UnitId = "VO84"});
+                product.UnitCount = 2;
+                productService.Save(product);
+            }
+            StockUnit stockUnitTradePlace = stock.GetStockUnit(product.Id, "", "VO84", stockLocationTradeplace);
+
+            if (stockUnitTradePlace != null)
+            {
+                if (inStock.InnerText.ToLower() == "yes")
+                {
+                    stockUnitTradePlace.StockQuantity = 10;
+                    stockUnitTradePlace.ExpectedDelivery = defaultDate;
+                }
+                else if (inStock.InnerText.ToLower() == "low")
+                {
+                    stockUnitTradePlace.StockQuantity = 2;
+                    stockUnitTradePlace.ExpectedDelivery = defaultDate;
+                }
+                else if (inStock.InnerText.ToLower() == "no")
+                {
+                    if (expectedStockDate != null)
+                    {
+						//stockUnitTradePlace.ExpectedDelivery = new DateTime(Convert.ToInt32(year.InnerText), Convert.ToInt32(month.InnerText), Convert.ToInt32(day.InnerText));
+ 						DateTime date;
+                        if(DateTime.TryParse($"{day.InnerText}/{month.InnerText}/{year.InnerText} 00:00:00", out date))
+                        {
+                            stockUnitTradePlace.ExpectedDelivery = date;
+                        }
+                        else
+                        {
+                            stockUnitTradePlace.ExpectedDelivery = defaultDate;
+                        }
+                    }
+
+                    stockUnitTradePlace.StockQuantity = 0;
+                }
+                productCounter++;
+            }
+
+            stock.SaveStockUnit(stockUnitTradePlace);
+         }
+    }
+    
+    productService.ClearCache();
+    stock.ClearCache();
+
+	Dynamicweb.Ecommerce.Common.Application.KillStockUnits();
+	Dynamicweb.Ecommerce.Common.Application.KillProducts();
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"{productCounter} products updated by stock push");
+    
+//HttpContext.Current.Response.Write(result);
+}

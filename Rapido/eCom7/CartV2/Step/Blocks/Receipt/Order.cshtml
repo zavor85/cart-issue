@@ -1,0 +1,42 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage orderPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    orderPage.Add("OrderContainer", new Block
+    {
+        Id = "Order",
+        SortId = 20,
+        SkipRenderBlocksList = true,
+        Template = RenderOrder(),
+        Design = new Design
+        {
+            CssClass = "u-border u-no-border--bottom table-responsive"
+        }
+    });
+}
+
+@helper RenderOrder()
+{
+    List<Block> subBlocks = orderPage.GetBlockListById("Order").OrderBy(item => item.SortId).ToList();
+
+    <table class="table table--responsive-order u-no-margin">
+        <thead>
+            <tr>
+                <th>&nbsp;</th>
+                <th>@Translate("Product")</th>
+                <th class="u-ta-right">@Translate("Qty")</th>
+                <th class="u-ta-right">@Translate("Price")</th>
+                <th class="u-ta-right">@Translate("Total")</th>
+            </tr>
+        </thead>
+        <tbody>
+            @RenderBlockList(subBlocks)
+        </tbody>
+    </table>
+}

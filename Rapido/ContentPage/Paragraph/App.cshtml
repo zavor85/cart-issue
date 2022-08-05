@@ -1,0 +1,35 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@Include("ParagraphBase.cshtml")
+
+@{ 
+    string innerPadding = Model.Item.GetList("Padding") != null ? " padding-size-" + Model.Item.GetList("Padding").SelectedValue.ToLower() : "";
+    innerPadding += Model.Item.GetList("PaddingPosition") != null ? " padding-position-" + Model.Item.GetList("PaddingPosition").SelectedValue.ToLower() : "";
+    string outerMargin = Model.Item.GetList("Margin") != null ? " margin-" + Model.Item.GetList("Margin").SelectedValue.ToLower() : "";
+    string outerMarginPosition = Model.Item.GetList("MarginPosition") != null ? " margin-position-" + Model.Item.GetList("MarginPosition").SelectedValue.ToLower() : "";
+
+    string style = "";
+    string card = "";
+
+    if (!string.IsNullOrEmpty(Model.Item.GetString("RenderAsCard"))) {
+        style = Model.Item.GetBoolean("RenderAsCard") ? "background-color: #fff" : "";
+        card = Model.Item.GetBoolean("RenderAsCard") ? "card" : "";
+    }
+}
+
+<div class="content-row__item__body @innerPadding @outerMargin @outerMarginPosition @card dw-mod" style="@style">
+    @if (!string.IsNullOrEmpty(Model.Item.GetString("Title")) && !Model.Item.GetBoolean("HideTitle")) {
+        <div class="u-margin-bottom--lg">
+            @if (!Model.Item.GetBoolean("HideTitle")) { 
+                @Render(new Heading { Title = Model.Item.GetString("Title"), Level = 2, CssClass = "u-no-margin" })
+            }
+        </div>
+    }
+    @Model.GetModuleOutput()
+</div>
+
+
+

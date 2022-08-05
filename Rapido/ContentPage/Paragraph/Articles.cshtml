@@ -1,0 +1,30 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using System.IO
+@using System.Web
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.Articles
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks
+
+@{ 
+    int pageId = Model.PageID;
+    bool hideTitle = Model.Item.GetBoolean("HideTitle");
+    string itemType = Model.Item.GetString("ItemTypeName") != null ? Model.Item.GetString("ItemTypeName") : "DynamicArticle";
+    string sourcePagsId = Model.Item.GetItem("GetArticlesFrom") != null ? Model.Item.GetItem("GetArticlesFrom").PageID.ToString() : Pageview.ID.ToString();
+}
+
+<div class="articles-paragraph dw-mod">
+    @if (!hideTitle) {
+        @Render(new Heading { Title = Model.Item.GetString("Title"), Level = 2, CssClass = "u-no-margin" })
+    }
+
+    @Render(new ArticleList { Template = "../ItemPublisher/List/DynamicList.cshtml", PageSize = Model.Item.GetInt32("ArticlesListSize"), DisablePagination = true, SourcePage = sourcePagsId, SourceType = "Page", ItemType = itemType })
+</div>
+
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../Components/GridBuilder.cshtml")
+
+@* Include the components *@
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/ArticleComponents.cshtml")

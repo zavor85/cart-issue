@@ -1,0 +1,106 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Core
+@using System.Linq
+
+@helper RenderOrderSummary() {
+    bool hasTaxSettings = Dynamicweb.Rapido.Services.Countries.HasTaxSettings(GetString("Ecom:Order.ID"));
+    bool pointShop = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+    bool hidePaymentFee = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") && GetInteger("Ecom:Order.PaymentFee.Price") == 0;
+    string paymentMethod = !string.IsNullOrEmpty(GetString("Ecom:Order.PaymentMethod")) ? GetString("Ecom:Order.PaymentMethod") : Translate("Payment");
+    bool hideShippingFee = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") && GetInteger("Ecom:Order.ShippingFee.Price") == 0;
+    string shippingMethod = !string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethod")) ? GetString("Ecom:Order.ShippingMethod") : Translate("Delivery");
+
+    int numberofservices = 0;
+    int numberofproducts = GetInteger("Ecom:Order.OrderLines.TotalProductQuantity");
+
+foreach (LoopItem orderLinesCnt in GetLoop("OrderLines")) {
+    foreach (LoopItem orderlinefield in orderLinesCnt.GetLoop("Order.OrderLineFields")){
+          if (orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.SystemName")=="ServiceForProductId"){
+              numberofservices+=orderLinesCnt.GetInteger("Ecom:Order:OrderLine.Quantity");
+              numberofproducts-=orderLinesCnt.GetInteger("Ecom:Order:OrderLine.Quantity");
+          }   
+    }
+}
+
+
+
+    <h2 class="u-margin-bottom--lg">@Translate("Order summary")</h2>
+
+    <table class="table--condensed table--no-top-border">
+        <tbody>
+            <tr>
+                <td>@Translate("Total qty"):</td>
+                <td>@numberofproducts</td>
+            </tr>
+            @if(numberofservices>0){
+            <tr>
+                <td class="u-no-border">@Translate("DeliveryServicesTotal qty"):</td>
+                <td class="u-no-border">@numberofservices</td>
+            </tr>
+            }
+            @if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideSubtotal"))
+            {
+                <tr>
+                    <td>@Translate("Subtotal"):</td>
+                    <td>@GetString("Ecom:Order.PriceWithoutFees.PriceFormatted")</td>
+                </tr>
+            }
+            @if (!hidePaymentFee)
+            {
+                <tr>
+                    <td>@paymentMethod:</td>
+                    <td>@GetString("Ecom:Order.PaymentFee")</td>
+                </tr>
+            }
+            @if (!hideShippingFee)
+            {
+                <tr>
+                    <td>@shippingMethod:</td>
+                    <td>@GetString("Ecom:Order.ShippingFee")</td>
+                </tr>
+            }
+            @if (hasTaxSettings)
+            {
+                string totalTaxes = GetDouble("Ecom:Order.Taxes.Total.Price") != 0 ? GetString("Ecom:Order.Taxes.Total") : "-";
+
+                <tr>
+                    <td >@Translate("Sales Tax"):</td>
+                    <td class="u-ta-right">@totalTaxes</td>
+                </tr>
+            }
+            <tr class="u-bold u-border-top--bold">
+                <td>@Translate("Total"):</td>
+                <td width="150">@GetString("Ecom:Order.OrderLines.Total.Price")</td>
+            </tr>
+            @if (!pointShop && !hasTaxSettings)
+            {
+                <tr class="u-ta-right">
+                    <td class="u-no-border" colspan="2">
+                        <div>
+                            <small>@Translate("VAT") (@GetString("Ecom:Order.PriceWithoutFees.VATPercentFormatted")):</small>
+                            <small>@GetString("Ecom:Order.OrderLines.Total.PriceVAT")</small>
+                        </div>
+
+                        @if (isPricesWithVATEnabled)
+                        {    
+                            <div>
+                                <small>@Translate("Total price without VAT"):</small>
+                                <small>@GetString("Ecom:Order.OrderLines.Total.PriceWithoutVAT")</small>
+                            </div>
+                        }
+                        else
+                        {
+                            <div>
+                                <small>@Translate("Total price with VAT"):</small>
+                                <small>@GetString("Ecom:Order.OrderLines.Total.PriceWithVAT")</small>
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

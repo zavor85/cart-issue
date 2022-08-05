@@ -1,0 +1,579 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Services
+
+@functions {
+    BlocksPage gridViewPage = BlocksPage.GetBlockPage("ProductList");
+    Dynamicweb.Frontend.ItemViewModel gridViewSettings = null;
+}
+
+@if (Pageview.AreaSettings.GetItem("ProductList").GetBoolean("EnableGridView"))
+{
+    gridViewSettings = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView");
+
+    BlocksPage gridViewPage = BlocksPage.GetBlockPage("ProductList");
+
+    gridViewPage.Add("Views", new Block
+    {
+        Id = "ProductGridItemContainer",
+        Name = "th",
+        SortId = 20
+    });
+
+    Block gridViewScripts = new Block
+    {
+        Id = "GridViewScripts",
+        SortId = 20,
+        Template = GridView(),
+        BlocksList = new List<Block> {
+            new Block
+            {
+                Id = "GridViewItem",
+                SortId = 10,
+                Template = RenderGridViewItem(),
+                SkipRenderBlocksList = true,
+                BlocksList = new List<Block> {
+                    new Block
+                    {
+                        Id = "GridViewItemHiddenProperties",
+                        SortId = 10,
+                        Template = RenderGridViewItemHiddenProperties()
+                    },
+                    new Block
+                    {
+                        Id = "GridViewItemImageContainer",
+                        SortId = 20,
+                        SkipRenderBlocksList = true,
+                        Template = RenderGridViewItemImageContainer(),
+                        BlocksList = new List<Block> {
+                            new Block
+                            {
+                                Id = "GridViewItemImage",
+                                SortId = 10,
+                                Template = RenderGridViewItemImage()
+                            },
+                            new Block
+                            {
+                                Id = "GridViewItemStickers",
+                                SortId = 20,
+                                Template = RenderGridViewItemStickers()
+                            }
+                        }
+                    },
+                    new Block
+                    {
+                        Id = "GridViewItemInfoContainer",
+                        SortId = 30,
+                        SkipRenderBlocksList = true,
+                        Template = RenderGridViewItemInfoContainer(),
+                        BlocksList = new List<Block> {
+                            new Block
+                            {
+                                Id = "GridViewItemTitle",
+                                SortId = 10,
+                                Template = RenderGridViewItemTitle()
+                            }
+                        }
+                    },
+                    new Block
+                    {
+                        Id = "GridViewItemFooter",
+                        SortId = 40,
+                        SkipRenderBlocksList = true,
+                        Template = RenderGridViewItemFooter(),
+                        BlocksList = new List<Block> {
+                            new Block
+                            {
+                                Id = "GridViewItemActions",
+                                SortId = 10,
+                                Template = RenderGridViewItemActions()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    gridViewPage.Add("BottomSnippets", gridViewScripts);
+
+    //favorites
+    bool gridViewShowFavoriteButton = !gridViewSettings.GetBoolean("HideFavoriteButton");
+
+    if (gridViewShowFavoriteButton)
+    {
+        gridViewPage.Add("GridViewItemImageContainer", new Block
+        {
+            Id = "GridViewItemFavorites",
+            SortId = 30,
+            Template = RenderGridViewItemFavorites()
+        });
+    }
+
+    //number
+    bool gridViewShowNumber = gridViewSettings.GetBoolean("ShowProductNumber");
+
+    if (gridViewShowNumber)
+    {
+        gridViewPage.Add("GridViewItemInfoContainer", new Block
+        {
+            Id = "GridViewItemNumber",
+            SortId = 20,
+            Template = RenderGridViewItemNumber()
+        });
+    }
+
+    //price
+    bool gridViewShowPrice = !Pageview.AreaSettings.GetItem("ProductList").GetBoolean("HidePrice");
+    if (gridViewShowPrice && Dynamicweb.Rapido.Services.User.IsPricesAllowed())
+    {
+        gridViewPage.Add("GridViewItemInfoContainer", new Block
+        {
+            Id = "GridViewItemPrice",
+            SortId = 30,
+            Template = RenderGridViewItemPrice()
+        });
+    }
+
+    //stock
+    bool gridViewShowStock = gridViewSettings.GetBoolean("ShowStockAndShipping");
+
+    if (User.IsStockInfoAllowed() && gridViewShowStock)
+    {
+        gridViewPage.Add("GridViewItemFooter", new Block
+        {
+            Id = "GridViewItemStockAndDelivery",
+            SortId = 20,
+            Template = RenderGridViewItemStockAndDelivery()
+        });
+    }
+
+    //static variants
+    bool gridViewShowStaticVariants = gridViewSettings.GetBoolean("ShowStaticVariants");
+
+    if (gridViewShowStaticVariants)
+    {
+        gridViewPage.Add("GridViewItemFooter", new Block
+        {
+            Id = "GridViewItemStaticVariants",
+            SortId = 30,
+            Template = RenderGridViewItemStaticVariants()
+        });
+    }
+
+    //download button
+    bool gridViewShowAddToDownloadButton = gridViewSettings.GetBoolean("ShowAddToDownloadButton");
+
+    if (gridViewShowAddToDownloadButton && Pageview.User != null)
+    {
+        gridViewPage.Add("GridViewItemFooter", new Block
+        {
+            Id = "GridViewItemDownloadButton",
+            SortId = 40,
+            Template = RenderGridViewItemDownloadButton()
+        });
+    }
+}
+
+@helper GridView()
+{
+    int columnsCount = gridViewSettings.GetList("Columns") != null ? Converter.ToInt32(gridViewSettings.GetList("Columns").SelectedValue) : 3;
+    string imageZoomOnHover = gridViewSettings.GetBoolean("HoverImageZoom") ? "image-hover--zoom" : "";
+    
+    <script id="ProductGridItemContainer" type="text/x-template">
+        {{#.}}
+            <div id="Product{{id}}" data-template="GridViewItem" data-preloader="overlay" class="grid__col-lg-@(12 / columnsCount) grid__col-md-@(12 / columnsCount) grid__col-sm-@(12 / columnsCount) grid__col-xs-6 grid__col-6 product-list__grid-item @imageZoomOnHover dw-mod">
+                {{#Product}}
+                    {{>GridViewItem}}
+                {{/Product}}
+            </div>
+        {{/.}}
+    </script>
+}
+
+@helper RenderGridViewItem()
+{ 
+    List<Block> subBlocks = gridViewPage.GetBlockListById("GridViewItem");
+
+    <script id="GridViewItem" type="text/x-template">
+        {{#.}} 
+            <div class="grid__col--auto js-product-scroll-trigger u-no-padding u-full-height" data-params="{{googleImpression}}">
+                @RenderBlockList(subBlocks)
+            </div>
+        {{/.}}
+    </script>
+}
+
+@helper RenderGridViewItemHiddenProperties()
+{
+    <input type="hidden" name="ProductLoopCounter{{id}}" value="{{id}}" />
+    <input type="hidden" name="ProductID{{id}}" value="{{productId}}" />
+    <input type="hidden" name="VariantID{{id}}" value="{{variantid}}" id="Variant_{{id}}" />
+    <input type="hidden" name="UnitID{{id}}" value="{{unitId}}" id="Unit_{{id}}" />
+    <input type="hidden" name="Quantity{{id}}" value="1" id="Quantity_{{id}}" />
+}  
+
+@helper RenderGridViewItemImageContainer()
+{
+    List<Block> subBlocks = gridViewPage.GetBlockListById("GridViewItemImageContainer");
+
+    <div class="grid__cell product-list__grid-item__image dw-mod {{noImage}}">
+         <text>{{#if energyClass}}</text>
+       
+                    <div class="class-{{energyClassClass}} type-{{energyClassType}} link-to-datablad">
+                        <a href="{{link}}#Block__CustomFields">
+                        <span class="class">{{energyClass}}</span>
+                   
+        {{#ifCond energyClassType '==' "1"}}
+             <div class="label-left">
+                A <br>
+                ↑ <br>
+                G
+            </div>
+             </a>
+          {{/ifCond}}
+             {{#if databladLink}}
+            <a target="_blank" href="{{databladLink}}"><span class="datablad">@Translate("Datablad")</span></a>
+          {{else}}
+            <a href="{{link}}#Block__Specifikationer"><span class="datablad">@Translate("Datablad")</span></a>
+          {{/if}}
+           </div>
+          
+      <text>{{/if}}</text>
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+@helper RenderGridViewItemImage()
+{
+    bool secondaryImage = gridViewSettings.GetString("HoverAlternatineImage") != null ? gridViewSettings.GetBoolean("HoverAlternatineImage") : false;
+    
+    <a href="{{link}}" 
+       onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}} ;savePosition()" 
+       title="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}" 
+       class="u-block u-position-relative image-hover__wrapper dw-mod">
+        <img class="grid__cell-img grid__cell-img--centered u-padding b-lazy" src="/Files/Images/placeholder.gif" 
+            data-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{image}}"
+            @if (secondaryImage) {
+            <text>
+                {{#if secondaryImage}}
+                data-secondary-image-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{secondaryImage}}"
+                {{/if}} 
+            </text>
+            }
+            alt="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}" />
+    </a>
+}
+
+@helper RenderGridViewItemStickers()
+{
+    <text>
+        {{#StickersContainers}}
+            {{>StickersContainer}}
+        {{/StickersContainers}}
+    </text>
+}
+
+@helper RenderGridViewItemFavorites()
+{
+    <div class="favorites favorites--for-grid-view u-pull--right {{hasVariants}} dw-mod" {{hasVariants}}>
+        {{#Favorite}}
+            {{>FavoriteTemplate}}
+        {{/Favorite}}
+    </div>
+}
+
+@helper RenderGridViewItemInfoContainer()
+{
+    List<Block> subBlocks = gridViewPage.GetBlockListById("GridViewItemInfoContainer");
+
+    <div class="grid__cell product-list__grid-item__price-info dw-mod">
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+@helper RenderGridViewItemTitle()
+{
+    <a href="{{link}}" class="u-color-inherit" onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" title="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}">
+        <h6 class="u-condensed-text u-bold">{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}</h6>
+    </a>
+}
+
+@helper RenderGridViewItemNumber()
+{
+    <div class="item-number dw-mod">{{number}}</div>
+}
+
+@helper RenderGridViewItemPrice()
+{
+    int columnsCount = gridViewSettings.GetList("Columns") != null ? Converter.ToInt32(gridViewSettings.GetList("Columns").SelectedValue) : 4;
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool showCartButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToCartButton");
+    bool showVATPrice = Pageview.AreaSettings.GetItem("ProductList").GetBoolean("ShowBothPricesWithWithoutVAT");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+
+    if (pointShopOnly)
+    {
+        <text>
+            {{#if havePointPrice}}
+                <div class="price price--product-list dw-mod">{{points}} @Translate("points")</div>
+                @if (showCartButton)
+                {
+                    <text>
+                        {{#unless canBePurchasedWithPoints}}
+                            <small class="help-text u-no-margin">@Translate("Not enough points to buy this")</small>
+                        {{/unless}}
+                    </text>
+                }
+            {{else}}
+                @Translate("Not available")
+            {{/if}}
+        </text>
+        
+    }
+    else
+    {
+        <text>{{#if hideAddToCartButton}}</text>
+         
+        <text>{{else}}</text>
+          <div class="price price--product-list dw-mod">{{price}}</div>
+        <text>{{/if}}</text>
+
+        <div class="before-price {{onSale}} dw-mod">{{discount}}</div>
+        if (showVATPrice)
+        {
+            <div class="vat-price vat-price--product-list u-margin-top dw-mod">
+                @if (columnsCount <= 4) {
+                    if (isPricesWithVATEnabled)
+                    {
+                        <span>@Translate("excl. VAT")</span><span> ({{priceWithoutVAT}})</span>
+                    }
+                    else
+                    {
+                        <span>@Translate("incl. VAT")</span><span> ({{priceWithVAT}})</span>
+                    }
+                } else { 
+                    if (isPricesWithVATEnabled)
+                    {
+                        <div>@Translate("excl. VAT")</div><div>({{priceWithoutVAT}})</div>
+                    }
+                    else
+                    {
+                        <div>@Translate("incl. VAT")</div><div>({{priceWithVAT}})</div>
+                    }
+                }
+            </div>
+        }
+        <text>
+            {{#if priceRRP}}
+                <div><small>@Translate("RRP") {{priceRRP}}</small></div>
+            {{/if}}
+        </text>
+    }
+}
+
+@helper RenderGridViewItemFooter()
+{ 
+    List<Block> subBlocks = gridViewPage.GetBlockListById("GridViewItemFooter");
+    bool showStaticVariants = gridViewSettings.GetBoolean("ShowStaticVariants");
+
+    <div class="product-list__grid-item__footer dw-mod">
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+@helper RenderGridViewItemViewButton()
+{
+    string viewMoreText = gridViewSettings.GetString("ViewMoreText");
+    viewMoreText = !string.IsNullOrEmpty(viewMoreText) ? viewMoreText : "View";
+
+    @Render(new Link
+    {
+        Href = "{{link}}",
+        Id = "CartButton_{{id}}",
+        Title = Translate(viewMoreText),
+        OnClick = "{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}",
+        ButtonLayout = ButtonLayout.Secondary,
+        CssClass = "u-no-margin"
+    });
+}
+
+@helper RenderGridViewItemAddToCart()
+{
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    string wrapperClass = "buttons-collection--center";
+    int columnsCount = gridViewSettings.GetList("Columns") != null ? Converter.ToInt32(gridViewSettings.GetList("Columns").SelectedValue) : 4;
+    bool hideButtonText = columnsCount >= 4 || Pageview.Device.ToString() == "Mobile" || Pageview.Device.ToString() == "Tablet";
+    
+    if (pointShopOnly && columnsCount <= 4) 
+    {
+        hideButtonText = false;
+    }
+
+    var addToCartBtn = new AddToCart
+    {
+        WrapperCssClass = wrapperClass,
+        AddButton = new AddToCartButton
+        {
+            HideTitle = hideButtonText,
+            ProductId = "{{productId}}",
+            VariantId = "{{variantid}}",
+            UnitId = "{{unitId}}",
+            ProductInfo = "{{productInfo}}",
+            BuyForPoints = pointShopOnly,
+            Id = "AddToCartButton_{{id}}",
+            OnClick = "{{facebookPixelAction}}",
+            ExtraAttributes = new Dictionary<string, string>
+            {
+                { "{{disabledBuyButton}}", "" }
+            }
+        }
+    };
+
+    if (!pointShopOnly) 
+    {
+        addToCartBtn.QuantitySelector = new QuantitySelector
+        {
+            Id = "Quantity{{id}}",
+			OnKeyUp = "document.getElementById('AddToCartButton_{{id}}').disabled=!this.validity.valid", // ----------- Disables the add to cart button if outsid the limites
+			Max = "{{stockCurrentLocationsQuantityMax5}}" // ---------------------------------------------------------- this limites to the max amount that there are in current stock-location            
+        };
+    }
+
+    // stock matrix and product stock conditional
+    <text>
+        {{#if isStockLocationsExist}}
+            {{#ifCond stockLocationsTotalQuantity '>' 0}}
+                @Render(addToCartBtn)
+                  {{else}} 
+                @RenderGridViewItemViewButton()
+            {{/ifCond}}
+        {{else}} 
+            {{#ifCond stockQuantity '>' 0}}
+                @{
+                    addToCartBtn.AddButton.OnClick = "{{facebookPixelAction}}";
+                }
+                @Render(addToCartBtn)
+                  {{else}} 
+                @RenderGridViewItemViewButton()
+            {{/ifCond}}
+        {{/if}}
+    </text>
+
+}
+
+@helper RenderGridViewItemActions()
+{ 
+    bool showCartButton = gridViewSettings.GetBoolean("ShowAddToCartButton");
+    bool showViewButton = gridViewSettings.GetBoolean("ShowViewButton");
+
+    if (Dynamicweb.Rapido.Services.User.IsBuyingAllowed())
+    {
+        if (showCartButton)
+        {
+            if (!showViewButton)
+            {
+                <text>{{#if hideAddToCartButton}}</text>
+                    <div>@RenderGridViewItemViewButton()</div>
+                <text>{{else}}</text>
+                    @RenderGridViewItemAddToCart()
+                <text>{{/if}}</text>
+            }
+            else
+            {
+                <text>{{#if hideAddToCartButton}}</text>
+                @RenderGridViewItemViewButton()
+                <text>{{else}}</text>
+                 @RenderGridViewItemAddToCart()
+                <text>{{/if}}</text>
+               
+            }
+        }
+        else if (showViewButton)
+        {
+            <div>@RenderGridViewItemViewButton()</div>
+        }
+    }
+    else if (showViewButton)
+    {
+        <div>@RenderGridViewItemViewButton()</div>
+    }
+}
+
+@helper RenderGridViewItemStockAndDelivery()
+{
+    <text>{{#if stockText}}</text>
+        <div class="u-margin-top">
+            <div><span class="stock-icon {{stockState}} u-no-margin dw-mod" title="{{stockText}}"></span> {{stockText}}</div>
+            <div>
+                {{#if deliveryText}}
+                    {{deliveryText}}
+                {{else}}
+                    -
+                {{/if}}
+            </div>
+        </div>
+    <text>{{/if}}</text>
+}
+
+@helper RenderGridViewItemStaticVariants()
+{
+    string variantsSize = gridViewSettings.GetList("StaticVariantsDisplay") != null ? gridViewSettings.GetList("StaticVariantsDisplay").SelectedValue : "sm";
+    
+    <text>
+        {{#Variants}}
+            @if ( variantsSize == "lg" ) {
+                <text>
+                    {{>StaticVariantsLgTemplate}}
+                </text>
+            } else {
+                <text>
+                    {{>StaticVariantsTemplate}}
+                </text>
+            }
+        {{/Variants}}
+
+        {{#ifCond variantGroupsCount '>' 1}}
+            <div class="static-variant">
+                @Translate("More options available")
+            </div>
+        {{/ifCond}}
+
+        {{#ifCond variantGroupsCount '==' 0}}
+            <div class="static-variant"></div>
+        {{/ifCond}}
+    </text>
+}
+
+@helper RenderGridViewItemDownloadButton()
+{
+    <button type="button" class="btn btn--primary u-no-margin u-margin-top btn--condensed dw-mod js-add-to-downloads" title="@Translate("Add")" data-product-id="{{productId}}">
+        @Render(new Icon { Prefix = "fas", Name = "fa-plus", CssClass = "js-button-icon" })
+        <span class="js-button-text">@Translate("Add")</span>
+    </button>
+}
+
+<script>
+
+function createCookie(name,value,minutes) {
+    if (minutes) {
+        var date = new Date();
+        date.setTime(date.getTime()+(minutes*60*1000));
+        var expires = "; expires="+date.toGMTString();
+    } else {
+        var expires = "";
+    }
+    document.cookie = name+"="+value+expires+"; path=/";
+}
+
+function savePosition(){
+    var pathName = document.location.pathname;
+    createCookie("scrollPosition_" + pathName, document.documentElement.scrollTop, 3);
+}
+
+</script>

@@ -1,0 +1,69 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+@using Dynamicweb.Ecommerce;
+
+@functions {
+    BlocksPage headerPage = BlocksPage.GetBlockPage("CartDetails");
+}
+
+@{
+    Block headerContainer = new Block {
+        Id = "CartHeader",
+        SortId = 10,
+        Template = RenderCartHeader(),
+        Design = new Design {
+            RenderType = RenderType.Column,
+            Size = "6"
+        }
+    };
+
+    headerPage.Add("Head", headerContainer);
+}
+
+
+@helper RenderCartHeader()
+{
+
+    string cartName = !string.IsNullOrEmpty(GetString("Ecom:Order.DisplayName")) ? GetString("Ecom:Order.DisplayName") : Translate("Draft ID") + ": " + GetString("Ecom:Order.ID");
+    var id = GetString("Ecom:Order.ID");
+    var cartObject = Services.Orders.GetById(id);
+    string title = id;
+
+    if (cartObject != null) {
+        title = !string.IsNullOrEmpty(cartObject.DisplayName) ? cartObject.DisplayName : title;
+    }
+
+    Button backButton = new Button {
+        Title = Translate("Back to overview"),
+        Href = "/Default.aspx?ID=" + GetPageIdByNavigationTag("OrderDraft"),
+        Icon = new Icon
+        {
+            Prefix = "fal",
+            Name = "fa-arrow-left",
+            LabelPosition = IconLabelPosition.After
+        },
+        ButtonLayout = ButtonLayout.LinkClean
+    };
+
+    <div>
+        @Render(backButton)
+    </div>
+    
+    <div>
+        @Render(new Button {
+            AltText = Translate("Rename"),
+            Title = $"<h3>{cartName}</h3>",
+            ButtonLayout = ButtonLayout.LinkClean,
+            ButtonType = ButtonType.Button,
+            OnClick = "openRenameDraftModal('" + title + "', '" + id + "')",
+            CssClass = "u-margin-right orderdraft__button--rename",
+            Icon = new Icon {
+                Name = "fa-pen",
+                Prefix = "fal"
+            }
+        })
+    </div>
+}

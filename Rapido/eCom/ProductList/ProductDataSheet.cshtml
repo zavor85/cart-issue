@@ -1,0 +1,266 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Frontend.Devices
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using Dynamicweb.Core
+@using System
+@using System.IO
+@using System.Web
+@using System.Collections.Generic;
+
+@Include("../../Printables/General.cshtml")
+@Include("../../Printables/Paper/Header.cshtml")
+@Include("../../Printables/Paper/Footer.cshtml")
+@Include("../../GetProductImage.cshtml")
+
+@Include("../../Printables/ProductDataSheet/Layout1.cshtml")
+@Include("../../Printables/ProductDataSheet/Layout2.cshtml")
+@Include("../../Printables/ProductDataSheet/Layout3.cshtml")
+@Include("../../Printables/ProductDataSheet/Layout4.cshtml")
+
+@functions {
+    int heightBuffer;
+    int contentHeight;
+    int contentWidth;
+    string pageOrientation;
+}
+
+@{ 
+    int sheetMargin = GetParentSettingsItem("Margin") != null ? Convert.ToInt32(GetParentSettingsItem("Margin")) : 10;
+    int sheetHeight = 296;
+    int sheetWidth = 210;
+    int headerHeight = 15;
+    int footerHeight = 15;
+
+    string pageSize = !String.IsNullOrEmpty(GetParentSettingsItem("PageSize")) ? GetParentSettingsItem("PageSize").ToLower() : "a4";
+    pageOrientation = "portrait";
+
+    if (pageOrientation == "portrait") {
+        switch (pageSize) {
+            case "a4":
+                sheetHeight = 296;
+                sheetWidth = 210;
+                break;
+            case "a5":
+                sheetHeight = 209;
+                sheetWidth = 148;
+                break;
+            case "a3":
+                sheetHeight = 419;
+                sheetWidth = 297;
+                break;
+            case "letter":
+                sheetHeight = 279;
+                sheetWidth = 216;
+                break;
+            case "legal":
+                sheetHeight = 356;
+                sheetWidth = 216;
+                break;
+        }
+    } else {
+        switch (pageSize)
+        {
+            case "a4":
+                sheetHeight = 209;
+                sheetWidth = 296;
+                break;
+            case "a5":
+                sheetHeight = 147;
+                sheetWidth = 210;
+                break;
+            case "a3":
+                sheetHeight = 296;
+                sheetWidth = 420;
+                break;
+            case "letter":
+                sheetHeight = 215;
+                sheetWidth = 280;
+                break;
+            case "legal":
+                sheetHeight = 215;
+                sheetWidth = 357;
+                break;
+        }
+    }
+
+    //Add a buffer to the height
+    heightBuffer = 10;
+    sheetHeight = sheetHeight - heightBuffer;
+
+    contentHeight = (sheetHeight - (headerHeight + footerHeight + (sheetMargin * 2)));
+    contentWidth = (sheetWidth - (sheetMargin * 2));
+
+    foreach (LoopItem product in GetLoop("Products"))
+    {
+        @RenderProductSheet(product);
+    }
+}
+
+
+@helper RenderProductSheet(LoopItem product) { 
+    string pageMargin = GetParentSettingsItem("Margin") != null ? GetParentSettingsItem("Margin") : "10";
+
+    var allowedFieldsInLayout = 0;
+
+    //Collect all fields to render
+    Dictionary <string, Dictionary<string, string>> fieldGroupsToRender = new Dictionary<string, Dictionary<string, string>>();
+    var customFields = product.GetLoop("CustomFieldValues");
+    var productCategories = product.GetLoop("ProductCategories");
+    int totalFields = 0;
+    
+    if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideDetailsFields"])) {
+        Dictionary <string, string> customFieldsToRender = new Dictionary<string, string>();
+        foreach (var field in customFields) {
+            string fieldValue = field.GetString("Product.CustomField.Value.Clean");
+            fieldValue = fieldValue == "True" ? Translate("Yes") : fieldValue;
+            fieldValue = fieldValue == "False" ? Translate("No") : fieldValue;
+
+            if (field.GetLoop("Product.CustomField.Options").Count > 0)
+            {
+                List<string> accumulatedValues = new List<string> ();
+
+                foreach (var option in field.GetLoop("Product.CustomField.Options")) 
+                {
+                    if (option.GetBoolean("Product.CustomField.Option.IsSelected")) 
+                    {
+                        accumulatedValues.Add(option.GetString("Product.CustomField.Option.Name"));
+                    }
+                }
+                fieldValue = string.Join(", ", accumulatedValues);
+            }
+
+            if (!String.IsNullOrEmpty(fieldValue) && string.IsNullOrEmpty(field.GetString("Document.FullPath"))) {
+                customFieldsToRender.Add(field.GetString("Product.CustomField.Name") ,fieldValue);
+
+                totalFields++;
+            }
+        }
+        fieldGroupsToRender.Add(Translate("Details"), customFieldsToRender); 
+    }
+
+    if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideCategoryFields"])) {
+        foreach (LoopItem categoryGroup in productCategories)
+        {
+            var categoryFields = categoryGroup.GetLoop("ProductCategoryFields");
+
+            Dictionary <string, string> categoryFieldsToRender = new Dictionary<string, string>();
+            foreach (LoopItem field in categoryFields)
+            {
+                string fieldValue = field.GetString("Ecom:Product.CategoryField.Value");
+                fieldValue = fieldValue == "True" ? Translate("Yes") : fieldValue;
+                fieldValue = fieldValue == "False" ? Translate("No") : fieldValue;
+
+                if (!String.IsNullOrEmpty(fieldValue) && field.GetString("Ecom:Product.CategoryField.TypeID") != "8" && field.GetString("Ecom:Product.CategoryField.TypeID") != "9") {
+                    categoryFieldsToRender.Add(field.GetString("Ecom:Product.CategoryField.Label"), fieldValue);
+
+                    totalFields++;
+                }
+            }
+            fieldGroupsToRender.Add(categoryGroup.GetString("Ecom:Product.Category.Name"), categoryFieldsToRender); 
+        }
+    }
+
+
+    <section class="sheet">
+        <div class="sheet-container sheet-container--flex-col">
+            @RenderPaperHeader()
+            <div class="sheet-container__content sheet-container__content--padding-@(pageMargin)mm" style="height: @(contentHeight + heightBuffer)mm; width: @(contentWidth)mm;">
+                @switch (Convert.ToInt32(Pageview.CurrentParagraph.Item["Layout"].ToString())) {
+                    case 1:
+                        allowedFieldsInLayout = 18;
+                        @RenderLayout1(product, fieldGroupsToRender, allowedFieldsInLayout)
+                        break;
+                    case 2:
+                        allowedFieldsInLayout = 5;
+                        @RenderLayout2(product, fieldGroupsToRender, allowedFieldsInLayout)
+                        break;
+                    case 3:
+                        allowedFieldsInLayout = 5;
+                        @RenderLayout3(product, fieldGroupsToRender, allowedFieldsInLayout)
+                        break;
+                    case 4:
+                        allowedFieldsInLayout = 5;
+                        @RenderLayout4(product, fieldGroupsToRender, allowedFieldsInLayout)
+                        break;
+                }
+            </div>
+
+            @RenderPaperFooter()
+        </div>
+    </section>
+
+    if (totalFields > allowedFieldsInLayout) {
+         <section class="sheet">
+            <div class="sheet-container sheet-container--flex-col">
+                @RenderPaperHeader()
+                <div class="sheet-container__content sheet-container__content--padding-@(pageMargin)mm" style="height: @(contentHeight + heightBuffer)mm; width: @(contentWidth)mm">
+                    <div class="sheet-row">   
+                        <div class="sheet-row__col sheet-row__col--6">
+                            @RenderFields(fieldGroupsToRender, 20)
+                        </div>
+                        <div class="sheet-row__col sheet-row__col--6">
+                            @RenderFields(fieldGroupsToRender, 20)
+                        </div>
+                    </div>
+                </div>
+                @RenderPaperFooter()
+            </div>
+        </section> 
+    }
+}
+
+@helper RenderFields(Dictionary <string, Dictionary<string, string>> fieldGroupsToRender, int maxFields) {
+    var fieldsCounter = 0;
+
+    var colorService = new ColorSwatchService();
+    string fieldsLayout = "sheet-product-fields--"; 
+    fieldsLayout += Pageview.CurrentParagraph.Item["FieldsLayout"] != null ? Pageview.CurrentParagraph.Item["FieldsLayout"].ToString() : "clean";
+    string fieldsHeadingBackgroundColor = Pageview.CurrentParagraph.Item["FieldsHeadingBackgroundColor"].ToString();
+    fieldsHeadingBackgroundColor = !fieldsHeadingBackgroundColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, fieldsHeadingBackgroundColor) : fieldsHeadingBackgroundColor;
+    string fieldsHeadingFontColor = Pageview.CurrentParagraph.Item["FieldsHeadingFontColor"].ToString();
+    fieldsHeadingFontColor = !fieldsHeadingFontColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, fieldsHeadingFontColor) : fieldsHeadingFontColor;
+    string valueFieldsBackgroundColor = Pageview.CurrentParagraph.Item["ValueFieldsBackgroundColor"].ToString();
+    valueFieldsBackgroundColor = !valueFieldsBackgroundColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, valueFieldsBackgroundColor) : valueFieldsBackgroundColor;
+    string valueFieldsFontColor = Pageview.CurrentParagraph.Item["ValueFieldsFontColor"].ToString();
+    valueFieldsFontColor = !valueFieldsFontColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, valueFieldsFontColor) : valueFieldsFontColor;
+    string fieldsNameBold = Convert.ToBoolean(Pageview.CurrentParagraph.Item["BoldFieldsName"]) ? "sheet-product-fields__name--bold" : "";
+    string fieldsValueAlign = Pageview.CurrentParagraph.Item["FieldsValueAlignment"].ToString() == "left" ? "sheet-product-fields__value--left" : "";
+
+    string oddColoring = Pageview.CurrentParagraph.Item["FieldsLayout"].ToString() == "odd" || Pageview.CurrentParagraph.Item["FieldsLayout"].ToString() == "bordered-odd" ? "sheet-product-fields__row--odd-color" : "";
+
+
+    if (fieldGroupsToRender.Count > 0) {
+        foreach (var group in fieldGroupsToRender) {
+            if (group.Value.Count > 0 && fieldsCounter < maxFields) {
+                List<string> fieldsToRemove = new List<string>();
+
+                <table class="sheet-product-fields @fieldsLayout">
+                    <thead>
+                        <tr class="sheet-product-fields__header" style="background-color: @(fieldsHeadingBackgroundColor); color: @(fieldsHeadingFontColor);">
+                            <td colspan="2">@group.Key</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var field in group.Value) {
+                            if (fieldsCounter < maxFields) {
+                                <tr class="sheet-product-fields__row @oddColoring">
+                                    <td width="120" class="sheet-product-fields__name @fieldsNameBold">@field.Key</td>
+                                    <td class="sheet-product-fields__value @fieldsValueAlign" style="background-color: @(valueFieldsBackgroundColor); color: @(valueFieldsFontColor)">@field.Value</td>
+                                </tr>
+
+                                fieldsToRemove.Add(field.Key);
+                                fieldsCounter++;
+                            }
+                        }
+
+                        @foreach (var field in fieldsToRemove)
+                        {
+                            group.Value.Remove(field);
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+    }    
+}

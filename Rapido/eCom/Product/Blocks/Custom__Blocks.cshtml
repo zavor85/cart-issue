@@ -1,0 +1,168 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+
+
+
+@{ 
+    BlocksPage customProductBlocks = BlocksPage.GetBlockPage("Product");
+
+
+       Block outOfStockNotification = new Block()
+    {
+        Id = "outOfStockNotification",
+        SortId = 1,
+        Template = RenderoutOfStockNotification()
+    };
+
+
+    if (GetString("Ecom:Product.Price") != "0,00 kr."){
+
+        customProductBlocks.Add("Top", outOfStockNotification);
+    }
+    
+    
+
+
+}
+
+  @helper RenderoutOfStockNotification()
+    {
+
+        
+        var cookie = "PN-" + HttpUtility.UrlPathEncode(GetString("Ecom:Product.ID"));
+        cookie = cookie.Replace("/", "%2F");
+        bool isInStock = GetBoolean("Ecom:Product:Field.isInStock");
+
+        
+        if (HttpContext.Current.Request.Cookies.AllKeys.Contains(cookie)){
+            <div id="no-stock-notification-thank-you"><i>@Translate("Tak for din interesse. Du får besked på e-mail, om hvornår vi forventer at varen er tilbage på lager")</i></div>
+        }  else if  (GetBoolean("Ecom:Product.NotificationRegistered")){
+            <div id="no-stock-notification-thank-you"><i>@Translate("Tak for din interesse. Du vil få besked på e-mail, når varen er tilbage på lager.")</i></div>
+        }
+
+        
+        else if (@GetBoolean("Ecom:Product.NotificationRegistered") != true && @GetInteger("Ecom:Product.Stock") < 1 && !isInStock){
+
+            <iframe name="empty-iframe" style="display:none;"></iframe>
+            <div id="no-stock-action-form">
+                <h2>@Translate("Vi beklager meget. Varen er desværre ikke på lager i øjeblikket.")</h2>
+                <br>
+                <form action="javascript:chooseaction();">
+                    <input class="form__control  dw-mod" type="checkbox" name="choose-action" id="action2" value="2" >
+                    <label for="action2">Få besked om hvornår varen forventes at være på lager igen</label> 
+                    <br>
+                    <input class="form__control  dw-mod" type="checkbox" name="choose-action" id="action1" value="1" >
+                    <label for="action1" >Få besked når varen er på lager og kan leveres igen</label> 
+                    <br>
+
+                    @if (GetGlobalValue("Global:Extranet.Email") != "") {
+                        <input hidden required type="email" id="action-email" placeholder="e-mail" value="@GetGlobalValue("Global:Extranet.Email")">
+                    } else {
+                        <input required type="email" id="action-email" placeholder="e-mail">
+                    }
+
+                 
+
+                    <input class="btn--condensed btn--primary dw-mod" id="submit-action-form" type="submit" value='@Translate("Bestil notifikation", "Bestil notifikation")'/>
+                </form>
+                <script>
+                    function chooseaction(){
+
+                        
+                        let email = document.getElementById("action-email").value;
+
+                        let actionType1 = false;
+                        let actionType2 = false;
+                        if (document.getElementById("action1").checked == true){
+                            actionType1 = true;
+                        }
+
+                        if (document.getElementById("action2").checked == true){
+                            actionType2 = true;
+                        }
+
+                        if (actionType2 || actionType1){
+
+                            if(actionType2){
+                                document.getElementById("Email").value = email;
+                                document.getElementById("Productpage").value = window.location.href;
+                                document.getElementById("Productname").value = "@GetValue("Ecom:Product.Name")";
+                                document.getElementById("dw-form-8").setAttribute("target", "empty-iframe");
+                                RememberState.SetCookie("PN-@GetValue("Ecom:Product.ID")", 1);
+                                document.getElementById("Getnotifiedwhentheitemisexpectedtobebackinstock").click();
+                                document.getElementById("submit-action-form").disabled = true;
+
+                                if (!actionType1){
+                                    setTimeout(function(){
+                                    location.reload();
+                                    }, 500);
+                                } else {
+                                     setTimeout(function(){
+
+                                        if (document.getElementById("NotificationEmail")){
+                                            document.getElementById("NotificationEmail").value = email;
+                                        }
+
+                                        document.getElementById("submit-no-stock").click();
+
+                                    }, 500);
+                                }
+
+
+                                
+                            }  else if (actionType1){
+                                if (document.getElementById("NotificationEmail")){
+                                    document.getElementById("NotificationEmail").value = email;
+                                }
+
+                                document.getElementById("submit-no-stock").click();
+                                
+                            } 
+
+                        }
+                         
+                       
+                    }
+                
+                </script>
+            </div>
+
+
+            if (@GetBoolean("Ecom:Product.NotificationRegistered") != true && GetGlobalValue("Global:Extranet.UserName") != "" && @GetInteger("Ecom:Product.Stock") < 1) {
+                <div id="no-stock-notification">
+                    <div>
+                        <h2>@Translate("Vi beklager meget. Varen er ikke på lager i øjeblikket.")</h2>
+                        <h3>@Translate("Vil du have en besked, når vi er klar til at levere varen igen?")</h3>
+                    </div>
+                <a id="submit-no-stock" class="btn--condensed btn--primary dw-mod" href='/default.aspx?id=@GetValue("Ecom:Product:Page.ID")&productid=@GetValue("Ecom:Product.ID")&VariantID=@GetValue("Ecom:Product.VariantID")&LanguageID=@GetValue("Ecom:Product.LanguageID")&cartcmd=createnotificationforthisproduct' > @Translate("Bestil notifikation", "Bestil notifikation") </a>
+                </div>
+            } else if (@GetBoolean("Ecom:Product.NotificationRegistered") != true && GetGlobalValue("Global:Extranet.UserName") == "") {
+
+                <div id="no-stock-notification">
+                   
+                <form name='@GetValue("Ecom:Product.ID")' id='NotificationForm_@GetValue("Ecom:Product.ID")' method='post' action='/Default.aspx?ID=@GetValue("Ecom:Product:Page.ID")'>
+                    <input type="hidden" name="ProductID" id="ProductID" value='@GetValue("Ecom:Product.ID")' />
+                    <input type="hidden" name="VariantID" id="VariantID" value='@GetValue("Ecom:Product.VariantID")' />
+                    <input type="hidden" name="LanguageID" id="LanguageID" value='@GetValue("Ecom:Product.LanguageID")' />
+                    <input type="hidden" name="CartCmd" id="CartCmd" value="createnotificationforthisproduct" />
+                    <input type="email" required="required" id="NotificationEmail" name="NotificationEmail" value="" placeholder="@Translate("Email", "Email")">
+                    <input class="btn--condensed btn--primary dw-mod" type="submit" id="submit-no-stock" value='@Translate("Bestil notifikation", "Bestil notifikation")'/>
+                </form>
+                </div>
+                } else if (GetBoolean("Ecom:Product.NotificationRegistered") == true && GetGlobalValue("Global:Extranet.UserName") != "" ) {
+                    <div id="no-stock-notification"><i>@Translate("Tak for din interesse. Du vil få besked på e-mail, når varen er tilbage på lager.")</i></div>
+                } else if (GetBoolean("Ecom:Product.NotificationRegistered") == true && GetGlobalValue("Global:Extranet.UserName") == "") {
+                    <div id="no-stock-notification"><i>@Translate("Tak for din interesse. Du vil få besked på e-mail, når varen er tilbage på lager.")</i></div>
+                        }
+
+
+                <div id="no-stock-notification-form">@RenderParagraphContent(9165)</div>
+
+                    }
+            }
+
+

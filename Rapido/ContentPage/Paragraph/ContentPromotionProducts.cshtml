@@ -1,0 +1,187 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using Dynamicweb.Ecommerce.Frontend;
+@using System.Linq;
+
+@{
+    string columnSize = Model.Item.GetList("Width") != null ? Model.Item.GetList("Width").SelectedValue.ToString() : "12";
+
+    bool showTitle = Model.Item.GetString("ShowTitle") != null ? Model.Item.GetBoolean("ShowTitle") : false;
+    var productColumnSize = Model.Item.GetList("productColumnSize").SelectedValue;
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+
+    bool gridViewShowCartButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToCartButton");
+    bool gridViewShowViewButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowViewButton");
+    bool promotionShowStock = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowStockAndShipping");
+    string promotionMoreText = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("ViewMoreText")) ? Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("ViewMoreText") : "View";
+    bool promotionShowNumber = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowProductNumber");
+    bool promotionShowAddToDownloadButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("ShowAddToDownloadButton");
+    bool promotionSecondaryImage = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetString("HoverAlternatineImage") != null ? Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("HoverAlternatineImage") : false;
+    string promotionImageZoomOnHover = Pageview.AreaSettings.GetItem("ProductList").GetItem("GridView").GetBoolean("HoverImageZoom") ? "image-hover--zoom" : "";
+
+    int paragraphId = Model.ID;
+    int productCatalogId = GetPageIdByNavigationTag("PromotionFeed");
+    string feedFullUrl = "/Default.aspx?ID=" + productCatalogId;
+    feedFullUrl += "&Combinations=";
+
+    var products = new List<ProductViewModel>();
+
+    if (Model.Item.GetValue("Products") != null) {
+        products = Model.Item.GetValue("Products") as List<ProductViewModel>;
+    }
+
+    if (products != null) {
+        for (var i = 0; i < products.Count; i++)
+        {
+            feedFullUrl += products[i].Id;
+            feedFullUrl += products[i].VariantId != "" ? "%20" + products[i].VariantId : "";
+            feedFullUrl += ",";
+        }
+    } else {
+        feedFullUrl = "";
+    }
+}
+
+<div class="u-full-height">
+    <div class="grid grid--external-bleed js-handlebars-root" id="PromotionProductList_@paragraphId" data-template="PromotionProducts_@paragraphId" data-pre-render-template="ProductPreRenderContainer_@paragraphId" data-json-feed="@feedFullUrl" data-preloader="minimal"></div>
+</div>
+
+<script id="ProductPreRenderContainer_@paragraphId" type="text/x-template">
+    <div class="grid__col-md-@productColumnSize">
+        <div class="pre-render-element pre-render-element--md"></div>
+    </div>
+    <div class="grid__col-md-@productColumnSize">
+        <div class="pre-render-element pre-render-element--md"></div>
+    </div>
+    <div class="grid__col-md-@productColumnSize">
+        <div class="pre-render-element pre-render-element--md"></div>
+    </div>
+    <div class="grid__col-md-@productColumnSize">
+        <div class="pre-render-element pre-render-element--md"></div>
+    </div>
+</script>
+
+
+@* Grid view *@
+
+<script id="PromotionProducts_@paragraphId" type="text/x-template">
+    {{#.}}
+        <div class="grid__col-lg-@productColumnSize grid__col-md-@productColumnSize grid__col-sm-@productColumnSize grid__col-xs-6 grid__col-6 product-list__grid-item @promotionImageZoomOnHover dw-mod">
+            <div class="grid__col--auto js-product-scroll-trigger u-no-padding u-full-height" data-params="{{googleImpression}}">
+                <div class="grid__cell product-list__grid-item__image dw-mod {{noImage}}">
+                    <a href="{{link}}" 
+                       onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" 
+                       title="{{name}}" 
+                       class="u-block u-position-relative image-hover__wrapper dw-mod">
+                        <img class="grid__cell-img grid__cell-img--centered u-padding b-lazy" src="/Files/Images/placeholder.gif" 
+                             data-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{image}}"
+                             @if (promotionSecondaryImage) {
+                                <text>
+                                 {{#if secondaryImage}}
+                                    data-secondary-image-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{secondaryImage}}"
+                                 {{/if}} 
+                                </text>
+                             }
+                             alt="{{name}}" />
+                        {{#StickersContainers}}
+                            {{>StickersContainer_@paragraphId}}
+                        {{/StickersContainers}}
+                    </a>
+                </div>
+
+                <div class="grid__cell product-list__grid-item__price-info dw-mod">
+                    <a href="{{link}}" onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" title="{{name}}"><h6 class="u-condensed-text">{{name}}</h6></a>
+
+                    @if (promotionShowNumber)
+                    {
+                        <div class="item-number dw-mod">{{number}}</div>
+                    }
+
+                    @if (Dynamicweb.Rapido.Services.User.IsPricesAllowed())
+                    {
+                        if (pointShopOnly)
+                        {
+                            <text>
+                                {{#if havePointPrice}}
+                                    <div class="price price--product-list dw-mod">{{points}} @Translate("points")</div>
+                                {{else}}
+                                    @Translate("Not available")
+                                {{/if}}
+                            </text>
+                        }
+                        else
+                        {
+                            <div class="price price--product-list dw-mod">{{price}}</div>
+                            <div class="before-price {{onSale}} dw-mod">{{discount}}</div>
+                        }
+                    }
+                </div>
+
+                <div class="product-list__grid-item__footer dw-mod">
+                    @if (gridViewShowViewButton)
+                    {
+                       <div class="u-ta-center">
+                            <a href="{{link}}" 
+                               id="CartButton_{{id}}" 
+                               class="btn btn--secondary btn--full u-no-margin dw-mod" 
+                               onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" 
+                               title="@Translate(promotionMoreText)">@Translate(promotionMoreText)</a>
+                        </div>
+                    }
+
+                    @if (Dynamicweb.Rapido.Services.User.IsStockInfoAllowed() && promotionShowStock)
+                    {
+                        <div class="u-margin-top">
+                            <span class="stock-icon {{stockState}} u-no-margin dw-mod" title="{{stockText}}"></span> {{stockText}}{{deliveryText}}
+                        </div>
+                    }
+
+                    @if (promotionShowAddToDownloadButton && Pageview.User != null)
+                    {
+                        <button type="button" class="btn btn--primary u-no-margin u-margin-top btn--condensed dw-mod js-add-to-downloads" title="@Translate("Add")" data-product-id="{{productId}}">
+                            <i class="fas fa-plus js-button-icon"></i>
+                            <span class="js-button-text">@Translate("Add")</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    {{/.}}
+
+    {{^.}}
+        <div class="grid__col-12">
+            <h2>@Translate("No products found")</h2>
+        </div>
+    {{/.}}
+</script>
+
+
+<script>
+    @{
+        bool promotionUseGoogleTagManager = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleTagManagerID"));
+
+        if (promotionUseGoogleTagManager)
+        {
+            <text>
+                document.addEventListener("DOMContentLoaded", function (event) {
+                    Scroll.AddIsInViewportListener(".js-product-scroll-trigger", function (elem) {
+                        let googleImpression = JSON.parse(elem.getAttribute("data-params"));
+                        googleEnchantImpression(googleImpression);
+                        elem.classList.remove("js-product-scroll-trigger");
+                    });
+                });
+            </text>
+        }
+    }
+</script>
+
+<script id="StickersContainer_@paragraphId" type="text/x-template">
+    <div class="stickers-container stickers-container--{{position}} dw-mod">
+        {{#Stickers}}
+            {{>Sticker_@paragraphId}}
+        {{/Stickers}}
+    </div>
+</script>
+
+<script id="Sticker_@paragraphId" type="text/x-template">
+    <div class="{{className}}">{{text}}</div>
+</script>

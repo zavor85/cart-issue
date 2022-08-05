@@ -1,0 +1,135 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage cartsListPage = BlocksPage.GetBlockPage("CartList");
+}
+
+@{
+    bool isEmptyCartList = !string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.Carts.EmptyList"));
+
+    Block pageContainer = new Block
+    {
+        Id = "PageContainer",
+        SortId = 10,
+        Template = RenderCartListHeader(),
+        BlocksList = new List<Block> {
+            new Block
+            {
+                Id = "Pagination",
+                SortId = 30,
+                Design = new Design {
+                    RenderType = RenderType.Column,
+                    Size = "12"
+                },
+                Component = new Pagination
+                {
+                    CurrentPageNumber = GetInteger("Ecom:CustomerCenter.Paging.CurrentPage"),
+                    NumberOfPages = GetInteger("Ecom:CustomerCenter.Paging.NumPages"),
+                    PreviousPageUrl = GetString("Ecom:CustomerCenter.Paging.Back.URL"),
+                    NextPageUrl = GetString("Ecom:CustomerCenter.Paging.Forward.URL"),
+                    ShowNextAndPrevControls = true,
+                    PaginationType = PaginationType.CustomerCenterApp,
+                    NavigationItemsLimit = 5
+                }
+            },
+        }
+    };
+    cartsListPage.Add(pageContainer);
+
+    Block backButton = new Block
+    {
+        Id = "BackButton",
+        SortId = 9,
+        Component = new Button
+        {
+            Title = Translate("Back to overview"),
+            Href = "/Default.aspx?ID=" + GetPageIdByNavigationTag("CustomerDashboard"),
+            Icon = new Icon
+            {
+                Prefix = "fal",
+                Name = "fa-arrow-left",
+                LabelPosition = IconLabelPosition.After
+            },
+            ButtonLayout = ButtonLayout.LinkClean,
+            CssClass = "u-margin-bottom--xl"
+        },
+        Design = new Design {
+            RenderType = RenderType.Row
+        }
+    };
+
+    if (Pageview.Page.PropertyItem["LeftMenu"] != null) {
+        if (Pageview.Page.PropertyItem["LeftMenu"].ToString() == "False")
+        {
+            cartsListPage.Add(backButton);
+        }
+    } else {
+        cartsListPage.Add(backButton);
+    }
+
+    if (isEmptyCartList)
+    {
+        pageContainer.Add(new Block
+        {
+            Id = "EmptyListMessage",
+            SortId = 30,
+            Component = new Text { Content = Translate("No drafts found") }
+        });
+    }
+    pageContainer.Add(new Block
+    {
+        Id = "List",
+        SortId = 20
+    });
+
+    pageContainer.Add(new Block
+    {
+        Id = "BottomSnippets",
+        SortId = 50
+    });
+}
+
+@Include("Blocks/CartList/SuccessufulyActivatedModal.cshtml")
+@Include("Blocks/CartList/CopyDraftModal.cshtml")
+@Include("Blocks/CartList/EditDraftModal.cshtml")
+@Include("Blocks/CartList/NewDraftModal.cshtml")
+@Include("Blocks/CartList/Carts.cshtml")
+@Include("Blocks/CartList/BottomSnippets.cshtml")
+@Include("Blocks/CartList/Custom__Blocks.cshtml")
+
+@* Include the Rendering helpers *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/EcommerceComponents.cshtml")
+
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(cartsListPage.BlocksRoot.BlocksList)
+
+
+@helper RenderCartListHeader() { 
+    string draftIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("DraftIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("DraftIcon").SelectedValue : "fa fa-clipboard";
+
+    <div class="u-pull--left">
+        @Render(new Heading { Title = GetGlobalValue("Global:Page.Name"), Icon = new Icon { Name = draftIcon, LabelPosition = IconLabelPosition.After } })  
+    </div>
+    <div class="u-pull--right">
+        @Render(new Button
+        {
+            OnClick = "document.getElementById('NewDraftModalTrigger').checked = true;",
+            ButtonLayout = ButtonLayout.Primary,
+            Title = Translate("Add new draft"),
+            Icon = new Icon {
+                Name = draftIcon,
+                LabelPosition = IconLabelPosition.After
+            }
+        })
+    </div>  
+}

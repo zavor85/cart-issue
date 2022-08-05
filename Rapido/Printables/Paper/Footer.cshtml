@@ -1,0 +1,171 @@
+﻿@using System
+@using System.Web
+
+@functions {
+    int pageNumber;
+}
+
+@helper RenderPaperFooter() { 
+    string pageMargin = GetParentSettingsItem("Margin") != null ? GetParentSettingsItem("Margin") : "10";
+
+    pageNumber = 1;
+    if (System.Web.HttpContext.Current.Items.Contains("PaperPageNumber"))
+    {
+        pageNumber = Convert.ToInt32(System.Web.HttpContext.Current.Items["PaperPageNumber"]);
+        pageNumber++;
+        System.Web.HttpContext.Current.Items["PaperPageNumber"] = pageNumber;
+    } else {
+        System.Web.HttpContext.Current.Items.Add("PaperPageNumber", pageNumber);
+    }
+
+    var colorService = new ColorSwatchService();
+    var footerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetFooter", GetParentSettingsItem("Footer"));
+
+    string footerBackgroundColor = footerSettings["BackgroundColor"] != null ? footerSettings["BackgroundColor"].ToString() : "";
+    footerBackgroundColor = !footerBackgroundColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, footerBackgroundColor) : footerBackgroundColor;
+    
+    string footerFontColor = footerSettings["FontColor"] != null ? footerSettings["FontColor"].ToString() : "";
+    footerFontColor = !footerFontColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, footerFontColor) : footerFontColor;
+
+    string footerLayout = footerSettings["Layout"] != null ? footerSettings["Layout"].ToString() : "1";
+
+    <div class="sheet-container__footer sheet-container__footer--padding-@(pageMargin)mm" style="background-color: @(footerBackgroundColor); color: @(footerFontColor)">
+        @switch (footerLayout) {
+            case "1":
+                @RenderFooterLayout1();
+                break;
+            case "2":
+                @RenderFooterLayout2();
+                break;
+            case "3":
+                @RenderFooterLayout3();
+                break;
+        }   
+    </div>    
+}
+
+
+@helper RenderFooterLayout1() { 
+    var footerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetFooter", GetParentSettingsItem("Footer"));
+
+    <div class="sheet-footer-left">
+        @if (footerSettings["Logo"] != null)
+        {
+            if (!String.IsNullOrEmpty(footerSettings["Logo"].ToString()))
+            {
+                string logo = footerSettings["Logo"].ToString();
+                if (Path.GetExtension(logo).ToLower() != ".svg")
+                {
+                    logo = "/Admin/Public/GetImage.ashx?height=20&amp;crop=5&amp;Compression=75&amp;image=" + logo;
+                }
+                else
+                {
+                    logo = HttpUtility.UrlDecode(logo);
+                }
+
+
+                <div class="sheet-footer-logo">
+                    <img src="@logo" />
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>
+    <div class="sheet-footer-center">
+        &nbsp;                
+    </div>
+    <div class="sheet-footer-right">
+        @if (footerSettings["ShowPageNumber"] != null)
+        {
+            if (Convert.ToBoolean(footerSettings["ShowPageNumber"]))
+            {
+                <div class="sheet-footer-page-number">
+                    @pageNumber
+                </div>
+           } else {
+                <text>&nbsp;</text>
+           }
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>    
+}
+
+@helper RenderFooterLayout2() { 
+    var footerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetFooter", GetParentSettingsItem("Footer"));
+
+    <div class="sheet-footer-left">
+        &nbsp;
+    </div>
+    <div class="sheet-footer-center">
+        @if (footerSettings["Logo"] != null)
+        {
+            if (!String.IsNullOrEmpty(footerSettings["Logo"].ToString()))
+            {
+                <div class="sheet-footer-logo">
+                    <img src="@footerSettings["Logo"].ToString()" />
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>
+    <div class="sheet-footer-right">
+        @if (footerSettings["ShowPageNumber"] != null)
+        {
+            if (Convert.ToBoolean(footerSettings["ShowPageNumber"]))
+            {
+                <div class="sheet-footer-page-number">
+                    @pageNumber
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>       
+}
+
+@helper RenderFooterLayout3() { 
+    var footerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetFooter", GetParentSettingsItem("Footer"));
+
+    <div class="sheet-footer-left">
+        &nbsp;
+    </div>
+    <div class="sheet-footer-center">
+        @if (footerSettings["ShowPageNumber"] != null)
+        {
+            if (Convert.ToBoolean(footerSettings["ShowPageNumber"]))
+            {
+                <div class="sheet-footer-page-number">
+                    @pageNumber
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+        } else {
+            <text>&nbsp;</text>
+        }            
+    </div>
+    <div class="sheet-footer-right">
+        @if (footerSettings["Logo"] != null)
+        {
+            if (!String.IsNullOrEmpty(footerSettings["Logo"].ToString()))
+            {
+                <div class="sheet-footer-logo">
+                    <img src="@footerSettings["Logo"].ToString()" />
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+        } else {
+            <text>&nbsp;</text>
+        }  
+    </div>     
+}

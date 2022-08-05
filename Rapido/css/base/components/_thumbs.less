@@ -1,0 +1,34 @@
+//Thumbs
+.thumb-list {
+}
+
+.thumb-list__item {
+    border: 2px transparent solid;
+}
+
+.thumb-list__item:hover, .thumb-list__item--active {
+    border-color: @brand-color-three;
+}
+
+.thumb-image-view {
+    padding: @reflex-cell-spacing-sm;
+    cursor: pointer;
+    margin: 0 auto;
+}
+
+.carousel--height-is-set .thumb-list__image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.thumb-list__image-label {
+    height: 100%;
+    position: relative;
+}
+
+.thumb-list__item {
+    overflow: hidden;
+    height: 100%;
+}

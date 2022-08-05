@@ -1,0 +1,500 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using System.Linq
+
+@{ 
+    bool useGoogleTagManager = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleTagManagerID"));
+    int ReceiptShowCount = GetInteger("Ecom:Order.ReceiptShowCount");
+}
+
+<section class="receipt">
+
+    <div class="receipt__item">
+	    <header class="receipt__header">
+		    <div class="receipt__header-item">
+			    <h1>@Translate("Thanks for your order")</h1>
+			    @Translate("We have sent a confirmation email to") <strong>@GetString("Ecom:Order.Customer.Email")</strong>
+		    </div>
+
+		    <div class="receipt__header-item">
+                @Render(new Button {
+               ButtonLayout = ButtonLayout.Secondary,
+               Title = Translate("Print"),
+               OnClick = "window.print()",
+               CssClass = "u-no-margin no-print",
+               Icon = new Icon {
+                   Prefix = "fal",
+                   Name = "fa-print",
+                   LabelPosition = IconLabelPosition.After
+               }
+           })
+		    </div>
+	    </header>
+
+	    <div class="receipt__list">
+            @if (Pageview.User == null) {
+		        <div class="card__wrapper">
+                    <div class="card u-full-width">
+                        <h2 class="u-margin-bottom--lg">@Translate("Save your details for faster checkout")</h2>
+
+                        <ul>
+                            <li>@Translate("Mange your payment preferences")</li>
+                            <li>@Translate("Manage multiple shipping addresses")</li>
+                            <li>@Translate("View your order status")</li>
+                            <li>@Translate("Search previous orders")</li>
+                        </ul>
+
+                        <div class="btn__wrapper">
+                           @Render(new Button {
+                               Title = Translate("Create account"),
+                               ButtonLayout = ButtonLayout.Primary,
+                               ButtonType = ButtonType.Button,
+                               Href = "/Default.aspx?ID=" + GetPageIdByNavigationTag("CreateAccount")
+                           })
+                        </div>
+
+                        <small>
+                            @Translate("Your data is safe with us. View our") <a href="/Default.aspx?ID=@GetPageIdByNavigationTag("PrivacyNotice")" target="_blank">@Translate("privacy notice here")</a>
+                        </small>
+                    </div>
+		        </div>
+            }
+
+		    @RenderOrderSummary()
+
+            <div class="receipt__group">
+                <div class="card u-full-width">
+                    <h2 class="u-margin-bottom--lg">Spørgsmål?</h2>
+
+                    @Translate("Feel free to contact us with any questions regarding your order"). <a href="/Default.aspx?ID=@GetPageIdByNavigationTag("Contact")">@Translate("Klik her")</a>
+                </div>
+            </div>
+
+	    </div>
+    </div>
+
+    @{
+        string email = GetString("Ecom:Order.Customer.Email");
+        string phone = GetString("Ecom:Order.Customer.Phone");
+
+        string deliveryMethod = GetString("Ecom:Order.ShippingMethod");
+        string deliveryDate = GetString("Ecom:Order.ShippingDate");
+
+        string cardType = GetString("Ecom:Order.TransactionCardType");
+        string cardNumber = GetString("Ecom:Order.TransactionCardNumber");
+    }
+
+    <div class="receipt__item">
+	    <div class="receipt__data">
+
+	        <h2 class="receipt__data-title">@Translate("Shipping and payment")</h2>
+
+            <div class="receipt__data-list">
+                @if (!string.IsNullOrWhiteSpace(email)) {
+		            <div class="receipt__data-item">
+			            <h6>@Translate("Receipt sent to")</h6>
+                        @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Email"))) {
+                            <div>@GetString("Ecom:Order.Customer.Email")</div>
+                        }
+			            @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Delivery.Email"))) {
+                            if (GetString("Ecom:Order.Delivery.Email") != GetString("Ecom:Order.Customer.Email")) {
+                                <div>@GetString("Ecom:Order.Delivery.Email")</div>
+                            }
+                        }
+		            </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(phone)) {
+		            <div class="receipt__data-item">
+			            <h6>@Translate("Contact number")</h6>
+			            @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Phone"))) {
+                            <div>@GetString("Ecom:Order.Customer.Phone")</div>
+                        }
+			            @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Delivery.Phone"))) {
+                            if (GetString("Ecom:Order.Delivery.Phone") != GetString("Ecom:Order.Customer.Phone")) {
+                                <div>@GetString("Ecom:Order.Delivery.Phone")</div>
+                            }
+                        }
+		            </div>
+                }
+
+		        <div class="receipt__data-item">
+			        <h6>@Translate("Order ID")</h6>
+			        @GetString("Ecom:Order.ID")
+		        </div>
+
+		        <div class="receipt__data-item">
+			        <h6>@Translate("Order date")</h6>
+			        @GetDate("Ecom:Order.Date").ToString(Pageview.Area.Dateformat + " HH:mm")
+		        </div>
+
+                <div class="receipt__data-item">
+                    <h6>@Translate("Ship to")</h6>
+                    @{ 
+                        <div>@GetString("Ecom:Order.Delivery.Company")</div>
+                        <div>@GetString("Ecom:Order.Delivery.Name")</div>
+                        <div>@GetString("Ecom:Order.Delivery.Address")</div>
+                        <div>@GetString("Ecom:Order.Delivery.Address2")</div>
+                        <div>@GetString("Ecom:Order.Delivery.Zip") @GetString("Ecom:Order.Delivery.City")</div>
+
+                        if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.Delivery.Region"))) {
+                            <div>@GetString("Ecom:Order.Delivery.Region")</div>
+                        }
+
+                        <div>@GetString("Ecom:Order.Delivery.Country")</div>
+                    }
+                </div>
+
+                @if ( !string.IsNullOrWhiteSpace(deliveryMethod) ) {
+		            <div class="receipt__data-item">
+			            <h6>@Translate("Delivery method")</h6>
+			            @GetString("Ecom:Order.ShippingMethod")
+                        @GetString("Ecom:Order.ShippingDate")
+		            </div>
+                }
+
+                <div class="receipt__data-item">
+                    <h6>@Translate("Bill to")</h6>
+
+                    @if (GetString("Ecom:Order.Customer.Address") != GetString("Ecom:Order.Delivery.Address")){ 
+                        string stateRegion = GetString("Ecom:Order.Customer.Region");
+
+                        <div>@GetString("Ecom:Order.Customer.Company")</div>
+                        <div>@GetString("Ecom:Order.Customer.Name")</div>
+                        <div>@GetString("Ecom:Order.Customer.Address")</div>
+                        <div>@GetString("Ecom:Order.Customer.Address2")</div>
+                        <div>@GetString("Ecom:Order.Customer.Zip") @GetString("Ecom:Order.Customer.City")</div>
+
+                        if ( !string.IsNullOrWhiteSpace(stateRegion) ) {
+                            <div>@stateRegion</div>
+                        }
+
+                        <div>@GetString("Ecom:Order.Customer.Country")</div>
+                    } else {
+                        <div>(@Translate("Same as shipping address"))</div>
+                    }
+                </div>
+
+                @if ( !string.IsNullOrWhiteSpace(GetString("Ecom:Order.PaymentMethod")) ) {
+                    <div class="receipt__data-item">
+                        <h6>@Translate("Payment method")</h6>
+                        <div>@GetString("Ecom:Order.PaymentMethod")</div>
+                        @if (!string.IsNullOrWhiteSpace(GetString(cardType + cardNumber)) ) {
+                            <div>@cardType: @cardNumber</div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(GetString("Ecom:Order.Customer.Comment"))) {
+                    <div class="receipt__data-item">
+                        <h6>@Translate("Comment")</h6>
+                        @GetString("Ecom:Order.Customer.Comment")
+                    </div>
+                }
+            </div>
+	    </div>
+    </div>
+
+    <div class="receipt__item">
+        <div class="receipt__item--small">
+            @RenderProductsTable()
+            @RenderOrderSummaryTable("table--small u-margin-left--auto")
+        </div>
+     </div>
+
+</section>
+
+
+@helper RenderOrderSummary() {
+	<div class="card__wrapper">
+        <div class="card receipt__group-inner u-full-width">
+            <h2 class="u-margin-bottom--lg">@Translate("Order summary")</h2>
+            @RenderOrderSummaryTable()
+		</div>
+	</div>
+}
+
+@helper RenderOrderSummaryTable(string className = "", string[] excludes = null ) {
+    bool hasTaxSettings = Dynamicweb.Rapido.Services.Countries.HasTaxSettings(GetString("Ecom:Order.ID"));
+    bool pointShop = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+    bool hidePaymentFee = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") && GetInteger("Ecom:Order.PaymentFee.Price") == 0;
+    string paymentMethod = !string.IsNullOrEmpty(GetString("Ecom:Order.PaymentMethod")) ? GetString("Ecom:Order.PaymentMethod") : Translate("Payment");
+    bool hideShippingFee = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") && GetInteger("Ecom:Order.ShippingFee.Price") == 0;
+    string shippingMethod = !string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethod")) ? GetString("Ecom:Order.ShippingMethod") : Translate("Delivery");
+
+    int numberofservices = 0;
+    int numberofproducts = GetInteger("Ecom:Order.OrderLines.TotalProductQuantity");
+
+    foreach (LoopItem orderLinesCnt in GetLoop("OrderLines")) {
+        foreach (LoopItem orderlinefield in orderLinesCnt.GetLoop("Order.OrderLineFields")){
+              if (orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.SystemName")=="ServiceForProductId"){
+                  numberofservices+=orderLinesCnt.GetInteger("Ecom:Order:OrderLine.Quantity");
+                  numberofproducts-=orderLinesCnt.GetInteger("Ecom:Order:OrderLine.Quantity");
+              }   
+        }
+    }
+
+
+    <table class="table--condensed table--no-top-border @className">
+        <tbody>
+            <tr>
+                <td>@Translate("Total qty"):</td>
+                <td>@numberofproducts</td>
+            </tr>
+            @if(numberofservices>0){
+            <tr>
+                <td class="u-no-border">@Translate("DeliveryServicesTotal qty"):</td>
+                <td class="u-no-border">@numberofservices</td>
+            </tr>
+            }
+            @if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideSubtotal"))
+            {
+                <tr>
+                    <td>@Translate("Subtotal"):</td>
+                    <td>@GetString("Ecom:Order.PriceWithoutFees.PriceFormatted")</td>
+                </tr>
+            }
+            @if (!hidePaymentFee)
+            {
+                <tr>
+                    <td>@paymentMethod:</td>
+                    <td>@GetString("Ecom:Order.PaymentFee")</td>
+                </tr>
+            }
+            @if (!hideShippingFee)
+            {
+                <tr>
+                    <td>@shippingMethod:</td>
+                    <td>@GetString("Ecom:Order.ShippingFee")</td>
+                </tr>
+            }
+            @if (hasTaxSettings)
+            {
+                string totalTaxes = GetDouble("Ecom:Order.Taxes.Total.Price") != 0 ? GetString("Ecom:Order.Taxes.Total") : "-";
+
+                <tr>
+                    <td >@Translate("Sales Tax"):</td>
+                    <td class="u-ta-right">@totalTaxes</td>
+                </tr>
+            }
+            <tr class="u-bold u-border-top--bold">
+                <td>@Translate("Total"):</td>
+                <td width="150">@GetString("Ecom:Order.OrderLines.Total.Price")</td>
+            </tr>
+            @if (!pointShop && !hasTaxSettings)
+            {
+                <tr class="u-ta-right">
+                    <td class="u-no-border" colspan="2">
+                        <div>
+                            <small>@Translate("VAT") (@GetString("Ecom:Order.PriceWithoutFees.VATPercentFormatted")):</small>
+                            <small>@GetString("Ecom:Order.OrderLines.Total.PriceVAT")</small>
+                        </div>
+
+                        @if (isPricesWithVATEnabled)
+                        {    
+                            <div>
+                                <small>@Translate("Total price without VAT"):</small>
+                                <small>@GetString("Ecom:Order.OrderLines.Total.PriceWithoutVAT")</small>
+                            </div>
+                        }
+                        else
+                        {
+                            <div>
+                                <small>@Translate("Total price with VAT"):</small>
+                                <small>@GetString("Ecom:Order.OrderLines.Total.PriceWithVAT")</small>
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@helper RenderProductsTable() {
+    
+    var products = GetLoop("OrderLines");
+
+    if ( products == null ) {
+        return;
+    }
+
+    <table>
+        <thead>
+            <tr>
+                <th colspan="3"><h2 class="u-margin-bottom--lg">@Translate("Ordreliste")</h2></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ( LoopItem product in products ) {
+                double quantity = product.GetDouble("Ecom:Order:OrderLine.Quantity");
+
+                string ServiceForProductId = "";            
+                foreach (LoopItem orderlinefield in product.GetLoop("Order.OrderLineFields")){
+                    if (orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.SystemName")=="ServiceForProductId"){
+                        ServiceForProductId = orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.Value");
+                    }   
+                }
+            
+            
+if (product.GetBoolean("Ecom:Order:OrderLine.IsProduct") && string.IsNullOrEmpty(ServiceForProductId)){
+//                 if (product.GetBoolean("Ecom:Order:OrderLine.IsProduct")){
+
+            
+//	string DeliveryServiceGroup = "GROUP895";
+	string ProdId = product.GetString("Ecom:Product.ID");
+//	string ProdNumber = product.GetString("Ecom:Product.Number");
+//	string ProdOrderlineID = "";
+//	int ProdQuantity = 0;
+	string DeliveryServiceOrderlineID = "";
+	string DeliveryServiceOrderlineID_List = "";
+	string DeliveryServiceDeleteByOrderlineID_OnClick = "";
+	string DeliveryServiceDeleteByOrderlineID_HTML = "";
+//	string DeliveryServiceSelection_HTML = "";
+            
+	int ActivDeliveryServiceLevel = 0;
+	string ActivDeliveryServiceName = "";
+	string ActivDeliveryServiceItemPrice = "";
+	int ActivDeliveryServiceQuantity = 0;
+	string ActivDeliveryServicePrice = "";
+		
+	int DS_cnt = 0;
+            
+
+	foreach (LoopItem orderLines in GetLoop("OrderLines")) {
+		foreach (LoopItem orderlinefield in orderLines.GetLoop("Order.OrderLineFields")){
+			if (orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.SystemName")=="ServiceForProductId" && orderlinefield.GetString("Ecom:Order:OrderLine.OrderLineField.Value") == ProdId){
+				DS_cnt++;
+				DeliveryServiceOrderlineID = orderLines.GetString("Ecom:Order:OrderLine.Id");
+				DeliveryServiceOrderlineID_List += orderLines.GetString("Ecom:Order:OrderLine.Id") + ",";
+				
+
+                //Do the same with bit different approach
+
+				DeliveryServiceDeleteByOrderlineID_OnClick = "Cart.ChangeQuantity("+ Pageview.Page.ID.ToString() + ", '" + DeliveryServiceOrderlineID + "', 0);";
+				
+                DeliveryServiceDeleteByOrderlineID_HTML += "<a onclick=\""+DeliveryServiceDeleteByOrderlineID_OnClick+"\">"+DeliveryServiceOrderlineID+"</a> ";
+
+				ActivDeliveryServiceLevel = orderLines.GetInteger("Ecom:Product:Field.isDeliveryServiceLevel");
+				ActivDeliveryServiceName = orderLines.GetString("Ecom:Product.Name");
+				ActivDeliveryServiceItemPrice = orderLines.GetString("Ecom:Product.Price");
+				ActivDeliveryServiceQuantity = orderLines.GetInteger("Ecom:Order:OrderLine.Quantity");
+				ActivDeliveryServicePrice = orderLines.GetString("Ecom:Order:OrderLine.Price");
+				
+			}   
+		}
+    }
+
+            
+            
+            
+            
+    
+            
+            
+                    <tr>
+                        <td width="80">
+                            @Render(new Image
+                       {
+                           Path = GetProductImage(product),
+                           ImageDefault = new ImageSettings
+                           {
+                               Height = 150,
+                               Width = 150
+                           }
+                       })
+                        </td>
+                        <td>
+                            <h6><strong>@product.GetString("Ecom:Product.Name")</strong></h6>
+
+                            @foreach (LoopItem variant in product.GetLoop("VariantGroups"))
+                            {
+                                string variantName = variant.GetString("Ecom:VariantGroup.Name");
+
+                                foreach (LoopItem options in variant.GetLoop("VariantOptions").Where(x => x.GetBoolean("Ecom:VariantOption.Selected")))
+                                {
+                                    string optionName = options.GetString("Ecom:VariantOption.Name");
+
+                                    <div>@variantName: <span>@optionName</span></div>
+                                }
+
+                            }
+                            <div>@Translate("Qty"): @quantity</div>
+
+@if (ActivDeliveryServiceName != ""){
+    <div>+ @ActivDeliveryServiceName @ActivDeliveryServicePrice</div>
+}
+                            
+                            
+                            
+                        </td>
+                        <td class="u-ta-right">@product.GetString("Ecom:Order:OrderLine.Price")</td>
+                    </tr>
+                } else if (product.GetBoolean("Ecom:Order:OrderLine.IsDiscount")) {
+                    <tr>
+                        <td colspan="2">
+                            <h6><strong>@product.GetString("Ecom:Order:OrderLine.ProductName")</strong></h6>
+                        </td>
+                        <td class="u-ta-right">@product.GetString("Ecom:Order:OrderLine.Price")</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+}
+
+@if (ReceiptShowCount <= 1) {
+    <script>
+        dataLayer.push({
+            "event": "purchase",
+            "ecommerce": {
+                "currencyCode": "@Pageview.Area.EcomCurrencyId",
+                "purchase": {
+                    "actionField": {
+                        "id": "@GetString("Ecom:Order.ID")",
+                        "affiliation": "Online Store",
+                        "revenue": "@GetDouble("Ecom:Order.Price.PriceWithVAT")",   // Total transaction value (incl. tax and shipping)
+                        "tax":"@GetString("Ecom:Order.Price.VAT.Value").Replace(",",".")",
+                        "shipping": "@GetDouble("Ecom:Order.ShippingFee.Price")"
+                    },
+                    "products": [
+                        @foreach (LoopItem orderline in GetLoop("OrderLines"))
+                        {
+                            var groupObject = Dynamicweb.Ecommerce.Services.ProductGroups.GetGroup(orderline.GetString("Ecom:Product.PrimaryOrFirstGroupID"));
+                            <text>
+                            {
+                                "name": "@orderline.GetString("Ecom:Order:OrderLine.ProductName")",
+                                "id": "@orderline.GetString("Ecom:Product.ID")",
+                                "price": "@orderline.GetDouble("Ecom:Order:OrderLine.UnitPrice.Price")",
+                                "brand": "@orderline.GetString("Ecom:Product:Field.brand.Value")",
+                                "category": "@(groupObject != null ? groupObject.Name : "")",
+                                "variant": "@orderline.GetString("Ecom:Order:OrderLine.ProductVariantID")",
+                                "quantity": @orderline.GetInteger("Ecom:Order:OrderLine.Quantity")
+                            },
+                            </text>
+                        }
+                    ]
+                }
+            }
+        });
+    </script>
+    
+    <span id="CompleteReceipt" cnt="@ReceiptShowCount"></span>
+	<script>
+	  gtag('event', 'conversion', {'send_to': 'AW-981985452/v4DnCPf6_48DEKzRn9QD',
+		'value': '@GetDouble("Ecom:Order.Price.PriceWithVAT.Value")',
+		'currency': '@Pageview.Area.EcomCurrencyId'
+	  });
+	</script>     
+    
+}
+
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../../Components/GridBuilder.cshtml")
+@Include("../../../Components/GeneralComponents.cshtml")
+
+@Include("../../../GetProductImage.cshtml")

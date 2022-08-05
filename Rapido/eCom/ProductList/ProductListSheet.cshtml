@@ -1,0 +1,200 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Content.Items
+@using System
+@using System.IO
+@using System.Web
+@using System.Collections.Generic;
+
+
+@Include("../../Printables/General.cshtml")
+@Include("../../Printables/Paper/Header.cshtml")
+@Include("../../Printables/Paper/Footer.cshtml")
+@Include("../../GetProductImage.cshtml")
+
+@functions {
+    int heightBuffer;
+    int contentHeight;
+    int contentWidth;
+    int productItemHeight;
+    string pageOrientation;
+}
+
+@{ 
+    int productsOnSheet = 14;
+    int sheetMargin = GetParentSettingsItem("Margin") != null ? Convert.ToInt32(GetParentSettingsItem("Margin")) : 10;
+    int sheetHeight = 296;
+    int sheetWidth = 210;
+    int headerHeight = 15;
+    int footerHeight = 15;
+
+    string pageSize = !String.IsNullOrEmpty(GetParentSettingsItem("PageSize")) ? GetParentSettingsItem("PageSize").ToLower() : "a4";
+    pageOrientation = "portrait";
+
+    if (pageOrientation == "portrait") {
+        switch (pageSize) {
+            case "a4":
+                sheetHeight = 296;
+                sheetWidth = 210;
+                break;
+            case "a5":
+                sheetHeight = 209;
+                sheetWidth = 148;
+                break;
+            case "a3":
+                sheetHeight = 419;
+                sheetWidth = 297;
+                break;
+            case "letter":
+                sheetHeight = 279;
+                sheetWidth = 216;
+                break;
+            case "legal":
+                sheetHeight = 356;
+                sheetWidth = 216;
+                break;
+        }
+    } else {
+        switch (pageSize)
+        {
+            case "a4":
+                sheetHeight = 209;
+                sheetWidth = 296;
+                break;
+            case "a5":
+                sheetHeight = 147;
+                sheetWidth = 210;
+                break;
+            case "a3":
+                sheetHeight = 296;
+                sheetWidth = 420;
+                break;
+            case "letter":
+                sheetHeight = 215;
+                sheetWidth = 280;
+                break;
+            case "legal":
+                sheetHeight = 215;
+                sheetWidth = 357;
+                break;
+        }
+    }
+
+    if (Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideProductImage"]))
+    {
+        productsOnSheet = 22;
+    }
+
+    //Add a buffer to the height
+    heightBuffer = 30;
+    sheetHeight = sheetHeight - heightBuffer;
+
+    contentHeight = (sheetHeight - (headerHeight + footerHeight + (sheetMargin * 2)));
+    contentWidth = (sheetWidth - (sheetMargin * 2));
+    productItemHeight = (contentHeight - 2) / productsOnSheet;
+
+    List<LoopItem> productListPart = new List<LoopItem>();
+    int count = 1;
+
+    foreach (LoopItem product in GetLoop("Products"))
+    {
+        productListPart.Add(product);
+
+        if (count < productsOnSheet) {
+            count++;
+        } else {
+            @RenderProductSheet(productListPart);
+
+            productListPart.Clear();
+            count = 1;
+        }
+    }
+
+    if (count != 1) {
+        @RenderProductSheet(productListPart);
+    }
+}
+
+
+@helper RenderProductSheet(dynamic products) {
+    string pageMargin = GetParentSettingsItem("Margin") != null ? GetParentSettingsItem("Margin") : "10";
+    List<String> availableCustomFields = Pageview.CurrentParagraph.Item["CustomFields"].ToString().Split(new char[] { ',' }).ToList();
+
+
+    <section class="sheet">
+        <div class="sheet-container sheet-container--flex-col">
+            @RenderPaperHeader()
+
+            <div class="sheet-container__content sheet-container__content--padding-@(pageMargin)mm" style="height: @(contentHeight + heightBuffer)mm">
+               <table class="sheet-product-table">
+                    @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideTableHeaders"])) {
+                        <thead class="sheet-product-table__head">
+                            <tr>
+                                @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideProductImage"])) {
+                                    <td>&nbsp;</td>
+                                }
+                                <td>@Translate("Product")</td>
+                                @foreach (string availableField in availableCustomFields)
+                                {
+                                    <td>@availableField</td>
+                                }
+                                @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HidePrice"])) {
+                                    <td align="right">@Translate("Price")</td>
+                                }
+                            </tr>
+                        </thead>
+                    }
+
+                    @foreach (LoopItem product in products)
+                    {
+                        string productName = product.GetString("Ecom:Product.Name");
+                        productName += !String.IsNullOrEmpty(product.GetString("Ecom:Product.SelectedVariantComboName")) ? ", " + product.GetString("Ecom:Product.SelectedVariantComboName") : "";
+                        string productPrice = product.GetString("Ecom:Product.Discount.Price.PriceFormatted") != product.GetString("Ecom:Product.Price.PriceFormatted") ? product.GetString("Ecom:Product.Discount.Price.PriceFormatted") : product.GetString("Ecom:Product.Price.PriceFormatted");
+                        string productBeforePrice = product.GetString("Ecom:Product.Discount.Price.PriceFormatted") != product.GetString("Ecom:Product.Price.PriceFormatted") ? product.GetString("Ecom:Product.Price.PriceFormatted") : "";
+                        string productNameWidth = productItemHeight < 20 ? "width: 40mm; " : "";
+                        int productImageHeight = productItemHeight < 15 ? 6 : productItemHeight - 4; 
+
+                        <tr class="sheet-product-table-item" style="height: @(productItemHeight)mm">
+                            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideProductImage"]))
+                            {
+                                <td>
+                                    <img src="@GetProductImage(product)" style="height: @(productImageHeight)mm" />
+                                </td>
+                            }
+                            <td>
+                                <div class="sheet-product-number">@product.GetString("Ecom:Product.Number")</div>
+                                <div class="sheet-product-title">@productName</div>
+                            </td>
+                            @foreach (string availableField in availableCustomFields)
+                            {
+                                foreach (LoopItem field in product.GetLoop("CustomFieldValues"))
+                                {
+                                    if (field.GetString("Product.CustomField.Template").ToLower() == availableField.ToLower())
+                                    {
+                                        if (!String.IsNullOrEmpty(field.GetString("Product.CustomField.Value")))
+                                        {
+                                            <td>@field.GetString("Product.CustomField.Value")</td>
+                                        }
+                                        else 
+                                        {
+                                            <td>&nbsp;</td>
+                                        }
+                                    }
+                                }
+                            }
+                            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HidePrice"]))
+                            {
+                                <td style="width: 30mm">
+                                    <div class="sheet-product-price">@productPrice</div>
+                                    <div class="sheet-product-before-price">@productBeforePrice</div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </table>
+            </div>
+            @RenderPaperFooter()
+        </div>
+    </section>
+}
+
+

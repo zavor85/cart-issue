@@ -1,0 +1,42 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb
+@using Dynamicweb.Core
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using System
+@using System.Web
+@using System.Globalization
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage creditListPage = BlocksPage.GetBlockPage("CreditList");
+}
+
+@if (!string.IsNullOrWhiteSpace(GetString("Ecom:IntegrationCustomerCenter.Credit.EmptyList")))
+{
+    creditListPage.Add(
+        new Block
+        {
+            Id = "EmptyListMessage",
+            SortId = 10,
+            Component = new Text { Content = Translate("No credits found") }
+        }
+    );
+}
+
+@Include("Blocks/CreditList/Credits.cshtml")
+@Include("Blocks/CreditList/ViewCreditModal.cshtml")
+@Include("Blocks/CreditList/Custom__Blocks.cshtml")
+
+@* Include the Rendering helpers *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/EcommerceComponents.cshtml")
+
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(creditListPage.BlocksRoot.BlocksList)
+
+

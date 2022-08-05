@@ -1,0 +1,63 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@Include("ParagraphBase.cshtml")
+
+@{ 
+    int cropMode = !string.IsNullOrEmpty(Convert.ToString(Model.Item.GetList("ImageCrop"))) ? Convert.ToInt32(Model.Item.GetList("ImageCrop").SelectedValue) : 0;
+
+    Image image = new Image
+    {
+        Path = Model.Item.GetFile("Image") != null ? Model.Item.GetFile("Image").Path : "",
+        ImageDefault = new ImageSettings
+        {
+            Crop = cropMode,
+            Height = 845,
+            Width = 1920
+        },
+        ImageMedium = new ImageSettings
+        {
+            Crop = cropMode,
+            Height = 450,
+            Width = 1024
+        },
+        ImageSmall = new ImageSettings
+        {
+            Crop = cropMode,
+            Height = 544,
+            Width = 640
+        }
+    };
+
+    string link = !string.IsNullOrEmpty(Model.Item.GetString("Link")) ? Model.Item.GetString("Link") : "";
+    string linkTarget = link.Contains("http") ? "_blank" : "_self";
+}
+
+@if (!string.IsNullOrEmpty(link)) {
+    <a href="@link" target="@linkTarget">
+         @RenderTheContent(image)
+    </a>
+} else {
+    @RenderTheContent(image)
+}
+
+
+@helper RenderTheContent(Image image) { 
+    <div class="image-paragraph dw-mod">
+        @{
+            image.CssClass = "background-image__cover";
+
+            <div class="background-image dw-mod">
+                <div class="background-image__wrapper dw-mod">
+                    @Render(image)
+                </div> 
+            </div>
+        }
+    </div>
+}
+
+
+
+

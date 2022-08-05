@@ -1,0 +1,341 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Services
+@using System.Web.Helpers
+
+@functions {
+    BlocksPage tilesView = BlocksPage.GetBlockPage("ProductList");
+    Dynamicweb.Frontend.ItemViewModel tilesViewSettings = null;
+}
+
+@{
+    var settings = Pageview.AreaSettings.GetItem("ProductList");
+    var enableTiles = settings.GetBoolean("EnableTilesView");
+
+    if ( enableTiles ) {
+        tilesViewSettings = settings.GetItem("TilesView");
+        BlocksPage tilesView = BlocksPage.GetBlockPage("ProductList");
+
+        Block tiles = new Block {
+            Id = "ProductTilesViewContainer",
+            Name ="grip-horizontal",
+            SortId = 50,
+        };
+
+        tilesView.Add("Views", tiles);
+
+
+        Block tilesViewScripts = new Block {
+            Id = "TilesViewScripts",
+            SortId = 20,
+            Template = TilesView(),
+            BlocksList = new List<Block> {
+                new Block {
+                    Id = "TilesViewItem",
+                    SortId = 10,
+                    Template = RenderTilesViewItem(),
+                    SkipRenderBlocksList = true,
+                    BlocksList = new List<Block> {
+                        new Block {
+                            Id = "TilesViewItemHiddenProperties",
+                            SortId = 10,
+                            Template = RenderTilesViewItemHiddenProperties()
+                        },
+                        new Block {
+                            Id = "TilesViewItemImageContainer",
+                            SortId = 20,
+                            Template = RenderTilesViewItemImageContainer(),
+                            SkipRenderBlocksList = true,
+                            BlocksList = new List<Block> {
+                                new Block {
+                                    Id = "TilesViewItemImage",
+                                    SortId = 10,
+                                    Template = RenderTilesViewItemImage(),
+                                },
+                                new Block
+                                {
+                                    Id = "TilesViewItemStickers",
+                                    SortId = 20,
+                                    Template = RenderTilesViewItemStickers()
+                                },
+                                new Block {
+                                    Id = "TilesViewItemFavorites",
+                                    SortId = 20,
+                                    Template = RenderTilesViewItemFavorites()
+                                },
+                            },
+                        },
+                        new Block {
+                            Id = "TilesViewItemContentContainer",
+                            SortId = 30,
+                            Template = RenderTilesViewItemContentContainer(),
+                            SkipRenderBlocksList = true,
+                            BlocksList = new List<Block> {
+                                new Block {
+                                    Id = "TilesViewItemContent",
+                                    SortId = 30,
+                                    Template = RenderTilesViewItemContent(),
+                                    SkipRenderBlocksList = true,
+                                    BlocksList = new List<Block> {
+                                        new Block {
+                                            Id = "TilesViewItemHeader",
+                                            SortId = 10,
+                                            Template = RenderTilesViewItemHeader(),
+                                            SkipRenderBlocksList = true,
+                                            BlocksList = new List<Block> {
+                                                new Block {
+                                                    Id = "TilesViewItemTitle",
+                                                    SortId = 10,
+                                                    Template = RenderTilesViewItemTitle(),
+                                                },
+                                                new Block {
+                                                    Id = "TilesViewItemNumber",
+                                                    SortId = 20,
+                                                    Template = RenderTilesViewItemNumber(),
+                                                },
+                                            }
+                                        },
+                                        new Block {
+                                            Id = "TilesViewItemPrice",
+                                            SortId = 30,
+                                            Template = RenderTilesViewItemPrice(),
+                                        },
+                                    }
+                                },
+                                new Block {
+                                    Id = "TilesViewItemFooter",
+                                    SortId = 40,
+                                    Template = RenderTilesViewItemFooter(),
+                                    SkipRenderBlocksList = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        tilesView.Add("BottomSnippets", tilesViewScripts);
+
+        if (tilesViewSettings.GetBoolean("ShowStaticVariants")) {
+            Block staticVariants = new Block {
+                Id = "TilesViewItemVariants",
+                SortId = 10,
+                Template = RenderTilesViewItemVariants(),
+            };
+            tilesView.Add("TilesViewItemContentContainer", staticVariants);
+        } 
+
+        //download button
+        bool tilesViewShowAddToDownloadButton = tilesViewSettings.GetBoolean("ShowAddToDownloadButton");
+
+        if (tilesViewShowAddToDownloadButton && Pageview.User != null)
+        {
+            tilesView.Add("TilesViewItemFooter", new Block
+            {
+                Id = "TilesViewItemDownloadButton",
+                SortId = 20,
+                Template = RenderTilesViewItemDownloadButton()
+            });
+        }
+    }
+}
+
+@helper TilesView() {
+    int columnsCount = tilesViewSettings.GetList("Columns") != null ? Converter.ToInt32(tilesViewSettings.GetList("Columns").SelectedValue) : 3;
+
+    <script id="ProductTilesViewContainer" type="text/x-template">
+        {{#.}}
+            <div id="Product{{id}}" data-template="TilesViewItem" data-preloader="overlay" class="grid__col-lg-@(12 / columnsCount) grid__col-md-@(12 / columnsCount) grid__col-sm-@(12 / columnsCount) grid__col-xs-6 product-list__tiles-item js-product dw-mod">
+                {{#Product}}
+                    {{>TilesViewItem}}
+                {{/Product}}
+            </div>
+        {{/.}}
+    </script>
+}
+
+
+@helper RenderTilesViewItem() { 
+    List<Block> subBlocks = tilesView.GetBlockListById("TilesViewItem");
+    bool showShadow = tilesViewSettings.GetBoolean("HoverShowShadow");
+    string addShadow = ( showShadow != null && showShadow ) ? "product-list--shadow" : "";
+
+    <script id="TilesViewItem" type="text/x-template">
+        {{#.}} 
+            <div class="grid__col--auto js-product-scroll-trigger u-no-padding u-full-height @addShadow" data-params="{{googleImpression}}">
+                @RenderBlockList(subBlocks)
+            </div>
+        {{/.}}
+    </script>
+}
+
+
+@helper RenderTilesViewItemContentContainer() {
+    List<Block> subBlocks = tilesView.GetBlockListById("TilesViewItemContentContainer");
+
+    <text>
+        {{#.}}
+            <div class="grid__cell product-list__tiles-item__price-info u-padding--lg u-flex u-flex--column dw-mod">
+                @RenderBlockList(subBlocks)
+            </div>
+        {{/.}}
+    </text>
+}
+
+
+
+@helper RenderTilesViewItemVariants() {
+    string variantsSize = tilesViewSettings.GetList("StaticVariantsDisplay") != null ? tilesViewSettings.GetList("StaticVariantsDisplay").SelectedValue : "sm";
+    
+    <text>
+        {{#Variants}}
+            @if ( variantsSize == "lg" ) {
+                <text>
+                    {{>StaticVariantsLgTemplate}}
+                </text>
+            } else {
+                <text>
+                    {{>StaticVariantsTemplate}}
+                </text>
+            }
+        {{/Variants}}
+
+        {{#ifCond variantGroupsCount '==' 0}}
+            <div class="static-variant"></div>
+        {{/ifCond}}
+    </text>
+}
+
+@helper RenderTilesViewItemFavorites() {
+    bool showFavoriteButton = !tilesViewSettings.GetBoolean("HideFavoriteButton");
+    
+    if ( !showFavoriteButton ) {
+        return;
+    }
+
+    <div class="favorites favorites--for-tiles-view u-pull--right {{hasVariants}} dw-mod" {{hasVariants}}>
+        {{#Favorite}}
+            {{>FavoriteTemplate}}
+        {{/Favorite}}
+    </div>
+}
+
+@helper RenderTilesViewItemImageContainer() {
+    List<Block> subBlocks = tilesView.GetBlockListById("TilesViewItemImageContainer");
+
+    <div class="grid__cell dw-mod {{noImage}}">
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+@helper RenderTilesViewItemStickers()
+{
+    <text>
+        {{#StickersContainers}}
+            {{>StickersContainer}}
+        {{/StickersContainers}}
+    </text>
+}
+
+@helper RenderTilesViewItemImage() {
+    string imageZoomOnHover = tilesViewSettings.GetBoolean("HoverImageZoom") ? "image-hover--zoom" : "";
+    bool secondaryImage = tilesViewSettings.GetString("HoverAlternativeImage") != null ? tilesViewSettings.GetBoolean("HoverAlternativeImage") : false;
+    
+    <a href="{{link}}" 
+       onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" 
+       title="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}" 
+       class="product-list__tiles-item__image u-block u-position-relative image-hover__wrapper @imageZoomOnHover dw-mod">
+        <img class="grid__cell-img u-middle-horizontal b-lazy" src="/Files/Images/placeholder.gif" 
+            data-src="/Admin/Public/GetImage.ashx?width=450&amp;height=450&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{image}}"
+            @if (secondaryImage) {
+            <text>
+                {{#if secondaryImage}}
+                data-secondary-image-src="/Admin/Public/GetImage.ashx?width=450&amp;height=450&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{secondaryImage}}"
+                {{/if}} 
+            </text>
+            }
+            alt="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}" />
+    </a>
+}
+
+
+@helper RenderTilesViewItemHiddenProperties() {
+    <input type="hidden" name="ProductLoopCounter{{id}}" value="{{id}}" />
+    <input type="hidden" name="ProductID{{id}}" value="{{productId}}" />
+    <input type="hidden" name="VariantID{{id}}" value="{{variantid}}" id="Variant_{{id}}" />
+    <input type="hidden" name="UnitID{{id}}" value="{{unitId}}" id="Unit_{{id}}" />
+    <input type="hidden" name="Quantity{{id}}" value="1" id="Quantity_{{id}}" />
+}
+
+
+@helper RenderTilesViewItemContent() {
+    List<Block> subBlocks = tilesView.GetBlockListById("TilesViewItemContent");
+
+    <div class="grid__cell dw-mod">
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+
+@helper RenderTilesViewItemHeader() {
+    List<Block> subBlocks = tilesView.GetBlockListById("TilesViewItemHeader");
+
+    <div class="u-flex u-justify-content--between u-margin-bottom dw-mod">
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+
+@helper RenderTilesViewItemTitle() {
+    <a href="{{link}}" class="u-color-inherit u-flex-basis--50 u-flex-grow--1" onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" title="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}">
+        <h6 class="u-bold u-capitalize">{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}</h6>
+    </a>
+}
+
+
+@helper RenderTilesViewItemNumber() {
+    bool showNumber = tilesViewSettings.GetBoolean("ShowProductNumber");
+    
+    if ( !showNumber ) {
+        return;
+    }
+
+    <div class="item-number u-margin-left--lg dw-mod">{{number}}</div>
+}
+
+
+@helper RenderTilesViewItemPrice() {
+    <div class="price__wrapper u-flex u-flex--wrap u-justify-content--between">
+        <div class="price__inner u-margin-right">
+            <div class="price price--product-list u-bold dw-mod">{{price}}</div>
+            <div class="before-price {{onSale}} dw-mod">{{discount}}</div>
+        </div>
+
+        {{#if priceRRP}}
+            <div class="price--rrp dw-mod">{{priceRRP}}</div>
+        {{/if}}
+    </div>
+}
+
+
+@helper RenderTilesViewItemFooter() {
+     List<Block> subBlocks = tilesView.GetBlockListById("TilesViewItemFooter");
+
+    <div class="product-list__tiles-item__footer u-margin-top--auto dw-mod">
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+@helper RenderTilesViewItemDownloadButton() {
+    <button type="button" class="btn btn--primary u-no-margin u-margin-top btn--condensed dw-mod js-add-to-downloads" title="@Translate("Add")" data-product-id="{{productId}}">
+        @Render(new Icon { Prefix = "fas", Name = "fa-plus", CssClass = "js-button-icon" })
+        <span class="js-button-text">@Translate("Add")</span>
+    </button>
+}

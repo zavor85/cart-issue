@@ -1,0 +1,235 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Modules.UserManagement;
+
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using System
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage secondaryUsersPage = BlocksPage.GetBlockPage("SecondaryUsers");
+}
+
+@{
+    string siteurl = GetGlobalValue("Global:Request.Url").ToString();
+    Pageview.Meta.Title = Translate("Manage Accounts");
+
+    Block secondaryUsersContainer = new Block()
+    {
+        Id = "SecondaryUsersContainer",
+        SortId = 10,
+        SkipRenderBlocksList = true,
+        Template = RenderSecondaryUsersContainer()
+    };
+
+    if (string.IsNullOrWhiteSpace(GetGlobalValue("Global:Extranet.SecondaryUser.UserID")))
+    {
+        int impersonationFeed = GetPageIdByNavigationTag("UsersFeed");
+
+        TextField searchField = new TextField
+        {
+            Placeholder = Translate("Type customer name or number"),
+            Name = "q",
+            OnKeyUp = "HandlebarsBolt.UpdateContent('searchUsersResultsHeader', '/Default.aspx?ID=" + impersonationFeed + "&q=' + this.value);"
+        };
+
+        secondaryUsersContainer.BlocksList = new List<Block>
+        {
+            new Block()
+            {
+                Id = "SecondaryUsersHeader",
+                SortId = 10,
+                Component = new Heading { Title = Translate("Select the customer you want to manage"), Level = 2, CssClass = "u-pull--left u-margin-bottom--lg" }
+            },
+            new Block()
+            {
+                Id = "SecondaryUsersActions",
+                SortId = 20,
+                Design = new Design {
+                    RenderType = RenderType.Row,
+                    CssClass = "u-no-padding"
+                },
+                BlocksList = new List<Block> {
+                    new Block {
+                        Id = "SearchField",
+                        SortId = 10,
+                        Component = searchField,
+                        Design = new Design {
+                            RenderType = RenderType.Column,
+                            Size = "6",
+                            CssClass = "u-no-padding"
+                        }
+                    },
+                    new Block {
+                        Id = "ListInfo",
+                        SortId = 20,
+                        Template = RenderSecondaryUsersListInfo(),
+                        Design = new Design {
+                            RenderType = RenderType.Column,
+                            Size = "6",
+                            CssClass = "u-ta-right"
+                        }
+                    }
+                }
+            },
+            new Block()
+            {
+                Id = "SecondaryUsersList",
+                SortId = 30,
+                Template = RenderSecondaryUsersList()
+            },
+            new Block()
+            {
+                Id = "ResultsListScript",
+                SortId = 40,
+                Template = RenderResultsListScript()
+            },
+            new Block()
+            {
+                Id = "PaginationScripts",
+                SortId = 50,
+                Template = RenderPaginationScripts()
+            },
+        };
+    }
+    else
+    {
+        secondaryUsersContainer.BlocksList.Add(new Block
+        {
+            Id = "StopImpersonation",
+            SortId = 10,
+            Template = RenderStopImpersonation()
+        });
+    }
+
+    secondaryUsersPage.Add(secondaryUsersContainer);
+}
+
+@Include("Blocks/SecondaryUsers/Custom__Blocks.cshtml")
+
+@Include("../Components/GridBuilder.cshtml")
+@Include("../Components/GeneralComponents.cshtml")
+
+@RenderBlockList(secondaryUsersPage.BlocksRoot.BlocksList)
+
+@helper RenderSecondaryUsersContainer()
+{
+    List<Block> subBlocks = secondaryUsersPage.GetBlockListById("SecondaryUsersContainer").OrderBy(item => item.SortId).ToList();
+    
+    <div class="paragraph-container grid__col-12">
+        @RenderBlockList(subBlocks)
+    </div>
+}
+
+@helper RenderSecondaryUsersListInfo()
+{
+    <div id="usersCounter" class="u-margin-bottom u-color-gray">@GetString("QueryResult.TotalCount") @Translate("customers")</div>
+}
+
+@helper RenderSecondaryUsersList()
+{
+    int impersonationFeed = GetPageIdByNavigationTag("UsersFeed");
+
+    <div id="searchUsersResultsHeader" class="js-handlebars-root" data-template="SearchUsersResult" data-json-feed="/Default.aspx?ID=@impersonationFeed" data-preloader="minimal"></div>
+}
+
+@helper RenderResultsListScript()
+{
+    <script id="SearchUsersResult" type="text/x-template">
+        {{#.}}
+            <table class="table data-list dw-mod">
+                <thead>
+                    <tr class="u-bold">
+                        <td>@Translate("Customer")</td>
+                        <td>@Translate("Customer") #</td>
+                        <td>@Translate("Email")</td>
+                        <td>@Translate("Address")</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                </thead>
+                    
+                {{#Users}}
+                    <tbody class="data-list__item dw-mod">
+                        <tr onmouseover="document.querySelector('#SignInButton_{{id}}').classList.remove('u-hidden')" onmouseout="document.querySelector('#SignInButton_{{id}}').classList.add('u-hidden')" height="80">
+                            <td width="160" class="u-va-middle">{{userName}}</td>
+                            <td class="u-va-middle">{{customerNumber}}</td>
+                            <td class="u-va-middle">{{email}}</td>
+                            <td class="u-va-middle">{{address}}, {{zip}} {{city}}, {{country}}</td>
+                            <td class="u-va-middle" width="160">
+                                <form method="post" name="account{{id}}">
+                                    @Render(new HiddenField { Id = "DWExtranetSecondaryUserSelector", Name = "DWExtranetSecondaryUserSelector", Value = "{{id}}" })
+                                    @Render(new Button {
+                                        ButtonType = ButtonType.Submit,
+                                        ButtonLayout = ButtonLayout.Secondary,
+                                        CssClass = "u-pull--right u-margin-top u-margin-bottom u-hidden",
+                                        Id = "SignInButton_{{id}}",
+                                        Title = Translate("Sign in")
+                                    })
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                {{/Users}}
+            </table>
+            
+            {{#Paginations}}
+                <div class="pager u-margin-top {{hidePagination}}">
+                    <div class="pager__info">
+                        @Translate("Page") {{current}} @Translate("of") {{total}} 
+                    </div>
+                    <ul class="pager__list" id="Buttons">                                
+                        {{#Buttons}}
+                            {{> (lookup . 'template') }}
+                        {{/Buttons}}
+                    </ul>
+                </div>
+            {{/Paginations}}
+        {{/.}}
+    </script>
+}
+
+@helper RenderPaginationScripts() 
+{
+    <script id="PaginationBtn" type="text/x-template">
+        <li class="pager__btn" onclick="HandlebarsBolt.UpdateContent('searchUsersResultsHeader', '{{link}}' )">
+            <span class="pager__num dw-mod link"><i class="fas fa-angle-{{text}}"></i></span>
+        </li>
+    </script>
+
+    <script id="PaginationEllipsis" type="text/x-template">
+        <li class="pager__btn">
+            <span class="pager__num--ellipsis dw-mod">…</span>
+        </li>
+    </script>
+
+    <script id="PaginationCurrentPage" type="text/x-template">
+        <li class="pager__btn">
+            <span class="pager__num pager__num--current dw-mod">{{text}}</span>
+        </li>
+    </script>
+
+    <script id="PaginationLink" type="text/x-template">
+        <li class="pager__btn" onclick="HandlebarsBolt.UpdateContent('searchUsersResultsHeader', '{{link}}' )">
+            <span class="pager__num dw-mod link">{{text}}</span>
+        </li>
+    </script>
+}
+
+@helper RenderStopImpersonation()
+{
+    string stopImpersonateTranslation = Translate("Stop impersonation");
+
+    <div class="grid__cell">
+        <div class="u-pull--left">@Translate("Stop impersonation if you want to login as another user.")</div>
+        <form method="post" class="u-pull--right u-no-margin">
+            @Render(new Button {
+                ButtonType = ButtonType.Submit,
+                ButtonLayout = ButtonLayout.Secondary,
+                CssClass = "u-no-margin",
+                Name = "DwExtranetRemoveSecondaryUser",
+                Title = stopImpersonateTranslation
+            })
+        </form>
+    </div>
+}

@@ -1,0 +1,297 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@{ 
+    BlocksPage productListFacetsBlocksPage = BlocksPage.GetBlockPage("ProductList");
+    string facetsBlockViewMode = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("ProductList").GetString("FacetsViewMode")) ? Pageview.AreaSettings.GetItem("ProductList").GetString("FacetsViewMode").ToLower() : "left";
+    
+    if (facetsBlockViewMode == "left" && Pageview.Device.ToString() != "Mobile" && Pageview.Device.ToString() != "Tablet")
+    {
+        Block facetsBlock = new Block
+        {
+            Id = "Facets",
+            SortId = 30,
+            Template = RenderProductListFacets()
+        };
+        productListFacetsBlocksPage.Add("Navigation", facetsBlock);
+    }
+
+    if (facetsBlockViewMode == "top" || Pageview.Device.ToString() == "Mobile" || Pageview.Device.ToString() == "Tablet")
+    {
+        Block facetsBlock = new Block
+        {
+            Id = "Facets",
+            SortId = 10,
+            Template = RenderProductListTopFacets()
+        };
+        productListFacetsBlocksPage.Add("ProductList", facetsBlock);
+    }
+
+    Block facetSelections = new Block
+    {
+        Id = "FacetSelections",
+        SortId = 20,
+        Template = RenderFacetSelections()
+    };
+    productListFacetsBlocksPage.Add("ProductList", facetSelections);
+
+    Block checkboxFacetTemplate = new Block
+    {
+        Id = "CheckboxFacet",
+        SortId = 30,
+        Template = RenderCheckboxFacets()
+    };
+    productListFacetsBlocksPage.Add("BottomSnippets", checkboxFacetTemplate);
+
+    Block tagsFacetTemplate = new Block
+    {
+        Id = "TagsFacet",
+        SortId = 40,
+        Template = RenderTagsFacets()
+    };
+    productListFacetsBlocksPage.Add("BottomSnippets", tagsFacetTemplate);
+
+    Block colorsFacetTemplate = new Block
+    {
+        Id = "ColorFacet",
+        SortId = 50,
+        Template = RenderColorFacets()
+    };
+    productListFacetsBlocksPage.Add("BottomSnippets", colorsFacetTemplate);
+
+    Block selectedFilter = new Block
+    {
+        Id = "SelectedFilter",
+        SortId = 60,
+        Template = RenderSelectedFilter()
+    };
+    productListFacetsBlocksPage.Add("BottomSnippets", selectedFilter);
+
+    Block selectedColorFilter = new Block
+    {
+        Id = "SelectedColorFilter",
+        SortId = 70,
+        Template = RenderSelectedColorFilter()
+    };
+    productListFacetsBlocksPage.Add("BottomSnippets", selectedColorFilter);
+
+    Block resetFilters = new Block
+    {
+        Id = "ResetFilters",
+        SortId = 80,
+        Template = RenderResetFilters()
+    };
+    productListFacetsBlocksPage.Add("BottomSnippets", resetFilters);
+}
+
+@helper RenderFacetSelections()
+{
+   @*This is part of a script template *@
+    <text>
+        {{#if FacetSelections}}
+            <div class="buttons-collection u-margin-bottom" id="selectedFacets">
+                {{#FacetSelections}}
+                    {{>(lookup . 'template')}}
+                {{/FacetSelections}}    
+            </div>
+        {{/if}}
+    </text>
+}
+
+@helper RenderProductListFacets() {
+    var facetSettings = Pageview.AreaSettings.GetItem("ProductList").GetItem("Facets");
+    string boxDisplay = facetSettings.GetList("BoxDisplay") != null ? facetSettings.GetList("BoxDisplay").SelectedValue : "scroll";
+    
+    string facetMoreClass = ( boxDisplay == "view-more" ? "facets-container__list--more" : "");
+
+    @*This is part of a script template *@
+
+    <input type="checkbox" id="CheckFacetGroups" class="js-remember-state u-hidden" data-expand="CheckFacetGroups" />
+    <div class="facets-container facets-container--left expandable--collapsed dw-mod" data-trigger="CheckFacetGroups">
+        {{#FacetGroups}}
+        <input type="checkbox" id="OptionsGroup_{{name}}" class="expand-trigger js-remember-state" {{defaultState}} />
+
+        <div class="expand-container facets-container__box dw-mod js-filter">
+            <label class="expand-container__btn facets-container__header dw-mod" for="OptionsGroup_{{name}}">{{name}}</label>
+            <div class="expand-container__content js-facet-container dw-mod" data-input="OptionsGroup_{{name}}">
+                <div class="facets-container__search {{showFilter}} dw-mod">
+                    <input type="text" class="u-full-width u-no-margin" onkeyup="Filter.FilterItems(event)" placeholder="@Translate("Search")" />
+                </div>
+                <div id="facetList{{cleanName}}" class="facets-container__list @facetMoreClass dw-mod">
+                    {{#FacetOptions}}
+                        {{#ifCond template "===" "Checkboxes"}}
+                            {{>Checkboxes}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Range"}}
+                            {{>Checkboxes}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Weight"}}
+                            {{>Checkboxes}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Tags"}}
+                            {{>Tags}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Colors"}}
+                            {{>Colors}}
+                        {{/ifCond}}
+                    {{/FacetOptions}}
+                    <div class="u-hidden js-filter-not-found">
+                        @Translate("Your search gave 0 results")
+                    </div>
+                </div>
+
+                @if ( boxDisplay == "view-more" ) {
+                    <div class="facets-container__more js-facet-expand">
+                        @Render(new Button {
+                            Title = "<span class=js-facet-trigger-text>" + Translate("View more") + "</span>",
+                            ButtonType = ButtonType.Button,
+                            ButtonLayout = ButtonLayout.Clean,
+                            CssClass = "facets-container__more-button js-facet-trigger u-flex u-no-margin u-full-width",
+                            OnClick = "Facets.ExpandToggle(this)",
+                            ExtraAttributes = new Dictionary<string, string>{
+                                {"data-target", "facetList{{cleanName}}"},
+                                {"data-toggle-text", Translate("Show less")},
+                            },
+                            Icon = new Icon {
+                                Prefix = "fal",
+                                Name = "fa-angle-down",
+                            }
+                        })
+                    </div>
+                }
+            </div>
+        </div>
+        {{/FacetGroups}}
+    </div>
+    <label for="CheckFacetGroups" class="btn btn--primary btn--full u-no-margin dw-mod js-expand-hide facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Select filters")</label>
+    <label for="CheckFacetGroups" class="btn btn--primary btn--full u-no-margin dw-mod expandable--collapsed facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Close filters")</label>
+}
+
+@helper RenderProductListTopFacets()
+{
+    @*This is part of a script template *@
+    <input type="checkbox" id="CheckFacetGroups" class="js-remember-state u-hidden" data-expand="CheckFacetGroups" />
+    <div class="grid grid--external-bleed dw-mod expandable--collapsed facets-container facets-container--top u-margin-bottom" data-trigger="CheckFacetGroups">
+        @if (Pageview.Device.ToString() == "Mobile"){
+            string dropdownCssClass = Pageview.Device.ToString() == "Mobile" ? "u-flex-grow--1" : "";
+        
+            <div class="grid__col-lg-3 grid__col-md-3 grid__col-sm-4 grid__col-xs-12">
+                <input type="checkbox" id="ProductSort" class="dropdown-trigger" />
+                <div class="dropdown u-inline-block @dropdownCssClass dw-mod">
+                    <label class="dropdown__header dropdown__btn dropdown__btn--small dw-mod" for="ProductSort">{{selectedSort}}</label>
+                    <div class="dropdown__content dw-mod">
+                        <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: '', SortOrder: '' }, true);">@Translate("Default")</div>
+                        <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'Created', SortOrder: 'DESC'}, true);">@Translate("Newest")</div>
+                        <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'NameForSort', SortOrder: 'ASC'}, true);">@Translate("Name A - Z")</div>
+                        <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'NameForSort', SortOrder: 'DESC'}, true);">@Translate("Name Z - A")</div>
+                        @if (Dynamicweb.Rapido.Services.User.IsPricesAllowed())
+                        {
+                            <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'Price', SortOrder: 'ASC' }, true);">@Translate("Price low - high")</div>
+                            <div class="dropdown__item" onclick="HandlebarsBolt.UpdateQueryParameters('productList', { SortBy: 'Price', SortOrder: 'DESC' }, true);">@Translate("Price high - low")</div>
+                        }
+                    </div>
+                    <label class="dropdown-trigger-off" for="ProductSort"></label>
+                </div>
+            </div>
+        }
+
+        {{#FacetGroups}}
+        <div class="grid__col-lg-3 grid__col-md-3 grid__col-sm-4 grid__col-xs-12">
+            <input type="checkbox" id="OptionsGroup_{{counter}}" class="dropdown-trigger" />
+            <div class="dropdown dw-mod js-filter">
+                <label class="dropdown__header dropdown__btn dw-mod" for="OptionsGroup_{{counter}}">{{name}}</label>
+                <div class="dropdown__content dropdown__content--padding dw-mod">
+                    <div class="u-margin-bottom {{showFilter}}">
+                        <input type="text" class="u-full-width u-no-margin" onkeyup="Filter.FilterItems(event)" placeholder="@Translate("Search")" />
+                    </div>
+                    {{#FacetOptions}}
+                        {{#ifCond template "===" "Checkboxes"}}
+                            {{>Checkboxes}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Range"}}
+                            {{>Checkboxes}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Weight"}}
+                            {{>Checkboxes}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Tags"}}
+                            {{>Tags}}
+                        {{/ifCond}}
+                        {{#ifCond template "===" "Colors"}}
+                            {{>Colors}}
+                        {{/ifCond}}
+                    {{/FacetOptions}}
+                    <div class="u-hidden js-filter-not-found">
+                        @Translate("Your search gave 0 results")
+                    </div>
+                </div>
+                <label class="dropdown-trigger-off" for="OptionsGroup_{{counter}}"></label>
+            </div>
+        </div>
+        {{/FacetGroups}}
+    </div>
+    <label for="CheckFacetGroups" class="btn btn--primary btn--full u-margin-bottom--lg dw-mod js-expand-hide facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Select filters")</label>
+    <label for="CheckFacetGroups" class="btn btn--primary btn--full u-margin-bottom--lg dw-mod expandable--collapsed facets-container-trigger" data-trigger="CheckFacetGroups">@Translate("Close filters")</label>
+}
+
+@helper RenderCheckboxFacets()
+{ 
+    <script id="Checkboxes" type="text/x-template">
+        <div class="form__field-group u-no-margin dw-mod">
+            <input type="checkbox" class="{{selected}} checkbox-facet__checkbox form__control dw-mod" onclick="Facets.UpdateFacets(this);" id="{{queryParameter}}{{value}}" name="{{queryParameter}}" value="[{{value}}]" {{selected}} {{disabled}}>
+	        <label class="{{disabled}} checkbox-facet dw-mod" data-filter-value="{{label}}" for="{{queryParameter}}{{value}}">
+                <span class="checkbox-facet__label dw-mod">{{label}}</span>
+                <span class="checkbox-facet__count dw-mod">({{count}})</span>
+	        </label>
+        </div>
+    </script>
+}
+
+@helper RenderTagsFacets()
+{ 
+    <script id="Tags" type="text/x-template">
+	    <button type="button" class="btn btn--tag {{selected}} {{disabled}} dw-mod" data-filter-value="{{label}}" data-check="{{selected}}" onclick="Facets.UpdateFacets(this);" name="{{queryParameter}}" value="[{{value}}]" {{disabled}}>
+		    {{label}} <span class="facets-group__counter dw-mod">({{count}})</span>
+	    </button>
+    </script>
+}
+
+@helper RenderColorFacets()
+{ 
+    <script id="Colors" type="text/x-template">
+	    <button type="button" class="btn btn--colorbox u-margin-right {{selected}} {{disabled}} dw-mod" data-filter-value="{{label}}" style="background-color: {{value}}" title="{{label}}" data-check="{{selected}}" onclick="Facets.UpdateFacets(this);" name="{{queryParameter}}" value="[{{value}}]" {{disabled}}></button>
+    </script>
+}
+
+@helper RenderSelectedFilter()
+{ 
+    <script id="SelectedFilter" type="text/x-template">
+	    <button type="button" class="btn btn--tag dw-mod" data-check="checked" onclick="Facets.UpdateFacets(this);" name="{{queryParameter}}" value="[{{value}}]" title="@Translate("Remove filter")">
+		    {{group}}: {{label}} &nbsp;<i class="fal fa-times"></i>
+	    </button>
+    </script>
+}
+
+@helper RenderSelectedColorFilter()
+{ 
+    <script id="SelectedColorFilter" type="text/x-template">
+	    <button type="button" class="btn btn--tag dw-mod" data-check="checked" onclick="Facets.UpdateFacets(this);" name="{{queryParameter}}" value="[{{value}}]" title="@Translate("Remove filter")">
+		    {{group}}: <div class="btn__colorbox dw-mod" style="background-color: {{value}}"></div> <i class="fas fa-times"></i>
+	    </button>
+    </script>
+}
+
+@helper RenderResetFilters()
+{ 
+    <script id="ResetFilters" type="text/x-template">
+	    <button type="button" class="btn btn--tag" onclick="Facets.ResetFacets();">
+		    @Translate("Reset all filters") &nbsp;<i class="fal fa-redo"></i>
+	    </button>
+    </script>
+}
+

@@ -1,0 +1,54 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage viewInvoiceModalPage = BlocksPage.GetBlockPage("InvoiceList");
+}
+
+@{
+    Modal modal = new Modal
+    {
+        Id = "Invoice",
+        Width = ModalWidth.Iframe,
+        Heading = new Heading { Title = Translate("Invoice details") },
+        BodyTemplate = RenderViewInvoiceModal()
+    };
+
+    Block viewInvoiceModal = new Block
+    {
+        Id = "ViewInvoiceModal",
+        SortId = 30,
+        Component = modal
+    };
+
+    viewInvoiceModalPage.Add(viewInvoiceModal);
+
+    Block viewInvoiceModalScript = new Block
+    {
+        Id = "ViewInvoiceModalScript",
+        SortId = 20,
+        Template = RenderViewInvoiceModalScript()
+    };
+
+    viewInvoiceModalPage.Add(viewInvoiceModalScript);
+}
+
+@helper RenderViewInvoiceModal()
+{
+    <iframe src="about:blank" class="modal__iframe"></iframe>
+}
+
+@helper RenderViewInvoiceModalScript()
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            window.orderModal = new IframeModal({
+                modalId: "InvoiceModal",
+                linkPrefix: "/Admin/public/CustomerCenter/RequestExternalPdf.aspx?type=Invoice&id="
+            });
+        });
+    </script>
+}

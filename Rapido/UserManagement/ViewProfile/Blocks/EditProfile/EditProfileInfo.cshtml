@@ -1,0 +1,341 @@
+﻿@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage editProfileInfoViewPage = BlocksPage.GetBlockPage("EditProfilePage");
+}
+
+@{
+    Block editProfileInfo = new Block
+    {
+        Id = "EditProfileInfo",
+        SortId = 20,
+        BlocksList = new List<Block>
+{
+            new Block
+            {
+                Id = "EditProfileInfoView",
+                SortId = 20,
+                Template = RenderEditProfileInfoView()
+            },
+            new Block
+            {
+                Id = "EditProfileInfoScripts",
+                SortId = 30,
+                Template = RenderEditProfileInfoScripts()
+            }
+        }
+    };
+
+    editProfileInfoViewPage.Add("ViewsSwitcher", editProfileInfo);
+}
+
+@helper RenderEditProfileInfoView()
+{
+    Form form = new Form { FormStartMarkup = GetString("UserManagement:User.FormStart") };
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_Name",
+        Name = "UserManagement_Form_Name",
+        Label = Translate("Name"),
+        Required = true,
+        Value = GetString("UserManagement:User.Name"),
+        ErrorMessage = GetString("UserManagement:User.Name.Input.Error"),
+        CssClass = "js-profile-view"
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_Company",
+        Name = "UserManagement_Form_Company",
+        Label = Translate("Company"),
+        Value = GetString("UserManagement:User.Company"),
+        ErrorMessage = GetString("UserManagement:User.Company.Input.Error"),
+        CssClass = "js-profile-view"
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_Email",
+        Name = "UserManagement_Form_Email",
+        Type = TextFieldType.Email,
+        Label = Translate("Email"),
+        Value = GetString("UserManagement:User.Email"),
+        Required = true,
+        ErrorMessage = GetString("UserManagement:User.Email.Input.Error"),
+        CssClass = "js-profile-view"
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_Phone",
+        Name = "UserManagement_Form_Phone",
+        Type = TextFieldType.Tel,
+        Label = Translate("Phone"),
+        Value = GetString("UserManagement:User.Phone"),
+        ErrorMessage = GetString("UserManagement:User.Phone.Input.Error"),
+        CssClass = "js-profile-view"
+    });
+
+    form.Add(new Heading 
+    { 
+        Title = Translate("Billing address"), 
+        Level = 2, 
+        Icon = new Icon { Prefix = "fas", Name = "fa-id-card", LabelPosition = IconLabelPosition.After }, 
+        CssClass = "js-profile-view u-no-margin" 
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_Address",
+        Name = "UserManagement_Form_Address",
+        Label = Translate("Address"),
+        Value = GetString("UserManagement:User.Address"),
+        Required = true,
+        ErrorMessage = GetString("UserManagement:User.Address.Input.Error"),
+        CssClass = "js-profile-view"
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_Zip",
+        Name = "UserManagement_Form_Zip",
+        Label = Translate("Zip"),
+        Value = GetString("UserManagement:User.Zip"),
+        Required = true,
+        ErrorMessage = GetString("UserManagement:User.Zip.Input.Error"),
+        CssClass = "js-profile-view"
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_City",
+        Name = "UserManagement_Form_City",
+        Label = Translate("City"),
+        Value = GetString("UserManagement:User.City"),
+        Required = true,
+        ErrorMessage = GetString("UserManagement:User.City.Input.Error"),
+        CssClass = "js-profile-view"
+    });
+
+    var regionsField = new SelectField
+    {
+        Id = "UserManagement_Form_State",
+        Name = "UserManagement_Form_State",
+        Label = Translate("State/Region"),
+        CssClass = "js-profile-view",
+        WrapperCssClass = "js-state-field"
+    };
+
+    var currentRegions = Dynamicweb.Ecommerce.Services.Countries.GetRegions(GetString("UserManagement:User.CountryCode"));
+
+    if (currentRegions.Count > 0)
+    {
+        foreach (var region in currentRegions)
+        {
+            regionsField.Options.Add(new SelectFieldOption
+            {
+                Value = region.RegionCode,
+                Label = region.Name
+            });
+        }
+        regionsField.Value = GetString("UserManagement:User.State");
+    }
+    else
+    {
+        regionsField.WrapperCssClass += " js-hidden u-hidden";
+    }
+
+    form.Add(regionsField);
+
+    var countrySelector = new SelectField
+    {
+        Id = "UserManagement_Form_Country",
+        Name = "UserManagement_Form_Country",
+        Label = Translate("Country"),
+        Required = true,
+        ErrorMessage = GetString("UserManagement:User.Country.Input.Error"),
+        Value = GetString("UserManagement:User.Country"),
+        CssClass = "js-profile-view",
+        OnChange = "changeCountry(this.value)"
+    };
+
+    countrySelector.Options.Add(new SelectFieldOption
+    {
+        Label = Translate("Nothing selected"),
+        Value = "",
+        Disabled = true,
+        Checked = true
+    });
+
+    <script>
+        let countryRegions = {
+
+            @foreach (var country in GetLoop("UserManagement.CountryList"))
+            {
+                var regions = Dynamicweb.Ecommerce.Services.Countries.GetRegions(country.GetString("Country.Code2"));
+
+                if (regions.Count > 0)
+                {
+                    <text>"@country.GetString("Country.Code2")": {</text>
+                }
+
+                <text>@string.Join(",", regions.Select(region => "\"" + region.RegionCode + "\": \"" + region.Name + "\""))</text>
+
+                if (regions.Count > 0)
+                {
+                    <text>},</text>
+                }
+
+                countrySelector.Options.Add(new SelectFieldOption
+                {
+                    Label = Translate(country.GetString("Country.Name")),
+                    Value = country.GetString("Country.Code2")
+                });
+            }
+        }
+    </script>
+
+    form.Add(new HiddenField { Id = "countryHidden", Name = "UserManagement_Form_CountryCode", Value = GetString("UserManagement:User.Country") });
+
+    form.Add(countrySelector);
+
+    /* Passwords */
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_OldPassword",
+        Name = "UserManagement_Form_OldPassword",
+        Type = TextFieldType.Password,
+        Label = Translate("Old password"),
+        Value = GetString("UserManagement:User.OldPassword"),
+        ErrorMessage = GetString("UserManagement:User.OldPassword.Input.Error"),
+        CssClass = "js-password-view"
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_NewPassword",
+        Name = "UserManagement_Form_NewPassword",
+        Type = TextFieldType.Password,
+        Label = Translate("New password"),
+        Value = GetString("UserManagement:User.NewPassword"),
+        ErrorMessage = GetString("UserManagement:User.NewPassword.Input.Error"),
+        CssClass = "js-password-view"
+    });
+
+    form.Add(new TextField
+    {
+        Id = "UserManagement_Form_NewPasswordConfirm",
+        Name = "UserManagement_Form_NewPasswordConfirm",
+        Type = TextFieldType.Password,
+        Label = Translate("Confirm password"),
+        Value = GetString("UserManagement:User.NewPasswordConfirm"),
+        ErrorMessage = GetString("UserManagement:User.NewPasswordConfirm.Input.Error"),
+        CssClass = "js-password-view"
+    });
+
+    form.Add(new Button
+    {
+        ButtonType = ButtonType.Button,
+        Title = Translate("Back"),
+        Icon = new Icon { Prefix = "fas", Name = "fa-angle-left", LabelPosition = IconLabelPosition.After },
+        ButtonLayout = ButtonLayout.Secondary,
+        CssClass = "btn--condensed",
+        OnClick = "Expand.changeTriggerValue(document.getElementById('editProfileContentTrigger'), false);"
+    });
+
+    form.Add(new Button { ButtonType = ButtonType.Submit, Title = Translate("Save") });
+
+    <div class="expandable--collapsed" data-trigger="editProfileContentTrigger">
+        <div class="grid">
+            <div class="grid__col-md-8 grid__col--bleed">
+                @Render(form)
+            </div>
+        </div>
+    </div>
+}
+
+@helper RenderEditProfileInfoScripts()
+{
+    <script>
+        function changeCountry(countryCode) {
+            document.getElementById("countryHidden").value = countryCode;
+            let stateField = document.getElementById("UserManagement_Form_State");
+            stateField.innerHTML = "";
+            let currentRegions = countryRegions[countryCode];
+
+            if (currentRegions != null) {
+                for (let regionCode in currentRegions) {
+                    let option = document.createElement("option");
+                    option.text = currentRegions[regionCode];
+                    option.value = regionCode;
+                    stateField.add(option);
+                }
+                stateField.closest(".js-state-field").classList.remove("u-hidden");
+            } else {
+                let option = document.createElement("option");
+                option.value = "";
+                stateField.add(option);
+                stateField.closest(".js-state-field").classList.add("u-hidden");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            regionLabels.InitDictionary({
+                "CA": "@Translate("Province")",
+                "US": "@Translate("State")"
+            });
+            regionLabels.LocalizeRegionLabels("UserManagement_Form_State", "UserManagement_Form_Country", true);
+        });
+
+        function openProfileInfoEdit(view) {
+            let hideElements = document.querySelectorAll(view == "profile" ? ".js-password-view" : ".js-profile-view");
+            let showElements = document.querySelectorAll(view == "profile" ? ".js-profile-view" : ".js-password-view");
+
+            Expand.changeTriggerValue(document.getElementById("editProfileContentTrigger"), true);
+            hideElements.forEach(function (element) {
+                if (element.parentElement.classList.contains("form__field-group")) {
+                    element.parentElement.classList.add("u-hidden");
+                    element.disabled = true;
+                } else {
+                    element.classList.add("u-hidden");
+                }
+                
+            });
+            showElements.forEach(function (element) {
+                if (element.parentElement.classList.contains("form__field-group")) {
+                    if (!element.parentElement.classList.contains("js-hidden")) {
+                        element.parentElement.classList.remove("u-hidden");
+                        element.disabled = false;
+                    }
+                } else {
+                    element.classList.remove("u-hidden");
+                }
+            });
+        }
+
+        @if (!string.IsNullOrEmpty(GetString("UserManagement:User.Name.Input.Error")) ||
+            !string.IsNullOrEmpty(GetString("UserManagement:User.Phone.Input.Error")) ||
+            !string.IsNullOrEmpty(GetString("UserManagement:User.Email.Input.Error")))
+        {
+            <text>
+                document.addEventListener("DOMContentLoaded", function () {
+                    openProfileInfoEdit("profile");
+                });
+            </text>
+        }
+
+        @if (!string.IsNullOrEmpty(GetString("UserManagement:User.OldPassword.Input.Error")) ||
+            !string.IsNullOrEmpty(GetString("UserManagement:User.NewPassword.Input.Error")) ||
+            !string.IsNullOrEmpty(GetString("UserManagement:User.NewPasswordConfirm.Input.Error")))
+        {
+            <text>
+                document.addEventListener("DOMContentLoaded", function () {
+                    openProfileInfoEdit("password");
+                });
+            </text>
+        }
+    </script>
+}

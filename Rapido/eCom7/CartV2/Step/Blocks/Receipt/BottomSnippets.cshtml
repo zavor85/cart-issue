@@ -1,0 +1,93 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Ecommerce.Orders
+
+@functions {
+    BlocksPage snippetsPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    if (!string.IsNullOrWhiteSpace(Pageview.AreaSettings.GetItem("Settings").GetString("FacebookPixelID")))
+    {
+        snippetsPage.Add("OrderContainer", new Block
+        {
+            Id = "FacebookPixelEvent",
+            SortId = 100,
+            Template = RenderFacebookPixelEvent()
+        });
+    }
+
+    if (!string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleTagManagerID")))
+    {
+        snippetsPage.Add("OrderContainer", new Block
+        {
+            Id = "GoogleTagManagerEvent",
+            SortId = 110,
+            Template = RenderGoogleTagManagerEvent()
+        });
+    }
+
+    snippetsPage.Add("OrderContainer", new Block
+    {
+        Id = "CartCookieCleaner",
+        SortId = 120,
+        Template = RenderCartCookieCleaner()
+    });
+}
+
+@helper RenderCartCookieCleaner()
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            RememberState.DeleteCookie("useAnotherAddress");
+        })
+    </script>
+
+}
+
+@helper RenderFacebookPixelEvent()
+{
+    <script>
+      fbq('track', 'Purchase', {currency: '@GetString("Ecom:Order.Price.Currency.Code")', value: @GetDouble("Ecom:Order.Price.Price")});
+    </script>
+}
+
+@helper RenderGoogleTagManagerEvent()
+{
+    <script>
+        dataLayer.push({
+            "event": "purchase",
+            "ecommerce": {
+                "currencyCode": "@Pageview.Area.EcomCurrencyId",
+                "purchase": {
+                    "actionField": {
+                        "id": "@GetString("Ecom:Order.ID")",
+                        "affiliation": "Online Store",
+                        "revenue": "@GetDouble("Ecom:Order.Price.PriceWithVAT")",   // Total transaction value (incl. tax and shipping)
+                        "tax":"@GetDouble("Ecom:Order.Price.VAT")",
+                        "shipping": "@GetDouble("Ecom:Order.ShippingFee.Price")"
+                    },
+                    "products": [
+                        @foreach (LoopItem orderline in GetLoop("OrderLines").Where(o => o.GetInteger("Ecom:Order:OrderLine.Type") != (int)OrderLineType.Tax).ToList())
+                        {
+                            var groupObject = Dynamicweb.Ecommerce.Services.ProductGroups.GetGroup(orderline.GetString("Ecom:Product.PrimaryOrFirstGroupID"));
+                            <text>
+                            {
+                                "name": "@orderline.GetString("Ecom:Order:OrderLine.ProductName")",
+                                "id": "@orderline.GetString("Ecom:Product.ID")",
+                                "price": "@orderline.GetDouble("Ecom:Order:OrderLine.UnitPrice.Price")",
+                                "brand": "@orderline.GetString("Ecom:Product:Field.brand.Value")",
+                                "category": "@(groupObject != null ? groupObject.Name : "")",
+                                "variant": "@orderline.GetString("Ecom:Order:OrderLine.ProductVariantID")",
+                                "quantity": @orderline.GetInteger("Ecom:Order:OrderLine.Quantity")
+                            },
+                            </text>
+                        }
+                    ]
+                }
+            }
+        });
+    </script>
+}

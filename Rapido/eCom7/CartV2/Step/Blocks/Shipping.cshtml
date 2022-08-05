@@ -1,0 +1,263 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Linq
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@{
+    BlocksPage shippingCheckoutPage = BlocksPage.GetBlockPage("CheckoutPage");
+    string shippingCardHeightClass = Pageview.Device.ToString() != "Tablet" ? "u-full-height" : "";
+    List<LoopItem> shippingMethods = GetLoop("Shippingmethods");
+    if (Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideShippingWarningsAndErrors"))
+    {
+        shippingMethods = shippingMethods.Where(s => !(string.Concat(s.GetString("Ecom:Cart.Shippingmethod.Error"), s.GetString("Ecom:Cart.Shippingmethod.Warning")).IsNotNullOrEmpty() && s.GetDouble("Ecom:Cart.ShippingMethod.Price.Price").Equals(0))).ToList();
+    }
+    var shippingDeliveryCountryCode = GetString("Ecom:Order.Delivery.Country.Code");
+    if (string.IsNullOrEmpty(shippingDeliveryCountryCode))
+    {
+        shippingDeliveryCountryCode = GetString("Ecom:Order.Customer.Country.Code");
+    }
+    bool shippingCountryIsNotSupported = !string.IsNullOrEmpty(shippingDeliveryCountryCode) && !GetLoop("Countries").Any(country => country.GetString("Ecom:Country.Code2") == shippingDeliveryCountryCode);
+
+    var shippingBlock = new Block()
+    {
+        Id = "Shipping",
+        SortId = 20,
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "6-auto"
+        }
+    };
+
+    var shippingHeader = new Block
+    {
+        Id = "ShippingMethodHeader",
+        SortId = 10,
+        Component = new Heading { Level = 3, Title = Translate("Shipping"), Icon = new Icon { Prefix = "fas", Name = "fa-truck", LabelPosition = IconLabelPosition.After } },
+        Design = new Design
+        {
+            RenderType = RenderType.CardHeader,
+            CssClass = "u-color-light--bg"
+        }
+    };
+
+    var shippingBody = new Block
+    {
+        Id = "ShippingMethodsBody",
+        SortId = 20,
+        Design = new Design {
+            RenderType = RenderType.CardBody,
+            CssClass = "u-color-light--bg " + shippingCardHeightClass
+        }
+    };
+
+    if (shippingCountryIsNotSupported)
+    {
+        shippingBody.Component = new NotificationMessage { MessageType = NotificationMessageType.Error, Message = Translate("There is no available shipping options") };
+        shippingBlock.Add(shippingHeader);
+        shippingBlock.Add(shippingBody);
+        shippingCheckoutPage.Add("OrderContainerRow", shippingBlock);
+    }
+    else if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideShipping") && shippingMethods.Count > 0)
+    {
+        shippingBody.Template = RenderShipping(shippingMethods);
+        shippingBlock.Add(shippingHeader);
+        shippingBlock.Add(shippingBody);
+        shippingCheckoutPage.Add("OrderContainerRow", shippingBlock);
+
+        Block parcelShopsModal = new Block()
+        {
+            Id = "ParcelShopsModal",
+            SortId = 10,
+            Component = new Modal
+            {
+                Id = "ParcelShops",
+                Heading = new Heading
+                {
+                    Title = Pageview.Device.ToString() != "Mobile" ? Translate("Choose a parcel shop") : Translate("Choose")
+                },
+                BodyTemplate = RenderParcelShopsModalContent(),
+                Width = ModalWidth.Lg
+            }
+        };
+        shippingCheckoutPage.Add("CheckoutTopSnippets", parcelShopsModal);
+
+        Block parcelShopsScriptTemplates = new Block()
+        {
+            Id = "ShippingProviderTemplates",
+            SortId = 10,
+            Template = RenderShippingProviderTemplates()
+        };
+        shippingCheckoutPage.Add("CheckoutBottomSnippets", parcelShopsScriptTemplates);
+    }
+}
+
+@helper RenderShipping(List<LoopItem> shippingMethods)
+{
+    if (shippingMethods == null)
+    {
+        shippingMethods = GetLoop("Shippingmethods");
+    }
+    bool defaultShippingIsSet = Dynamicweb.Ecommerce.Orders.Shipping.GetDefaultShippingMethod(Dynamicweb.Ecommerce.Common.Context.Cart.ShippingMethodCountryCode) != null;
+    bool haveShippingContent = shippingMethods.Count != 1 || !defaultShippingIsSet;
+    bool showShippingsBlock = haveShippingContent;
+    string errorMessage = GetString("Ecom:Cart.ValidationError.EcomCartShippingmethodId.ErrorMessage");
+
+    foreach (LoopItem shipping in shippingMethods)
+    {
+        bool selected = Converter.ToBoolean(shipping.GetString("Ecom:Cart.Shippingmethod.IsSelected"));
+        object shippingProviderContent = selected ? Newtonsoft.Json.JsonConvert.DeserializeObject(shipping.GetString("Ecom:ShippingProvider.Content")) : null;
+        string hideLabel = haveShippingContent ? "" : "u-hidden";
+        string leftMargin = haveShippingContent ? "u-margin--radio-button-indent" : "";
+
+        @Render(new RadioButtonField
+        {
+            OnChange = "Cart.SubmitCart()",
+            Label = shipping.GetString("Ecom:Cart.Shippingmethod.Name"),
+            Name = "EcomCartShippingmethodId",
+            Id = "EcomCartShippingmethodId_" + shipping.GetString("Ecom:Cart.Shippingmethod.ID"),
+            Value = shipping.GetString("Ecom:Cart.Shippingmethod.ID"),
+            CssClass = hideLabel,
+            Checked = selected,
+            WrapperCssClass = shippingProviderContent != null ? "u-margin-bottom" : ""
+        })
+
+        if (shippingProviderContent != null)
+        {
+            showShippingsBlock = true;
+
+            <div id="ShippingProviderContent" class="@leftMargin" data-template="ShippingProviderContentTemplate"></div>
+            <script>
+                document.addEventListener("DOMContentLoaded", function (event) {
+                    HandlebarsBolt.CreateItemsFromJson(@shippingProviderContent, "ShippingProviderContent", "ShippingProviderContentTemplate");
+                    HandlebarsBolt.CreateItemsFromJson(@shippingProviderContent, "ParcelShops", "ParcelShopsTemplate");
+                    RememberState.SetCookie("useAnotherAddress", false);
+                });
+
+                function setParcelShopToDeliveryFields(number, address) {
+                    Cart.FillShippingAddress(address);
+                    document.getElementById("parcelShopNumber").value = number;
+                    Cart.SubmitCart();
+                }
+            </script>
+        }
+
+        if (shippingProviderContent != null && @shipping.GetString("Ecom:ShippingProvider.Content").Length < 10)
+        {
+            @Render(new Button { ButtonLayout = ButtonLayout.Secondary, CssClass = "btn--full u-no-margin u-margin-bottom", OnClick = "Cart.SubmitCart()", Title = Translate("Get parcel shops") })
+            <small class="help-text dw-mod">@Translate("Requires a valid address")</small>
+        } 
+        
+    }
+    if (!string.IsNullOrEmpty(errorMessage))
+    {
+        @Render(new NotificationMessage { Message = errorMessage, MessageType = NotificationMessageType.Error })
+    }
+
+    if (!showShippingsBlock)
+    {
+        <script>
+            var shippingBlock = document.getElementById("Block__Shipping");
+            if (shippingBlock) {
+                shippingBlock.classList.add("u-hidden");
+            } 
+        </script>
+    }
+}
+
+@helper RenderParcelShopsModalContent()
+{
+    <div class="grid grid--bleed">
+        <div class="grid__col-auto u-margin-right">
+            <ul class="list list--clean list--scroll dw-mod" id="ParcelShops" data-template="ParcelShopsTemplate"></ul>
+        </div>
+        @if (Pageview.Device.ToString() != "Mobile")
+        {
+            <div class="grid__col-8">
+                <div class="map-container">
+                    <div id="MapCanvas" class="map-container__canvas"></div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@helper RenderShippingAddressFromParcelShop()
+{
+    @Render(new HiddenField { Name = "EcomOrderDeliveryName", Id = "EcomOrderDeliveryName", Value = "{{company}}" })
+    @Render(new HiddenField { Name = "EcomOrderDeliveryCompany", Id = "EcomOrderDeliveryCompany", Value = "{{company}}" })
+    @Render(new HiddenField { Name = "EcomOrderDeliveryAddress", Id = "EcomOrderDeliveryAddress", Value = "{{address}}" })
+    @Render(new HiddenField { Name = "EcomOrderDeliveryZip", Id = "EcomOrderDeliveryZip", Value = "{{zip}}" })
+    @Render(new HiddenField { Name = "EcomOrderDeliveryCity", Id = "EcomOrderDeliveryCity", Value = "{{city}}" })
+    @Render(new HiddenField { Name = "EcomOrderDeliveryRegion", Id = "EcomOrderDeliveryRegion", Value = "" })
+    @Render(new HiddenField { Name = "EcomOrderDeliveryCountry", Id = "EcomOrderDeliveryCountry", Value = "{{countryCode}}" })
+
+    @Render(new HiddenField { Name = "EcomOrderDeliveryEmail", Id = "EcomOrderDeliveryEmail", Value = "" })
+    @Render(new HiddenField { Name = "EcomOrderDeliveryPhone", Id = "EcomOrderDeliveryPhone", Value = "" })
+}
+
+@helper RenderShippingProviderTemplates()
+{
+    <script id="ShippingProviderContentTemplate" type="text/x-template">
+        {{#.}}
+        <div class="{{hideShippingProvider}}">
+            {{#SelectedParcelShop}}
+                <div class="u-hidden">
+                    <input type="radio" id="parcelShopNumber" class="u-no-margin" name="{{fieldPrefix}}{{fieldPostfix}}" value="{{number}}" {{selected}} />
+                </div>
+                <div>
+                    @Render(new Icon { Prefix = "fas", Name = "fa-map-marker", Label = "<span class='u-bold'>{{company}}</span>" })
+                    <div>{{address}}</div>
+                    <div>{{zip}} {{city}}</div>
+                    <div>{{country}}</div>
+                </div>
+                @RenderShippingAddressFromParcelShop()
+            {{/SelectedParcelShop}}
+            {{^SelectedParcelShop}}
+                @Translate("No points found")
+            {{/SelectedParcelShop}}
+            <div class="u-margin-top">
+                <label for="ParcelShopsModalTrigger" class="btn btn--secondary btn--full dw-mod" onclick="Maps.Init({containerId: 'MapCanvas', locationsList: {{toJSON ParcelShops}}, markerCallback: Cart.SelectParcelShop, selectionCallback: 'setParcelShopToDeliveryFields', buttonText: '@Translate("Select")'})">@Translate("Change parcel shop")</label>
+            </div>
+        </div>
+        {{/.}}
+    </script>
+
+    <script id="ParcelShopsTemplate" type="text/x-template">
+        {{#.}}
+        {{#ParcelShops}}
+        <li data-number="{{number}}" data-lat="{{latitude}}" data-lng="{{longitude}}" class="u-border-bottom u-padding-bottom">
+            <input type="radio" name="{{fieldPrefix}}{{fieldPostfix}}" value="{{number}}" class="form__control" id="{{fieldPrefix}}ParcelShopNumber_{{number}}" {{selected}}
+                   onclick="setParcelShopToDeliveryFields('{{number}}', {
+                                Name: '{{company}}', @*is it ok???*@
+                                Company: '{{company}}',
+                                Address: '{{address}}',
+                                Zip: '{{zip}}',
+                                City: '{{city}}',
+                                Country: '{{countryCode}}'
+                            })" />
+            <label for="{{fieldPrefix}}ParcelShopNumber_{{number}}" class="u-flex">
+                <span>
+                    <span class="u-margin-bottom u-block u-bold">{{company}}</span>
+                    <span class="u-line-height--normal u-font-size--sm">
+                        <span class="u-block">{{address}}</span>
+                        <span class="u-block">{{zip}} {{city}}</span>
+                        <span class="u-block">{{country}}</span>
+                    </span>
+                </span>
+            </label>
+        </li>
+        {{/ParcelShops}}
+        {{/.}}
+    </script>
+
+
+    string mapsScriptUrl = "//maps.googleapis.com/maps/api/js";
+    mapsScriptUrl += !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleMapsAPIKey")) ? "?key=" + Pageview.AreaSettings.GetItem("Settings").GetString("GoogleMapsAPIKey") : "";
+
+    <script src="@mapsScriptUrl"></script>
+}

@@ -1,0 +1,56 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components.Articles
+
+@Include("ParagraphBase.cshtml")
+@Include("../../Components/Articles/Quote.cshtml") 
+
+@{ 
+    string authorName = !string.IsNullOrEmpty(Model.Item.GetString("AuthorName")) ? Model.Item.GetString("AuthorName") : "";
+    string authorText = !string.IsNullOrEmpty(Model.Item.GetString("AuthorTitle")) ? Model.Item.GetString("AuthorTitle") : "";
+    authorText += !string.IsNullOrEmpty(Model.Item.GetString("AuthorTitle")) && !string.IsNullOrEmpty(Model.Item.GetString("AuthorCompany")) ? " - " : "";
+    authorText += !string.IsNullOrEmpty(Model.Item.GetString("AuthorCompany")) ? Model.Item.GetString("AuthorCompany") : "";
+
+    string text = Regex.Replace(Model.Item.GetString("Text"), "<.*?>", string.Empty);
+
+    Image quoteImage = new Image
+    {
+        Path = Model.Item.GetFile("AuthorImage") != null ? Model.Item.GetFile("AuthorImage").Path : "",
+        ImageDefault = new ImageSettings { Width = 300, Height = 300 }
+    };
+}
+
+
+
+<div class="u-full-height u-full-width u-margin-bottom--lg">
+    @if (!string.IsNullOrEmpty(text))
+    {
+        <div class="quote-text dw-mod">
+            <div><i class="fas fa-quote-right quote-icon dw-mod"></i></div>
+            @text
+        </div>
+    }
+
+    @if (authorName != "") {
+        @Render(new Heading { Title = authorName, Level = 2 })
+    }
+
+    @if (!string.IsNullOrEmpty(authorText))
+    {
+        <small>@authorText</small>
+    }
+</div>
+
+@if (quoteImage != null)
+{
+    if (quoteImage.Path != null) {
+        quoteImage.Title = !string.IsNullOrEmpty(quoteImage.Title) ? quoteImage.Title : Model.Item.GetString("AuthorName");
+        quoteImage.CssClass += " article__image article__image--ball";
+        quoteImage.ImageDefault.Width = 140;
+        quoteImage.ImageDefault.Height = 140;
+        @Render(quoteImage)
+    }
+}
+

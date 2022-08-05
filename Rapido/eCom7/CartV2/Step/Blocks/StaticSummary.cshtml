@@ -1,0 +1,220 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Linq
+@using System.Collections.Generic
+@using System.Text.RegularExpressions
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using Dynamicweb.Core
+@using Dynamicweb.Ecommerce.Orders
+@using Dynamicweb.Ecommerce.Orders.SalesDiscounts
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@{
+    BlocksPage staticSummaryCheckoutPage = BlocksPage.GetBlockPage("CheckoutPage");
+
+    Block staticSummary = new Block()
+    {
+        Id = "StaticSummary",
+        SortId = 20,
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "12"
+        },
+        BlocksList = new List<Block> {
+            new Block {
+                Id = "StaticSummaryHeader",
+                SortId = 10,
+                Component = new Heading { Level = 3, Title = Translate("Summary") + " (" + GetString("Ecom:Order.OrderLines.TotalProductQuantity") + ")", Icon = new Icon { Prefix = "fas", Name = "fa-list-ul", LabelPosition = IconLabelPosition.After } },
+                Design = new Design {
+                    RenderType = RenderType.CardHeader,
+                    CssClass = "u-color-light--bg"
+                }
+            },
+            new Block {
+                Id = "StaticSummaryBody",
+                SortId = 20,
+                Template = RenderStaticSummary(),
+                Design = new Design {
+                    RenderType = RenderType.CardBody,
+                    CssClass = "u-color-light--bg u-no-padding--xs"
+                }
+            }
+        }
+    };
+    staticSummaryCheckoutPage.Add("SummaryContainerRow", staticSummary);
+}
+
+
+@helper RenderStaticSummary()
+{
+    int productCatalog = GetPageIdByNavigationTag("ProductsPage");
+    bool hasTaxSettings = Dynamicweb.Rapido.Services.Countries.HasTaxSettings(GetString("Ecom:Order.ID"));
+    bool pointShop = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+
+    <table class="table cart-table u-margin-bottom u-border-bottom dw-mod">
+        <tbody>
+            @foreach (LoopItem orderline in GetLoop("OrderLines").Where(o => o.GetInteger("Ecom:Order:OrderLine.Type") != (int)OrderLineType.Tax).ToList())
+            {
+                if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                {
+                    string productLink = "/" + Regex.Replace(orderline.GetString("Ecom:Product.LinkGroup.Clean"), @"\?ID=\d*\&", "?ID=" + productCatalog + "&");
+                    productLink += !string.IsNullOrEmpty(orderline.GetString("Ecom:Order:OrderLine.ProductVariantID")) ? "&VariantID=" + orderline.GetString("Ecom:Order:OrderLine.ProductVariantID") : "";
+
+                    <tr>
+                        <td class="u-w60px">
+                            @orderline.GetString("Ecom:Order:OrderLine.Quantity") x
+                        </td>
+                        <td title="@orderline.GetString("Ecom:Order:OrderLine.ProductName") @GetString("Ecom:Order:OrderLine.ProductVariantText")">
+                            <a href="@productLink" class="u-color-inherit">@orderline.GetString("Ecom:Order:OrderLine.ProductName")</a>
+                            <div>@GetString("Ecom:Order:OrderLine.ProductVariantText")</div>
+                            <div>@orderline.GetString("Ecom:Order:OrderLine.UnitName")</div>
+                        </td>
+                        @if (orderline.GetInteger("Ecom:Order:OrderLine.Points") > 0)
+                        {
+                            <td class="u-ta-right u-w120px">
+                                <span class="u-color--loyalty-points">@orderline.GetInteger("Ecom:Order:OrderLine.Points")</span> @Translate("points")
+                            </td>
+                        }
+                        else
+                        {
+                            <td class="u-ta-right u-w120px">@orderline.GetString("Ecom:Order:OrderLine.Price")</td>
+                        }
+                    </tr>
+
+                    if (orderline.GetLoop("BOMItems").Count > 0)
+                    {
+                        <tr>
+                            <td colspan="3" class="u-no-padding">
+                                <table class="u-no-margin u-color-light-gray--bg">
+                                    <tbody>
+                                        @foreach (LoopItem bomitem in orderline.GetLoop("BOMItems"))
+                                        {
+                                            string bomItemLink = "/" + Regex.Replace(bomitem.GetString("Ecom:Product.LinkGroup.Clean"), @"\?ID=\d*\&", "?ID=" + productCatalog + "&");
+
+                                            <tr>
+                                                <td class="u-w60px">@bomitem.GetString("Ecom:Order:OrderLine.Quantity") x</td>
+                                                <td title="@bomitem.GetString("Ecom:Order:OrderLine.ProductName") @bomitem.GetString("Ecom:Order:OrderLine.ProductVariantText")">
+                                                    <a href="@bomItemLink">@bomitem.GetString("Ecom:Order:OrderLine.ProductName")</a>
+                                                    <div>@bomitem.GetString("Ecom:Order:OrderLine.ProductVariantText")</div>
+                                                    <div>@bomitem.GetString("Ecom:Order:OrderLine.UnitName")</div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr class="table__row--no-border">
+                        <td class="u-w60px">&nbsp;</td>
+                        <td>@orderline.GetString("Ecom:Order:OrderLine.ProductName")</td>
+                        <td class="cart-table__price u-ta-right dw-mod">@orderline.GetString("Ecom:Order:OrderLine.Price")</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideSubtotal"))
+    {
+        if (hasTaxSettings)
+        {
+            string subtotal = Dynamicweb.Ecommerce.Services.Currencies.Format(Dynamicweb.Ecommerce.Common.Context.Currency, (GetDouble("Ecom:Order.PriceWithoutFees.PriceWithVAT") - GetDouble("Ecom:Order.Taxes.Total.PriceWithVAT")), true);
+            <div class="u-padding-bottom u-padding-x">
+                <div class="cart-summary__subtotals dw-mod">@Translate("Subtotal")</div>
+                <div class="cart-summary__subtotals u-pull--right dw-mod">@subtotal.Replace(" ", "&nbsp;")</div>
+            </div>
+        }
+        else
+        {
+            <div class="u-padding-bottom u-padding-x">
+                <div class="cart-summary__subtotals dw-mod">@Translate("Subtotal")</div>
+                <div class="cart-summary__subtotals u-pull--right dw-mod">@GetString("Ecom:Order.PriceWithoutFees.PriceFormatted")</div>
+            </div>
+        }
+    }
+
+    if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") || GetInteger("Ecom:Order.PaymentFee.Price") != 0)
+    {
+        string paymentFee = GetInteger("Ecom:Order.PaymentFee.Price") != 0 ? GetString("Ecom:Order.PaymentFee.PriceFormatted") : Translate("Free");
+        string paymentMethod = GetString("Ecom:Order.PaymentMethod");
+
+        <div class="u-padding-bottom u-padding-x">
+            <div class="cart-summary__info dw-mod">@Render(new Icon { Prefix = "fas", Name = "fa-credit-card", Label = (!string.IsNullOrEmpty(paymentMethod) ? paymentMethod : Translate("Payment")), LabelPosition = IconLabelPosition.After })</div>
+            <div class="cart-summary__info u-pull--right dw-mod">@paymentFee</div>
+        </div>
+    }
+
+    if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") || GetInteger("Ecom:Order.ShippingFee.Price") != 0)
+    {
+        string shippingFee = GetInteger("Ecom:Order.ShippingFee.Price") != 0 ? GetString("Ecom:Order.ShippingFee.PriceFormatted") : Translate("Free");
+        string shippingMethod = GetString("Ecom:Order.ShippingMethod");
+
+        <div class="u-padding-bottom u-padding-x">
+            <div class="cart-summary__info dw-mod">@Render(new Icon { Prefix = "fas", Name = "fa-truck", Label = (!string.IsNullOrEmpty(shippingMethod) ? shippingMethod : Translate("Shipping")), LabelPosition = IconLabelPosition.After })</div>
+            <div class="cart-summary__info u-pull--right dw-mod">@shippingFee</div>
+        </div>
+    }
+
+    if (hasTaxSettings)
+    {
+        string totalTaxes = GetDouble("Ecom:Order.Taxes.Total.Price") != 0 ? GetString("Ecom:Order.Taxes.Total") : "-";
+
+        <div class="u-padding-bottom u-padding-x">
+            <div class="cart-summary__info dw-mod">@Render(new Icon { Prefix = "fas", Name = "fa-hand-holding-usd", Label = Translate("Sales Tax"), LabelPosition = IconLabelPosition.After })</div>
+            <div class="cart-summary__info u-pull--right dw-mod">@totalTaxes</div>
+        </div>
+    }
+
+    if (Pageview.User != null && Dynamicweb.Security.Licensing.LicenseManager.LicenseHasFeature("LoyaltyPoints") && GetDouble("Ecom:Order.RewardTotalPoints") > 0)
+    {
+        <div class="u-padding-bottom u-padding-x">
+            <div class="cart-summary__info dw-mod">@Translate("Earnings")</div>
+            <div class="cart-summary__info u-pull--right dw-mod"><span class="u-color--loyalty-points">@GetDouble("Ecom:Order.RewardTotalPoints")</span> @Translate("points")</div>
+        </div>
+    }
+
+    <div class="u-padding u-border-top">
+        <div class="cart-summary__totals dw-mod">@Translate("Total")</div>
+        <div class="cart-summary__totals u-pull--right dw-mod">@GetString("Ecom:Order.OrderLines.Total.Price")</div>
+    </div>
+
+    if (!pointShop && !hasTaxSettings)
+    {
+        <div class="u-ta-right u-padding-x">
+            <small class="cart-summary__info dw-mod">@Translate("VAT") (@GetString("Ecom:Order.PriceWithoutFees.VATPercentFormatted")):</small>
+            <small class="cart-summary__info dw-mod">@GetString("Ecom:Order.OrderLines.Total.PriceVAT")</small>
+        </div>
+
+        if (isPricesWithVATEnabled)
+        {
+            <div class="u-ta-right u-padding-x">
+                <small class="cart-summary__info dw-mod">@Translate("Total price without VAT"):</small>
+                <small class="cart-summary__info dw-mod">@GetString("Ecom:Order.OrderLines.Total.PriceWithoutVAT")</small>
+            </div>
+        }
+        else
+        {
+            <div class="u-ta-right u-padding-x">
+                <small class="cart-summary__info dw-mod">@Translate("Total price with VAT"):</small>
+                <small class="cart-summary__info dw-mod">@GetString("Ecom:Order.OrderLines.Total.PriceWithVAT")</small>
+            </div>
+        }
+    }
+
+
+    if (hasTaxSettings && Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("ShowCheckoutDisclaimer") && (GetDouble("Ecom:Order.Taxes.Total.Price") == 0 || string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethodID"))))
+    {
+        <small class="u-full-width">@string.Format("{0}", GetDouble("Ecom:Order.Taxes.Total.Price") == 0 && string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethodID")) ? Translate("*Sales Tax and Shipping calculated at Checkout") : string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethodID")) ? Translate("* Shipping calculated at Checkout") : Translate("* Sales Tax Calculated at Checkout"))</small>
+    }
+}

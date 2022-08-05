@@ -1,0 +1,106 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System.Web;
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage loginFormPage = BlocksPage.GetBlockPage("Login");
+}
+
+@{
+    Block loginContainer = new Block
+    {
+        Id = "LoginForm",
+        Template = RenderLoginForm(),
+        SortId = 10
+    };
+    loginFormPage.Add("LoginFormPlaceholder", loginContainer);
+}
+
+
+@helper RenderLoginForm()
+{
+    string pageId = GetGlobalValue("Global:Page.ID");
+    int signInProfilePageId = GetPageIdByNavigationTag("SignInPage");
+    string specialRedirectPage = !string.IsNullOrEmpty(HttpContext.Current.Request.QueryString.Get("RedirectPageId")) ? "/Default.aspx?ID=" + HttpContext.Current.Request.QueryString.Get("RedirectPageId") : "";
+    string redirectPage = !string.IsNullOrEmpty(GetString("UserManagement:User.Login.SuccessRedirectToPage")) ? GetString("UserManagement:User.Login.SuccessRedirectToPage") : specialRedirectPage;
+    string currentUserId = GetGlobalValue("Global:Extranet.UserID");
+    bool hideCreateAccountLink = Pageview.AreaSettings.GetItem("Layout").GetItem("Header") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Header").GetBoolean("SignInHideCreateAccount") : true;
+
+    if (!string.IsNullOrEmpty(redirectPage) && !string.IsNullOrEmpty(currentUserId) && currentUserId != "0")
+    {
+        <script>
+            location.href = "@redirectPage";
+        </script>
+    }
+
+    var loginProviders = GetLoop("DWExtranetExternalLoginProviders");
+    
+    
+    <div>
+        @Render(new Heading { Title = Translate("Sign in with email"), Level = 2, CssClass = "u-margin-bottom--lg" })
+
+        @{ 
+            Form form = new Form { Method = FormMethod.Post };
+
+            if (!string.IsNullOrEmpty(GetString("DW_extranet_error_uk")))
+            {
+                @Render(new NotificationMessage
+                {
+                    MessageType = NotificationMessageType.Error,
+                    Message = GetString("DW_extranet_error_uk")
+                });
+            }
+
+            form.Add(new HiddenField { Name = "ID", Value = pageId });
+            form.Add(new HiddenField { Name = "DWExtranetUsernameRemember", Value = "True" });
+            form.Add(new HiddenField { Name = "DWExtranetPasswordRemember", Value = "True" });
+            form.Add(new HiddenField { Name = "LoginAction", Value = "Login" });
+            form.Add(new TextField { Id = "login-username", Type = TextFieldType.Text, Name = "username", Label = Translate("Email"), Required = true });
+            form.Add(new TextField { Id = "login-password", Type = TextFieldType.Password, Name = "password", Label = Translate("Password"), Required = true,
+                Link = new Link { Title = Translate("Forgot password?"), Href = "/Default.aspx?id=" + signInProfilePageId + "&LoginAction=Recovery" }
+            });
+            form.Add(new CheckboxField { Id = "rememberMe", Value = "True", Name = "Autologin", Label = Translate("Remember me") });
+            form.Add(new Button { ButtonType = ButtonType.Submit, Title = Translate("Sign in"), CssClass = "u-full-width" });
+
+            if (!hideCreateAccountLink) {
+                form.Add(new Text { Content = "<div class=\"u-border-top u-full-width u-margin-bottom--lg\"></div>" });
+                form.Add(new Link
+                {
+                    Href = "/Default.aspx?id=" + GetPageIdByNavigationTag("CreateAccount"),
+                    ButtonLayout = ButtonLayout.LinkClean,
+                    Title = Translate("Create account"),
+                    CssClass = "u-padding-top u-full-width"
+                });
+            }
+        }
+
+        @Render(form)
+    </div>
+
+    if (loginProviders.Count > 0) {
+        <div>
+            @Render(new Heading { Title = Translate("...or sign in with"), Level = 2, CssClass = "u-margin-bottom--lg u-margin-top--lg" })
+
+            @foreach (LoopItem LoginProvider in loginProviders)
+            {
+                var ProviderName = LoginProvider.GetString("ProviderName").ToLower();
+
+                @Render(new Link
+                {
+                    Href = "/Admin/Public/Social/ExternalLogin.aspx?action=login&providerID=" + LoginProvider.GetValue("ProviderID"),
+                    ButtonLayout = ButtonLayout.Secondary,
+                    Title = ProviderName,
+                    Icon = new Icon() {
+                        Prefix = "fab",
+                        Name = "fa-" + ProviderName,
+                        CssClass = "fa-1x u-color-" + ProviderName,
+                        LabelPosition = IconLabelPosition.After
+                    },
+                    CssClass = "btn--condensed u-no-margin u-full-width"
+                });
+            }
+        </div>
+    }
+}

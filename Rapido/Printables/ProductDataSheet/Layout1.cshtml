@@ -1,0 +1,50 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System
+
+
+
+@helper RenderLayout1(LoopItem product, Dictionary <string, Dictionary<string, string>> fieldGroupsToRender, int maxFields = 10) { 
+    var colorService = new ColorSwatchService();
+    string nameColor = Pageview.CurrentParagraph.Item["NameColor"] != null ? Pageview.CurrentParagraph.Item["NameColor"].ToString() : "#222222";
+    nameColor = !nameColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, nameColor) : nameColor;
+
+    string productName = product.GetString("Ecom:Product.Name");
+    productName += !String.IsNullOrEmpty(product.GetString("Ecom:Product.SelectedVariantComboName")) ? ", " + product.GetString("Ecom:Product.SelectedVariantComboName") : "";
+    string productPrice = product.GetString("Ecom:Product.Discount.Price.PriceFormatted") != product.GetString("Ecom:Product.Price.PriceFormatted") ? product.GetString("Ecom:Product.Discount.Price.PriceFormatted") : product.GetString("Ecom:Product.Price.PriceFormatted");
+    string productBeforePrice = product.GetString("Ecom:Product.Discount.Price.PriceFormatted") != product.GetString("Ecom:Product.Price.PriceFormatted") ? product.GetString("Ecom:Product.Price.PriceFormatted") : "";
+
+    <div class="sheet-row">
+        <div class="sheet-row__col sheet-row__col--6"> 
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideProductImage"]))
+            {
+                <img class="sheet-row__image" src="/Admin/Public/GetImage.ashx?width=720&amp;height=520&amp;crop=5&amp;Compression=75&amp;DoNotUpscale=True&amp;FillCanvas=True&amp;image=@GetProductImage(product)"/>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideName"]))
+            {
+                <h2 class="sheet-product-title sheet-product-title--lg" style="color: @nameColor">@productName</h2>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideNumber"]))
+            {
+                <div class="sheet-product-number">@product.GetString("Ecom:Product.Number")</div>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HidePrice"]))
+            {
+                <div class="sheet-product-price sheet-product-price--left">@productPrice</div>
+                <div class="sheet-product-before-price sheet-product-before-price--left">@productBeforePrice</div>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideShortDescription"]))
+            {
+                <div class="sheet-product-short-description">@product.GetString("Ecom:Product.ShortDescription")</div>
+            }
+            @if (!Convert.ToBoolean(Pageview.CurrentParagraph.Item["HideLongDescription"]))
+            {
+                <div class="sheet-product-long-description">@product.GetString("Ecom:Product.LongDescription")</div>
+            }
+        </div>
+        <div class="sheet-row__col sheet-row__col--6">
+            @* This helper is found in "ProductDataSheet.cshtml" *@
+            @RenderFields(fieldGroupsToRender, maxFields)
+        </div>
+</div>
+}
+

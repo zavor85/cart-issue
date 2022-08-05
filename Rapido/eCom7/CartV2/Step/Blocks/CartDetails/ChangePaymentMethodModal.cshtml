@@ -1,0 +1,65 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage changePaymentMethodPage = BlocksPage.GetBlockPage("CartDetails");
+}
+
+@{
+    var changePaymentMethodModal = new Modal {
+        Id = "ChangePaymentMethod",
+        Heading = new Heading { Title = Translate("Payment method") },
+        Width = ModalWidth.Lg,
+        BodyTemplate = RenderChangePaymentMethodModalBody(),
+    };
+
+    changePaymentMethodModal.AddActions(
+        new Button {
+            ButtonLayout = ButtonLayout.Secondary,
+            Title = Translate("Cancel"),
+            OnClick = "document.getElementById('ChangePaymentMethodModalTrigger').checked = false;"
+        },
+        new Button {
+            ButtonLayout = ButtonLayout.Primary,
+            Title = Translate("Save"),
+            OnClick = "document.getElementById('ChangePaymentMethodForm').submit()"
+        }
+    );
+
+    changePaymentMethodPage.Add("PageContainer", new Block {
+        Id = "ChangePaymentMethodModal",
+        SortId = 30,
+        Component = changePaymentMethodModal
+    });
+
+    changePaymentMethodPage.Add("BottomSnippets", new Block {
+        Id = "ChangePaymentMethodScript",
+        SortId = 30,
+        Template = RenderChangePaymentMethodModalScript()
+    });
+}
+
+
+@helper RenderChangePaymentMethodModalBody() {
+    <form id="ChangePaymentMethodForm" method="post" action="Default.aspx?ID=@Pageview.Page.ID" data-request="@GetPageIdByNavigationTag("CartAjax")">
+        <h5 class="u-margin-bottom">@Translate("Select your payment method")</h5>
+
+        @RenderPaymentMethodsSelect()
+    </form>
+}
+
+
+@helper RenderChangePaymentMethodModalScript() {
+    <script>
+        function changePaymentMethodModal() {
+            document.getElementById("ChangePaymentMethodModalTrigger").checked = true;
+        }
+    </script>
+}
+
+
+@Include("../../OnepageItems/PaymentMethods.cshtml")

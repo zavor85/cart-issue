@@ -1,0 +1,57 @@
+﻿
+.data-list {
+
+}
+
+.data-list__item {
+    cursor: pointer;
+}
+
+.data-list__actions {
+    display: none;
+    vertical-align: bottom;
+}
+
+.data-list__item:hover {
+    background-color: @gray-lightest;
+
+    .data-list__actions {
+        display: block;
+    }
+}
+
+.data-list__item--has-actions tr {
+    height: 50px;
+}
+
+.data-list__action-button {
+    display: inline-block;
+    padding-right: 15px;
+    margin-right: 15px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.data-list__action-button:not(:last-child) {
+    border-right: 1px solid rgba(0,0,0,0.3);
+}
+
+.data-list__remove-btn {
+    margin-top: -4px;
+}
+
+.data-list__main-item {
+    padding: 1em 0.5em;
+}
+
+.data-list__info-item {
+    padding: 1em 0.5em 0.5em;
+}
+
+.data-list-small-info {
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0;
+    color: @gray;
+}

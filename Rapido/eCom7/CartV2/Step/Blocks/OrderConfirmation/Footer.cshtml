@@ -1,0 +1,37 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage footerPage = BlocksPage.GetBlockPage("OrderConfirmation");
+}
+
+@{
+    footerPage.Add("PageContainer", new Block
+    {
+        Id = "Footer",
+        SortId = 30,
+        Template = RenderCartFooter()
+    });
+}
+
+@helper RenderCartFooter()
+{
+    string activateUrl = "Default.aspx?ID=" + Pageview.Page.ID + "&cartcmd=setcart";
+    string emptyCartUrl = "Default.aspx?ID=" + Pageview.Page.ID + "&cartcmd=deleteAllOrderlines";
+    string cartUrl = "Default.aspx?ID=" + Converter.ToString(GetPageIdByNavigationTag("CartPage"));
+    string cartId = GetString("Ecom:Order.ID");
+
+    <div class="card-footer u-color-light--bg u-border-top dw-mod">
+        @Render(new Button
+       {
+           Title = Translate("Confirm order"),
+           CssClass = "u-no-margin u-pull--right",
+           Name = GetString("CartV2.NextStepButtonName"),
+           ButtonType = ButtonType.Submit
+       })
+    </div>
+}

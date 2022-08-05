@@ -1,0 +1,21 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage footerPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    footerPage.Add("OrderContainer", new Block
+    {
+        Id = "OrderFooter",
+        SortId = 40,
+        Design = new Design
+        {
+            RenderType = RenderType.Row,
+            CssClass = "u-color-light-gray--bg u-border"
+        }
+    });
+}

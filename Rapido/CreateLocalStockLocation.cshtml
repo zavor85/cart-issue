@@ -1,0 +1,51 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+
+@using System
+@using System.Collections.Generic
+@using System.Web
+@using Dynamicweb
+@using Dynamicweb.Ecommerce
+@using Dynamicweb.Ecommerce.Products;
+@using Dynamicweb.Ecommerce.Stocks;
+
+
+@{
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/CreateStockLocation").Log($"===============================================================================================================================");
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/CreateStockLocation").Log("Creating Stock Location START");
+
+    ProductService productService = new Dynamicweb.Ecommerce.Products.ProductService();
+    StockService stock = new Dynamicweb.Ecommerce.Stocks.StockService();
+	int productCounter = 0;
+	int localStockId = 4;
+   
+    string unitId = "VO84"; // VO84 = Stk.
+	DateTime defaultDate = DateTime.MinValue;
+
+    IEnumerable<Product> allProducts = productService.GetAllProducts("LANG2", false);
+    IEnumerable<Product> notInTradeplaceProducts = allProducts.Where(product => !product.Name.ToLower().Contains("electrolux") &&
+                                                                                !product.Name.ToLower().Contains("aeg") &&
+                                                                                !product.Name.ToLower().Contains("voss") &&
+                                                                                !product.Name.ToLower().Contains("siemens") &&
+                                                                                !product.Name.ToLower().Contains("bosch") &&
+                                                                                !product.Name.ToLower().Contains("zanussi"));
+
+    foreach (var product in notInTradeplaceProducts)
+    {
+        if (product.Units.Count == 0)
+        {
+            stock.SaveStockUnit(new StockUnit(){ProductId = product.Id, VariantId = "", ProductNumber = "", Description = "", ExpectedDelivery = defaultDate, StockLocationId = localStockId, StockQuantity = 0, UnitId = unitId});
+            product.UnitCount = 1;
+            productCounter++;
+        }
+        productService.Save(product);
+    }
+
+    productService.ClearCache();
+    stock.ClearCache();
+
+    Dynamicweb.Ecommerce.Common.Application.KillStockUnits();
+    Dynamicweb.Ecommerce.Common.Application.KillProducts();
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/CreateStockLocation").Log($"{productCounter} local stock locations created");
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/CreateStockLocation").Log($"Creating Stock Location END");
+    HttpContext.Current.Response.Write($"{productCounter} local stock locations created. Creating Local Stock Locations finished. ");
+}

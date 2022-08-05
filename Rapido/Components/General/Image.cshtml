@@ -1,0 +1,203 @@
+﻿@using System.Collections.Generic
+@using System.Web
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks
+
+
+@* Component *@
+
+@helper RenderImage(Image settings)
+{
+    if (settings.FilterPrimary != ImageFilter.None || settings.FilterSecondary != ImageFilter.None)
+    {
+        Dictionary<string, string> optionalAttributes = new Dictionary<string, string>();
+        if (!string.IsNullOrEmpty(settings.FilterColor)) { optionalAttributes.Add("style", "background-color: " + settings.FilterColor); }
+        
+        if (settings.Caption != null)
+        {
+            @:<div>
+        }
+
+        var primaryFilterClass = settings.FilterPrimary.ToString().ToLower();
+        var secondaryFilterClass = settings.FilterSecondary.ToString().ToLower();
+
+        <div class="image-filter image-filter--@primaryFilterClass u-position-relative dw-mod" @ComponentMethods.AddAttributes(optionalAttributes)>
+            <div class="image-filter image-filter--@secondaryFilterClass dw-mod">
+                @if (settings.Link != null)
+                {
+                    <a href="@settings.Link">
+                        @RenderTheImage(settings)
+                    </a>
+                }
+                else
+                {
+                    @RenderTheImage(settings)
+                }
+            </div>
+        </div>
+
+        if (settings.Caption != null)
+        {
+            <span class="image-caption dw-mod">@settings.Caption</span>
+            @:</div>
+        }
+    }
+    else 
+    {
+        if (settings.Caption != null)
+        {
+            @:<div>
+        }
+        if (!string.IsNullOrEmpty(settings.Link))
+        {
+            <a href="@settings.Link">
+                @RenderTheImage(settings)
+            </a>
+        }
+        else
+        {
+            @RenderTheImage(settings)
+        }
+
+        if (settings.Caption != null)
+        {
+            <span class="image-caption dw-mod">@settings.Caption</span>
+            @:</div>
+        }
+    }
+}
+
+@helper RenderTheImage(Image settings)
+{
+if (settings != null)
+{
+    string alternativeImage = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("AlternativeImage")) ? Pageview.AreaSettings.GetItem("Settings").GetFile("AlternativeImage").PathUrlEncoded : "/Images/missing_image.jpg";
+    string placeholderImage = "/Files/Images/placeholder.gif";
+    string imageEngine = "/Admin/Public/GetImage.ashx?";
+
+    string imageStyle = "";
+
+    switch (settings.Style)
+    {
+        case ImageStyle.Ball:
+            imageStyle = "grid__cell-img--ball";
+            break;
+
+        case ImageStyle.Triangle:
+            imageStyle = "grid__cell-img--triangle";
+            break;
+    }
+
+    if (settings.Style == ImageStyle.Ball || settings.Style == ImageStyle.Circle || settings.Style == ImageStyle.Triangle)
+    {
+        settings.ImageDefault.Crop = settings.ImageDefault.Crop == 5 ? settings.ImageDefault.Crop = 0 : settings.ImageDefault.Crop;
+
+        if (settings.ImageDefault != null)
+        {
+            settings.ImageDefault.Height = settings.ImageDefault.Width;
+        }
+        if (settings.ImageMedium != null)
+        {
+            settings.ImageMedium.Height = settings.ImageMedium.Width;
+        }
+        if (settings.ImageSmall != null)
+        {
+            settings.ImageSmall.Height = settings.ImageSmall.Width;
+        }
+    }
+
+    string defaultImage = imageEngine;
+    string imageSmall = "";
+    string imageMedium = "";
+
+    if (settings.DisableImageEngine)
+    {
+        defaultImage = settings.Path;
+    }
+    else
+    {
+        if (settings.ImageDefault != null)
+        {
+            defaultImage += Dynamicweb.Rapido.Services.Images.GetImagePathFromSettings(settings.ImageDefault);
+
+            if (settings.Path.GetType() != typeof(string))
+            {
+                defaultImage += settings.Path != null ? "Image=" + settings.Path.PathUrlEncoded : "";
+                defaultImage += settings.Path != null ? "&" + settings.Path.GetFocalPointParameters() : "";
+            }
+            else
+            {
+                defaultImage += settings.Path != null ? "Image=" + HttpUtility.UrlEncode(settings.Path) : "";
+            }
+
+            defaultImage += "&AlternativeImage=" + alternativeImage;
+            defaultImage += "&format=webp";
+
+            if (defaultImage.Length > 255)
+            {
+                defaultImage = defaultImage.Replace("&AlternativeImage=" + alternativeImage, "");
+                defaultImage = defaultImage.Replace($"Crop=5&DoNotUpscale=True", "");
+                defaultImage = defaultImage.Replace($"&format=webp", "");
+            }
+        }
+
+        if (settings.ImageSmall != null)
+        {
+            imageSmall = "data-src-small=\"" + imageEngine;
+            imageSmall += Dynamicweb.Rapido.Services.Images.GetImagePathFromSettings(settings.ImageSmall);
+
+            if (settings.Path.GetType() != typeof(string))
+            {
+                imageSmall += settings.Path != null ? "Image=" + settings.Path.PathUrlEncoded : "";
+                imageSmall += settings.Path != null ? "&" + settings.Path.GetFocalPointParameters() : "";
+            }
+            else
+            {
+                imageSmall += settings.Path != null ? "Image=" + HttpUtility.UrlEncode(settings.Path) : "";
+            }
+            imageSmall += "&alternativeImage=" + alternativeImage;
+            imageSmall += "&format=webp";
+
+            imageSmall += "\"";
+        }
+
+        if (settings.ImageMedium != null)
+        {
+            imageMedium = "data-src-medium=\"" + imageEngine;
+            imageMedium += Dynamicweb.Rapido.Services.Images.GetImagePathFromSettings(settings.ImageMedium);
+
+            if (settings.Path.GetType() != typeof(string))
+            {
+                imageMedium += settings.Path != null ? "Image=" + settings.Path.PathUrlEncoded : "";
+                imageMedium += settings.Path != null ? "&" + settings.Path.GetFocalPointParameters() : "";
+            }
+            else
+            {
+                imageMedium += settings.Path != null ? "Image=" + HttpUtility.UrlEncode(settings.Path) : "";
+            }
+
+            imageMedium += "&alternativeImage=" + alternativeImage;
+            imageMedium += "&format=webp";
+            imageMedium += "\"";
+        }
+    }
+
+    Dictionary<string, string> optionalAttributes = new Dictionary<string, string>();
+    if (!string.IsNullOrEmpty(settings.OnClick)) { optionalAttributes.Add("onclick", settings.OnClick); }
+    if (!string.IsNullOrEmpty(settings.Title))
+    {
+        optionalAttributes.Add("alt", settings.Title);
+        optionalAttributes.Add("title", settings.Title);
+    }
+
+    if (settings.DisableLazyLoad)
+    {
+                <img id="@settings.Id" class="@imageStyle @settings.CssClass dw-mod" src="@defaultImage" @ComponentMethods.AddAttributes(optionalAttributes) @ComponentMethods.AddAttributes(settings.ExtraAttributes) />
+            } 
+            else 
+            {
+                <img id="@settings.Id" class="b-lazy @imageStyle @settings.CssClass dw-mod" src="@placeholderImage" data-src="@defaultImage" @imageSmall @imageMedium @ComponentMethods.AddAttributes(optionalAttributes) @ComponentMethods.AddAttributes(settings.ExtraAttributes) />
+            }
+        }
+}

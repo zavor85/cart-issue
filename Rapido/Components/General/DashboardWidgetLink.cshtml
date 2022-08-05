@@ -1,0 +1,25 @@
+﻿@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@helper RenderDashboardWidgetLink(DashboardWidgetLink settings)
+{
+    if (!string.IsNullOrEmpty(settings.Link))
+    {
+        var backgroundStyles = "";
+        if (!string.IsNullOrEmpty(settings.BackgroundColor))
+        {
+            backgroundStyles = "style=\"background-color:" + settings.BackgroundColor + "\"";
+        }
+
+        <a href="@settings.Link" class="widget widget--link @settings.CssClass dw-mod" @backgroundStyles title="@settings.Title" @ComponentMethods.AddAttributes(settings.ExtraAttributes)>
+            <div class="u-center-middle u-color-light">
+                @if (settings.Icon != null)
+                {
+                    settings.Icon.CssClass += "widget__icon";
+                    @Render(settings.Icon)
+                }
+                <div class="widget__title">@settings.Title</div>
+            </div>
+        </a>
+    }
+}

@@ -1,0 +1,175 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using System
+@using System.Linq
+@using System.Web
+@using System.IO
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage listPage = BlocksPage.GetBlockPage("Dashboard");
+}
+
+@{ 
+                string userName = Pageview.User.CurrentSecondaryUser != null ? Pageview.User.CurrentSecondaryUser.Name : Pageview.User.Name;
+
+                var content = new Block
+                {
+                    Id = "Content",
+                    SortId = 10,
+                    Design = new Design {
+                        RenderType = RenderType.Row,
+                        CssClass = "u-margin-top--lg u-margin-bottom--lg"
+                    },
+                    BlocksList = new List<Block> {
+            new Block {
+                Id = "Card",
+                SortId = 10,
+                Design = new Design {
+                    RenderType = RenderType.Column,
+                    Size = "4",
+                    CssClass = "card"
+                }
+            }
+        }
+                };
+                listPage.Add(content);
+
+                Block cardHeader = new Block
+                {
+                    Id = "CardHeader",
+                    SortId = 10,
+                    Component = new Heading { Title = Translate("Hi") + ", " + userName + "!", CssClass = "u-margin-bottom--lg" }
+        };
+        listPage.Add("Card", cardHeader);
+
+    if (Pageview.User.CurrentSecondaryUser != null && Pageview.User.CurrentSecondaryUser.ID > 0)
+    {
+        Block impersonationInfo = new Block
+        {
+            Id = "ImpersonationInfo",
+            SortId = 20,
+            Template = RenderImpersonationInfo()
+        };
+        listPage.Add("Card", impersonationInfo);
+    }
+
+    Block navigation = new Block
+    {
+        Id = "Navigation",
+        SortId = 30,
+        Template = RenderNavigation()
+    };
+    listPage.Add("Card", navigation);
+}
+
+
+@helper RenderImpersonationInfo() { 
+    string impersonationPageId = GetPageIdByNavigationTag("Impersonation").ToString();
+
+    <div>@Translate("You're logged in as"):</div>
+    <div class="u-bold u-margin-bottom--lg">
+        <span>@Pageview.User.Name</span>
+        @if (string.IsNullOrEmpty(Pageview.User.Company)) {
+            <span> / </span><span>@Pageview.User.Company</span>
+        }
+    </div>
+    <div class="u-margin-bottom--lg">
+        <span class="u-border-right u-margin-right--lg u-padding-right--lg">
+            @Render(new Button
+            {
+                Href = "/Default.aspx?ID=" + impersonationPageId,
+                ButtonLayout = ButtonLayout.LinkClean,
+                Title = Translate("Switch account"),
+                Icon = new Icon {
+                    Name = "fa-users",
+                    Prefix = "fal",
+                    LabelPosition = IconLabelPosition.After
+                },
+                CssClass = "u-no-margin u-color-inherit"
+            })  
+        </span>
+        <span>
+            @Render(new Button
+            {
+                ButtonType = ButtonType.Button,
+                ButtonLayout = ButtonLayout.LinkClean,
+                Title = Translate("Sign out"),
+                Icon = new Icon {
+                    Name = "fa-sign-out",
+                    Prefix = "fal",
+                    LabelPosition = IconLabelPosition.After
+                },
+                OnClick = "document.getElementById('StopImpersonationModalTrigger').checked = true",
+                CssClass = "u-no-margin"
+            })  
+        </span>
+    </div>
+}
+
+@helper RenderNavigation() { 
+    string favoriteIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon") != null ? "fas fa-" + Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon").SelectedValue : "fas fa-star";
+    string cartIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon").SelectedValue : "fas fa-shopping-cart";
+    string userIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("SignInProfileIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("SignInProfileIcon").SelectedValue : "fas fa-user";
+
+    <div class="left-navigation dw-mod">
+        @if (GetPageIdByNavigationTag("CustomerProfile") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("CustomerProfile").ToString(), Icon = new Icon { Name = userIcon, LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My profile"), ButtonLayout = ButtonLayout.LinkClean })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("CustomerAddresses") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("CustomerAddresses").ToString(), Icon = new Icon { Prefix = "fal", Name = "fa-address-book", LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My addresses"), ButtonLayout = ButtonLayout.LinkClean })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("CustomerFavorites") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("CustomerFavorites").ToString(), Icon = new Icon { Name = favoriteIcon, LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My favorites"), ButtonLayout = ButtonLayout.LinkClean  })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("CustomerOrders") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("CustomerOrders").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-list", LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My orders"), ButtonLayout = ButtonLayout.LinkClean  })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("DisableOrderDraft") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("OrderDraft").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-clipboard-list", LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My order drafts"), ButtonLayout = ButtonLayout.LinkClean  })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("DisableQuotesPage") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("QuotesPage").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-quote-right", LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My quotes"), ButtonLayout = ButtonLayout.LinkClean  })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("RMAPage") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("RMAPage").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-undo", LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My RMA"), ButtonLayout = ButtonLayout.LinkClean  })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("DisableSavedCards") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("SavedCards").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-credit-card", LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My saved cards"), ButtonLayout = ButtonLayout.LinkClean  })
+            </div>
+        }
+        @if (GetPageIdByNavigationTag("DisableRecurringOrders") != 0) {
+            <div class="left-navigation__item dw-mod">
+                @Render(new Button { Href = "Default.aspx?ID=" + GetPageIdByNavigationTag("RecurringOrders").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-calendar", LabelPosition = IconLabelPosition.After, CssClass = "u-color-gray" }, Title = Translate("My recurring orders"), ButtonLayout = ButtonLayout.LinkClean  })
+            </div>
+        }
+    </div> 
+}
+
+
+@Include("Blocks/List/Custom__Blocks.cshtml")
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+
+
+@RenderBlockList(listPage.BlocksRoot.BlocksList)

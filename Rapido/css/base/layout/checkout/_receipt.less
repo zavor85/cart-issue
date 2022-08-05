@@ -1,0 +1,93 @@
+﻿.receipt {
+
+    &__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: @reflex-cell-spacing-lg;
+
+        @media (min-width: @reflex-md) {
+            margin-bottom: @reflex-cell-spacing-xl;
+        }
+    }
+
+    &__list {
+        display: grid;
+        grid-gap: 3rem;
+
+        @media (min-width: @reflex-md) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+
+    &__item {
+        & + & {
+            margin-top: @reflex-cell-spacing-lg;
+
+            @media (min-width: @reflex-md) {
+                margin-top: @reflex-cell-spacing-xl;
+            }
+        }
+
+        &--small {
+            @media (min-width: @reflex-lg) {
+                width: 60%;
+            }
+        }
+    }
+
+
+    &__data {
+        &-title {
+            padding-bottom: @reflex-cell-spacing-md;
+            border-bottom: @border-width solid @border-color;
+        }
+
+        &-list {
+            display: grid;
+            grid-gap: 20px;
+
+            @media (min-width: @reflex-xs) {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            @media (min-width: @reflex-sm) {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            @media (min-width: @reflex-md) {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        &-item {
+            padding: 20px 0;
+
+            @media (max-width: @reflex-xxs-max) {
+                & + & {
+                    border-top: 1px solid @gray-light;
+                }
+            }
+
+            @media (min-width: @reflex-xs) and (max-width: @reflex-xs-max) {
+                &:nth-child(n+3) {
+                    border-top: 1px solid @gray-light;
+                }
+            }
+
+            @media (min-width: @reflex-sm) and (max-width: @reflex-sm-max) {
+                &:nth-child(n+4) {
+                    border-top: 1px solid @gray-light;
+                }
+            }
+
+            @media (min-width: @reflex-md) {
+                &:nth-child(n+5) {
+                    border-top: 1px solid @gray-light;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,54 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage viewCreditModalPage = BlocksPage.GetBlockPage("CreditList");
+}
+
+@{
+    Modal modal = new Modal
+    {
+        Id = "Credit",
+        Width = ModalWidth.Iframe,
+        Heading = new Heading { Title = Translate("Credit details") },
+        BodyTemplate = RenderViewCreditModal()
+    };
+
+    Block viewCreditModal = new Block
+    {
+        Id = "ViewCreditModal",
+        SortId = 30,
+        Component = modal
+    };
+
+    viewCreditModalPage.Add(viewCreditModal);
+
+    Block viewCreditModalScript = new Block
+    {
+        Id = "ViewCreditModalScript",
+        SortId = 20,
+        Template = RenderViewCreditModalScript()
+    };
+
+    viewCreditModalPage.Add(viewCreditModalScript);
+}
+
+@helper RenderViewCreditModal()
+{
+    <iframe src="about:blank" class="modal__iframe"></iframe>
+}
+
+@helper RenderViewCreditModalScript()
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            window.orderModal = new IframeModal({
+                modalId: "CreditModal",
+                linkPrefix: "/Admin/public/CustomerCenter/RequestExternalPdf.aspx?type=Credit&id="
+            });
+        });
+    </script>
+}

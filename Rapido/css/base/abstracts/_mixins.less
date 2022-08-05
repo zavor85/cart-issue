@@ -1,0 +1,24 @@
+// -----------------------------------------------------------------------------
+// This file contains all application-wide Less mixins.
+// -----------------------------------------------------------------------------
+
+.input-field() {
+    appearance: none;
+    background-color: #fff;
+    border: @border-width solid @border-color;
+    box-shadow: none;
+    box-sizing: border-box;
+    padding: 6px 12px; // The 6px vertically centers text on FF, ignored by Webkit
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    
+    &:hover,
+    &:focus {
+        .input-field-focus();
+    }
+}
+    
+.input-field-focus() {
+    border-color: @color-primary;
+    outline: 0;
+}

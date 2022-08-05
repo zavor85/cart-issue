@@ -1,0 +1,357 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+@using System.Web;
+@using System
+@using System.IO
+@using Dynamicweb.Rapido.Blocks
+
+@functions {
+	BlocksPage masterPage = BlocksPage.GetBlockPage("Master");
+
+	string getFontFamily(params string[] items)
+	{
+		var itemParent = Pageview.AreaSettings;
+		foreach (var item in items)
+		{
+			itemParent = itemParent.GetItem(item);
+			if (itemParent == null)
+			{
+				return null;
+			}
+		}
+
+		var googleFont = itemParent.GetGoogleFont("FontFamily");
+		if (googleFont == null)
+		{
+			return null;
+		}
+		return googleFont.Family.Replace(" ", "+");
+	}
+}
+
+@{
+    Block root = new Block
+    {
+        Id = "Root",
+        SortId = 10,
+        BlocksList = new List<Block>
+        {
+            new Block {
+                Id = "Head",
+                SortId = 10,
+                SkipRenderBlocksList = true,
+                Template = RenderMasterHead(),
+                BlocksList = new List<Block>
+                {
+                    new Block {
+                        Id = "HeadMetadata",
+                        SortId = 10,
+                        Template = RenderMasterMetadata(),
+                    },
+                    new Block {
+                        Id = "HeadCss",
+                        SortId = 20,
+                        Template = RenderMasterCss(),
+                    },
+                    new Block {
+                        Id = "HeadManifest",
+                        SortId = 30,
+                        Template = RenderMasterManifest(),
+                    }
+                }
+            },
+            new Block {
+                Id = "Body",
+                SortId = 20,
+                SkipRenderBlocksList = true,
+                Template = RenderMasterBody(),
+                BlocksList = new List<Block>
+                {
+                    new Block()
+                    {
+                        Id = "Master",
+                        SortId = 10,
+                        BlocksList = new List<Block> {
+                            new Block {
+                                Id = "MasterMain",
+                                SortId = 20,
+                                Template = RenderMain(),
+                                SkipRenderBlocksList = true,
+                                BlocksList = new List<Block> {
+                                    new Block {
+                                        Id = "MasterPageContent",
+                                        SortId = 20,
+                                        Template = RenderPageContent()
+                                    }
+                                }
+                            },
+                            new Block {
+                                Id = "MasterReferences",
+                                SortId = 40
+                            },
+                            new Block {
+                                Id = "MasterBottomSnippets",
+                                SortId = 50
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    masterPage.Add(root);
+}
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("Components/GridBuilder.cshtml")
+
+@* Include the components *@
+@Include("Components/GeneralComponents.cshtml")
+@Include("Components/ArticleComponents.cshtml")
+
+@* Include the Blocks for the page *@
+@Include("MasterBlocks/References.cshtml")
+@Include("MasterBlocks/BottomSnippets.cshtml")
+@Include("MasterBlocks/Custom__Blocks.cshtml")
+
+
+@functions { 
+    public class ManifestIcon
+    {
+        public string src { get; set; }
+        public string type { get; set; }
+        public string sizes { get; set; }
+    }
+
+    public class Manifest
+    {
+        public string name { get; set; }
+        public string short_name { get; set; }
+        public string start_url { get; set; }
+        public string display { get; set; }
+        public string background_color { get; set; }
+        public string theme_color { get; set; }
+        public List<ManifestIcon> icons { get; set; }
+    }
+}
+
+<!DOCTYPE html>
+<html lang="@Pageview.Area.CultureInfo.TwoLetterISOLanguageName">
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(masterPage.BlocksRoot.BlocksList)
+
+@helper RenderMasterHead() { 
+    List<Block> subBlocks = this.masterPage.GetBlockListById("Head").OrderBy(item => item.SortId).ToList();
+
+    <head>
+       <!-- Rapido version 3.3 -->
+
+       @RenderBlockList(subBlocks)
+    </head>   
+}
+
+@helper RenderMasterMetadata() { 
+    var swatches = new Dynamicweb.Content.Items.ColorSwatchService();
+    var brandColors = swatches.GetColorSwatch(1);
+    string brandColorOne = brandColors.Palette["BrandColor1"];
+
+    if (!String.IsNullOrEmpty(Model.Area.Item.GetItem("Settings").GetString("AppName")) && Model.Area.Item.GetItem("Settings").GetFile("AppIcon") != null) {
+        Manifest manifest = new Manifest
+        {
+            name = Model.Area.Item.GetItem("Settings").GetString("AppName"),
+            short_name = !String.IsNullOrEmpty(Model.Area.Item.GetItem("Settings").GetString("AppShortName")) ? Model.Area.Item.GetItem("Settings").GetString("AppShortName") : Model.Area.Item.GetItem("Settings").GetString("AppName"),
+            start_url = "/",
+            display = "standalone",
+            background_color = Model.Area.Item.GetItem("Settings").GetString("AppBackgroundColor"),
+            theme_color = Model.Area.Item.GetItem("Settings").GetString("AppThemeColor")
+        };
+
+        manifest.icons = new List<ManifestIcon> {
+            new ManifestIcon {
+                src = "/Admin/Public/GetImage.ashx?width=192&height=192&crop=5&image=" + Model.Area.Item.GetItem("Settings").GetFile("AppIcon").PathUrlEncoded,
+                sizes = "192x192",
+                type = "image/png"
+            },
+            new ManifestIcon {
+                src = "/Admin/Public/GetImage.ashx?width=512&height=512&crop=5&image=" + Model.Area.Item.GetItem("Settings").GetFile("AppIcon").PathUrlEncoded,
+                sizes = "512x512",
+                type = "image/png"
+            },
+            new ManifestIcon {
+                src = "/Admin/Public/GetImage.ashx?width=1024&height=1024&crop=5&image=" + Model.Area.Item.GetItem("Settings").GetFile("AppIcon").PathUrlEncoded,
+                sizes = "1024x1024",
+                type = "image/png"
+            }
+        };
+
+        string manifestFilePath = HttpContext.Current.Request.MapPath("/Files/Templates/Designs/Rapido/manifest.json");
+        string manifestJSON = Newtonsoft.Json.JsonConvert.SerializeObject(manifest);
+        string currentManifest = File.ReadAllText(manifestFilePath);
+
+        if (manifestJSON != currentManifest)
+        {
+            File.WriteAllText(manifestFilePath, manifestJSON);
+        }
+    }
+
+    <meta charset="utf-8" />
+    <title>@Model.Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="@brandColorOne" />
+
+    if (!Model.MetaTags.Contains("og:image") && Model.PropertyItem != null) {
+        Pageview.Meta.AddTag("og:image", string.Format("{0}://{1}{2}", Dynamicweb.Context.Current.Request.Url.Scheme, HttpContext.Current.Request.Url.Host, Model.PropertyItem.GetFile("OpenGraphImage")));
+    }
+
+    if (!Model.MetaTags.Contains("og:description")) {
+        Pageview.Meta.AddTag("og:description", Model.Description);
+    }
+    
+    Pageview.Meta.AddTag("og:title", Model.Title);  
+    Pageview.Meta.AddTag("og:site_name", Model.Name);
+    Pageview.Meta.AddTag("og:url", HttpContext.Current.Request.Url.ToString());
+    Pageview.Meta.AddTag("og:type", "Website");
+    Pageview.Meta.AddTag("fb:page_id", Model.ID.ToString());
+
+    @Model.MetaTags
+}
+
+@helper RenderMasterCss() { 
+    var fonts = new string[] {
+    getFontFamily("Layout", "HeaderFont"),
+    getFontFamily("Layout", "SubheaderFont"),
+    getFontFamily("Layout", "TertiaryHeaderFont"),
+    getFontFamily("Layout", "BodyText"),
+    getFontFamily("Layout", "Header", "ToolsFont"),
+    getFontFamily("Layout", "Header", "NavigationFont"),
+    getFontFamily("Layout", "MobileNavigation", "Font"),
+    getFontFamily("ProductList", "Facets", "HeaderFont"),
+    getFontFamily("ProductPage", "PriceFontDesign"),
+    getFontFamily("Ecommerce", "SaleSticker", "Font"),
+    getFontFamily("Ecommerce", "NewSticker", "Font"),
+    getFontFamily("Ecommerce", "CustomSticker", "Font")
+    };
+
+    string autoCssLink = "/Files/Templates/Designs/Rapido/css/rapido/rapido_" + Model.Area.ID.ToString() + ".min.css?ticks=" + Model.Area.UpdatedDate.Ticks;
+    string favicon = Model.Area.Item.GetItem("Layout").GetFile("LogoFavicon") != null ? Model.Area.Item.GetItem("Layout").GetFile("LogoFavicon").Path : "/Files/Images/favicon.png";
+    bool useFontAwesomePro = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetBoolean("UseFontAwesomePro");
+    string fontAwesomeCssLink = "/Files/Templates/Designs/Rapido/css/fonts/FontAwesomeFree/css/fontawesome-all.min.css";
+    if (useFontAwesomePro)
+    {
+        fontAwesomeCssLink = "/Files/Templates/Designs/Rapido/css/fonts/FontAwesomePro/css/fontawesome-all.min.css";
+    }
+    
+    /* Optimizer variables */
+    var minify = Model.Area.Item.GetItem("Rizzo").GetBoolean("MinifyCss");
+    var folderName = string.Empty;
+    var rizzoBundle = string.Empty;
+    var rizzoPackagesBundle = string.Empty;
+    var igniteBundle = string.Empty;
+    var variablesFile = "/Files/Templates/Designs/Rapido/css/rapido/_variables_" + Model.Area.ID + ".auto.less";
+
+    //Favicon
+    <link href="@favicon" rel="icon" type="image/png">
+
+    //Base (Default, wireframe) styles
+    <link rel="stylesheet" href="/Files/Templates/Designs/Rapido/css/base/base.min.css" type="text/css">
+
+    //Rapido Css from Website Settings
+    <link rel="stylesheet" id="rapidoCss" href="@autoCssLink" type="text/css">
+
+    if (Model.Area.Item.GetItem("Rizzo").GetBoolean("UseRizzoCss"))
+    {
+        <!-- Rizzo Css (DWNA specific styles) -->
+        folderName = "rizzo";
+        rizzoBundle = Dna.Optimizer.Renderer.RenderStyles($"/Files/Templates/Designs/Rapido/css/{folderName}", $"-{folderName}-styles", new [] {variablesFile}, new[] { $"{folderName}.css", $"{folderName}.min.css" }, minify, false, false);
+        <link id="rizzoCss" type="text/css" rel="stylesheet" href="@rizzoBundle" />
+    }
+    if (Model.Area.Item.GetItem("RizzoPackages").GetBoolean("UseRizzoCss"))
+    {
+        <!-- Rizzo Packages Css (DWNA packages specific styles) -->
+        folderName = "rizzoPackages";
+        rizzoPackagesBundle = Dna.Optimizer.Renderer.RenderStyles($"/Files/Templates/Designs/Rapido/css/{folderName}", $"-{folderName}-styles", new [] {variablesFile}, new[] { $"{folderName}.css", $"{folderName}.min.css" }, minify, false, false);
+        <link id="rizzoPackagesCss" type="text/css" rel="stylesheet" href="@rizzoPackagesBundle" />
+    }
+
+    //Ignite Css (Custom site specific styles) 
+    folderName = "ignite";
+    igniteBundle = Dna.Optimizer.Renderer.RenderStyles($"/Files/Templates/Designs/Rapido/css/{folderName}", $"-{folderName}-styles", new [] {variablesFile}, new[] { $"{folderName}.css", $"{folderName}.min.css" }, minify, false, false);
+    <link id="igniteCss" type="text/css" rel="stylesheet" href="@igniteBundle" />
+
+    //Font awesome
+    <link rel="stylesheet" href="@fontAwesomeCssLink" type="text/css">
+
+    //Flag icon
+    <link rel="stylesheet" href="/Files/Templates/Designs/Rapido/css/fonts/flag-icon.min.css" type="text/css">
+
+    //Google fonts
+    var family = string.Join("%7C", fonts.Where(x => !string.IsNullOrEmpty(x)).Distinct().Select(x => string.Format("{0}:100,200,300,400,500,600,700,800,900", x)));
+
+    <link href="https://fonts.googleapis.com/css?family=@family" rel="stylesheet">
+    
+    PushPromise(favicon);
+    PushPromise(fontAwesomeCssLink);
+    PushPromise("/Files/Templates/Designs/Rapido/css/base/base.min.css");
+    PushPromise(autoCssLink);
+    if (Model.Area.Item.GetItem("Rizzo").GetBoolean("UseRizzoCss"))
+    {
+        PushPromise(rizzoBundle);
+    }
+    if (Model.Area.Item.GetItem("RizzoPackages").GetBoolean("UseRizzoCss"))
+    {
+        PushPromise(rizzoPackagesBundle);
+    }
+    PushPromise(igniteBundle);
+    PushPromise("/Files/Images/placeholder.gif");
+    PushPromise("/Files/Templates/Designs/Rapido/css/fonts/flag-icon.min.css");
+}
+
+@helper RenderMasterManifest() { 
+    if (!String.IsNullOrEmpty(Model.Area.Item.GetItem("Settings").GetString("AppName")))
+    {
+        <link rel="manifest" href="/Files/Templates/Designs/Rapido/manifest.json">
+        PushPromise("/Files/Templates/Designs/Rapido/manifest.json");
+    } 
+}
+
+@helper RenderMasterBody() { 
+    List<Block> subBlocks = this.masterPage.GetBlockListById("Body").OrderBy(item => item.SortId).ToList();
+    string designLayout = Model.PropertyItem != null && Model.PropertyItem.GetItem("CustomSettings") != null ? Model.PropertyItem.GetItem("CustomSettings").GetString("DesignLayout") != null ? Model.PropertyItem.GetItem("CustomSettings").GetList("DesignLayout").SelectedValue : "" : "";
+    if (!String.IsNullOrEmpty(designLayout)) {
+        designLayout = "class=\"" + designLayout + "\"";
+    }
+
+    <body @designLayout>
+       @RenderBlockList(subBlocks)
+    </body>   
+}
+
+@helper RenderMain()
+{
+    List<Block> subBlocks = this.masterPage.GetBlockListById("MasterMain").OrderBy(item => item.SortId).ToList();
+
+    <main class="site dw-mod">
+        @RenderBlockList(subBlocks)
+    </main>
+}
+
+@helper RenderPageContent()
+{
+    bool isNavigationStickyMenu = Pageview.Device.ToString() != "Mobile" && Pageview.Device.ToString() != "Tablet" && Model.Area.Item.GetItem("Layout").GetItem("Header").GetBoolean("StickyTop");
+    string pagePos = isNavigationStickyMenu ? "js-page-pos" : "";
+
+    <div id="Page" class="page @pagePos">
+        <div id="content">
+            @RenderSnippet("Content")
+        </div>
+    </div>
+}
+
+@* Hack to support nested helpers *@
+@SnippetStart("Content")
+@ContentPlaceholder()
+@SnippetEnd("Content")
+</html>
+

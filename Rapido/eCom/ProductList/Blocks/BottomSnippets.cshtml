@@ -1,0 +1,352 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@{ 
+    BlocksPage productListBottomSnippetsPage = BlocksPage.GetBlockPage("ProductList");
+
+    Block productListStickers = new Block
+    {
+        Id = "Stickers",
+        SortId = 10,
+        Template = RenderStickersTemplates()
+    };
+    productListBottomSnippetsPage.Add("BottomSnippets", productListStickers);
+
+    Block productListUnits = new Block
+    {
+        Id = "Units",
+        SortId = 20,
+        Template = RenderUnitTemplates()
+    };
+    productListBottomSnippetsPage.Add("BottomSnippets", productListUnits);
+
+    Block productListVariants = new Block
+    {
+        Id = "Variants",
+        SortId = 30,
+        Template = RenderVariantTemplates()
+    };
+    productListBottomSnippetsPage.Add("BottomSnippets", productListVariants);
+
+    Block productListFavorites = new Block
+    {
+        Id = "Favorites",
+        SortId = 40,
+        Template = RenderFavoritesTemplates()
+    };
+    productListBottomSnippetsPage.Add("BottomSnippets", productListFavorites);
+
+    Block productListPreRender = new Block
+    {
+        Id = "PreRenders",
+        SortId = 50,
+        Template = RenderPreRenderTemplates()
+    };
+    productListBottomSnippetsPage.Add("BottomSnippets", productListPreRender);
+
+    Block productListInitializers = new Block
+    {
+        Id = "Initializers",
+        SortId = 60,
+        Template = RenderInitializers()
+    };
+    productListBottomSnippetsPage.Add("BottomSnippets", productListInitializers);
+}
+
+
+@helper RenderFavoritesTemplates()
+{
+    var selectedFavoriteIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon").SelectedValue : "star";
+    string favoriteIcon = "fas fa-" + selectedFavoriteIcon;
+    string favoriteOutlineIcon = "fal fa-" + selectedFavoriteIcon;
+    bool useFacebookPixel = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("FacebookPixelID"));
+    string currentFavoriteListId = HttpContext.Current.Request.QueryString.Get("ListID");
+
+    <script id="FavoriteTemplate" type="text/x-template">
+        <div class="favorites-list u-ta-left js-favorites-list">
+            @Render(new Button {
+                CssClass = "u-no-margin js-favorite-btn",
+                Icon = new Icon
+                {
+                    Name = "{{#if isInAnyFavoriteList}}" + favoriteIcon + "{{else}}" + favoriteOutlineIcon + "{{/if}}",
+                    CssClass = "fa-1_5x",
+                    LabelPosition = IconLabelPosition.After
+                },
+                ButtonLayout = ButtonLayout.LinkClean,
+                ButtonType = ButtonType.Button,
+                OnClick = "document.getElementById('FavoriteTrigger_{{id}}').checked = true"
+            })
+            <input type="checkbox" id="FavoriteTrigger_{{id}}" class="dropdown-trigger" />
+            <div class="dropdown dropdown--position-32px">
+                <div class="dropdown__content dropdown__content--show-left dropdown__content--padding u-w220px dw-mod">
+                    <ul class="list list--clean dw-mod">
+                        {{#FavoriteLists}}
+                            {{>FavoriteListItem}}
+                        {{/FavoriteLists}}
+                    </ul>
+                </div>
+                <label class="dropdown-trigger-off" for="FavoriteTrigger_{{id}}"></label>
+            </div>
+        </div>
+    </script>
+
+    <script id="FavoriteListItem" type="text/x-template">
+        <li>
+            @{
+                var button = new Button {
+                    CssClass = "list__link u-no-underline",
+                    OnClick = "toggleFavAction(this, event)",
+                    Icon = new Icon { Name = "{{#if isInFavoriteList}}" + favoriteIcon + "{{else}}" + favoriteOutlineIcon + "{{/if}}", LabelPosition = IconLabelPosition.After },
+                    AltText = "{{#if isInFavoriteList}}" + Translate("Remove from") + " {{name}}{{else}}" + Translate("Add to") + " {{name}}{{/if}}",
+                    Title = "{{name}}",
+                    ButtonType = ButtonType.Button,
+                    ButtonLayout = ButtonLayout.LinkClean,
+                    ExtraAttributes = new Dictionary<string, string>
+                    {
+                        { "data-list-id", "{{listId}}" },
+                        { "data-list-name", "{{name}}" },
+                        { "data-remove-link", "{{removeLink}}" },
+                        { "data-add-link", "{{addLink}}" },
+                        { "data-is-in-list", "{{isInFavoriteList}}" },
+
+                    }
+                };
+                if (useFacebookPixel)
+                {
+                    button.ExtraAttributes.Add("data-facebook-object", "{{facebookPixelAddAction}}");
+                }
+            }
+            @Render(button)
+        </li>
+    </script>   
+
+    <script>
+        @if (!string.IsNullOrEmpty(currentFavoriteListId))
+        {
+            <text>
+                window.currentFavoriteListId = "@currentFavoriteListId";
+            </text>
+        }
+        function toggleFavAction(button, event) {
+            if (button.getAttribute('data-add-link').indexOf('CCCreateNewList') > -1) {
+                Scroll.SavePosition(event);
+                @if (useFacebookPixel)
+                {
+                    <text>
+                        fbq('track', 'AddToWishlist', JSON.parse(button.getAttribute('data-facebook-object')));
+                    </text>
+                }
+                location.href = button.getAttribute('data-add-link');
+                return;
+            }
+            let isAdd = button.getAttribute('data-is-in-list') == "false";
+            Request.Fetch().get(
+                isAdd ? button.getAttribute('data-add-link') : button.getAttribute('data-remove-link'),
+                function (result) {
+                    button.querySelector('i').className = isAdd ? '@favoriteIcon u-margin-right--lg' : '@favoriteOutlineIcon u-margin-right--lg';
+                    button.setAttribute('data-is-in-list', isAdd);
+                    button.setAttribute('title', (!isAdd ? '@Translate("Add to") ' : '@Translate("Remove from") ') + button.getAttribute('data-list-name'))
+                    let favList = button.closest('.js-favorites-list');
+                    let favBtn = favList.querySelector('.js-favorite-btn i');
+                    let isInAnyFavoriteList = favList.querySelector('[data-is-in-list=true]') != null;
+                    if (isInAnyFavoriteList) {
+                        favBtn.className = '@favoriteIcon' + ' fa-1_5x';
+                    } else {
+                        favBtn.className = '@favoriteOutlineIcon' + ' fa-1_5x';
+                    }
+                    @if (useFacebookPixel)
+                    {
+                        <text>
+                            if (isAdd) {
+                                fbq('track', 'AddToWishlist', JSON.parse(button.getAttribute('data-facebook-object')));
+                            }
+                        </text>
+                    }
+                    if (window.currentFavoriteListId != null) { //if this page is favorite list
+                        let listId = button.getAttribute("data-list-id");
+                        if (listId == window.currentFavoriteListId && !isAdd) {
+                            location.reload();
+                        }
+                    }
+                },
+                function () {
+                    console.error("FavoriteLists: Error in ToggleFavAction request");
+                },
+                false
+            );
+        }
+    </script>
+}
+
+@helper RenderStickersTemplates()
+{
+    <script id="StickersContainer" type="text/x-template">
+        <div class="stickers-container stickers-container--{{{convertStickerPositionToClassName Position}}} dw-mod">
+            {{#Stickers}}
+                {{>Sticker}}
+            {{/Stickers}}
+        </div>
+    </script>
+
+    <script id="Sticker" type="text/x-template">
+        <div class="stickers-container__tag {{CssClass}} dw-mod">{{Title}}</div>
+    </script>
+
+    <script id="MiniSticker" type="text/x-template">
+        <div class="stickers-container__tag stickers-container__tag--micro {{CssClass}} dw-mod">{{Title}}</div>
+    </script>
+}
+
+@helper RenderUnitTemplates()
+{
+    <script id="UnitOption" type="text/x-template">
+        <div class="dropdown__item dw-mod" onclick="HandlebarsBolt.UpdateContent(this.closest('.js-product').id, '{{link}}&feed=true&UnitID={{value}}')">{{name}}</div>
+    </script>
+}
+
+@helper RenderVariantTemplates() {
+    <script id="VariantsTemplate" type="text/x-template">
+        {{#.}}
+            <div>
+                <div>
+                    {{#VariantOptions}}
+                        {{>VariantOption}}
+                    {{/VariantOptions}}
+                </div>
+            </div>
+        {{/.}}
+    </script>
+
+    <script id="VariantOption" type="text/x-template">
+        {{#if color}}
+            <button type="button" data-variant-id="{{variantId}}" data-variant-group="{{groupId}}" onclick="MatchVariants.SelectThis(event)" class="btn btn--colorbox u-margin-right {{disabled}} {{selected}} js-variant-option" data-check="{{selected}}" {{disabled}} style="background-color: {{color}}"></button>
+        {{else}} 
+            {{#if image}}
+                <img data-variant-id="{{variantId}}" data-variant-group="{{groupId}}" src="{{image}}" onclick="MatchVariants.SelectThis(event)" alt="{{name}}" title="{{name}}" class="btn btn--tag {{selected}} js-variant-option" data-check="{{selected}}" />
+            {{else}}
+                <button type="button" data-variant-id="{{variantId}}" data-variant-group="{{groupId}}" onclick="MatchVariants.SelectThis(event)" class="btn btn--tag {{disabled}} {{selected}} js-variant-option" data-check="{{selected}}" {{disabled}}>{{name}}</button>
+            {{/if}}
+        {{/if}}
+    </script>
+
+    <script id="DropdownVariantsTemplate" type="text/x-template">
+        {{#.}}
+        <div>
+            <div class="u-bold">{{name}}</div>
+            <select id="VariantSelector_{{id}}" class="u-full-width dw-mod" name="VariantSelector_{{id}}" onchange="MatchVariants.SelectOnChange(event)" >
+                <option>@Translate("Choose")</option>
+                {{#VariantOptions}}
+                    {{>DropdownVariantOption}}
+                {{/VariantOptions}}
+            </select>
+        </div>
+        {{/.}}
+    </script>
+
+    <script id="DropdownVariantOption" type="text/x-template">
+        <option class="js-variant-option {{selected}}" id="{{groupId}}_{{variantId}}" value="{{groupId}}_{{variantId}}" data-variant-id="{{variantId}}" data-variant-group="{{groupId}}" {{#if selected}}selected{{/if}} data-check="{{selected}}">{{name}}</option>
+    </script>
+
+    <script id="StaticVariantsTemplate" type="text/x-template">
+        {{#.}}
+            {{#if isFirstGroup}}
+                <div>
+                    {{#VariantOptions}}
+                        {{>StaticVariantOption}}
+                    {{/VariantOptions}}
+                </div>
+            {{/if}}
+        {{/.}}
+    </script>
+
+    <script id="StaticVariantOption" type="text/x-template">
+        {{#if color}}
+            <div class="static-variant static-variant--color dw-mod" style="background-color: {{color}}" title="{{name}}"></div>
+        {{else}}
+            <div class="static-variant dw-mod">{{name}} </div>
+        {{/if}}
+    </script>
+
+
+    <script id="StaticVariantsLgTemplate" type="text/x-template">
+        {{#.}}
+            {{#if isFirstGroup}}
+                <div class="padding-size-xs">
+                    {{#VariantOptions}}
+                        {{>StaticVariantLgOption}}
+                    {{/VariantOptions}}
+                </div>
+            {{/if}}
+        {{/.}}
+    </script>
+
+    <script id="StaticVariantLgOption" type="text/x-template">
+        {{#if color}}
+            <div class="static-variant static-variant--color static-variant--color--lg dw-mod" style="background-color: {{color}}" title="{{name}}"></div>
+        {{else}}
+            <div class="static-variant dw-mod">{{name}} </div>
+        {{/if}}
+    </script>
+
+    <script id="VariantOptionImage" type="text/x-template">
+        <img data-variant-id="{{variantId}}" data-friends="{{friendsList}}" data-variant-group="{{groupId}}" onclick="MatchVariants.SelectThis(event)" src="/Admin/Public/GetImage.ashx?width=100&amp;height=50&amp;crop=5&amp;Compression=75&amp;image=/Images/{{image}}" alt="{{name}}" title="{{name}}" class="btn btn--tag {{disabled}} {{selected}} js-variant-option" data-check="{{selected}}" {{disabled}} />
+    </script>
+}
+
+@helper RenderPreRenderTemplates() {
+    string facetsViewMode = !String.IsNullOrEmpty(Pageview.AreaSettings.GetItem("ProductList").GetString("FacetsViewMode")) ? Pageview.AreaSettings.GetItem("ProductList").GetString("FacetsViewMode").ToLower() : "left";
+
+    <script id="ProductPreRenderContainer" type="text/x-template">
+        @if (facetsViewMode == "left" && Pageview.Device.ToString() != "Mobile")
+        {
+            <div class="grid__col-3">
+                <div class="pre-render-element pre-render-element--xs"></div>
+                <div class="pre-render-element pre-render-element--md"></div>
+                <div class="pre-render-element pre-render-element--md"></div>
+                <div class="pre-render-element pre-render-element--md"></div>
+            </div>
+        }
+        <div class="grid__col-auto">
+            <div class="pre-render-element pre-render-element--xs"></div>
+            <div class="pre-render-element pre-render-element--lg"></div>
+            <div class="pre-render-element pre-render-element--lg"></div>
+            <div class="pre-render-element pre-render-element--lg"></div>
+            <div class="pre-render-element pre-render-element--lg"></div>
+        </div>
+    </script>
+}
+
+@helper RenderInitializers() {
+    <script>
+	    document.addEventListener("DOMContentLoaded", function (event) {
+		    document.getElementById("productList").addEventListener('contentLoaded', function (e) {
+		        if (getTarget(e).id === "productList") {
+			        Search.Init();
+			        Facets.Init("selectedFacets", "productList");
+			    }
+            }, false);
+
+            @{ 
+                bool useGoogleTagManager = !string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("Settings").GetString("GoogleTagManagerID"));
+
+                if (useGoogleTagManager)
+                {
+                    <text>
+                        Scroll.AddIsInViewportListener(".js-product-scroll-trigger", function (elem) {
+                            let googleImpression = JSON.parse(elem.getAttribute("data-params"));
+                            googleEnchantImpression(googleImpression);
+                            elem.classList.remove("js-product-scroll-trigger");
+                        });
+                    </text>
+                }
+            }
+            
+	    });
+    </script>
+}

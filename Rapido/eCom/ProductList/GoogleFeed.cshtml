@@ -1,0 +1,64 @@
+﻿@using Dynamicweb.Ecommerce;
+@using Dynamicweb.Ecommerce.Stocks;
+@using System.Text.RegularExpressions;
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+    <channel id="content.main" class="dwcontent" title="Main content" data-settings="removeid:true;template:ModuleOnly.html;">
+        <title>korsorhvidevare.dk products feed</title>
+        <description>korsorhvidevare.dk products feed for facebook</description>
+        <link>https://korsorhvidevare.dk/</link>
+        @{
+            var solutionBaseUrl = $"{GetGlobalValue("Global:Request.Scheme")}://{GetGlobalValue("Global:Request.Host")}";
+
+            foreach (LoopItem product in GetLoop("Products"))
+            {
+
+                double totalStockQuantity = 0;
+
+                //availability
+                foreach (LoopItem stokUnit in product.GetLoop("StockUnits"))
+                {
+                    totalStockQuantity = stokUnit.GetDouble("Ecom:StockUnit.TotalQuantity");
+                }
+                int productPageUrl = GetPageIdByNavigationTag("ProductsPage");
+                string stockStatus = totalStockQuantity <= 0 ? "out_of_stock" : "in_stock";
+                //url
+                string rawUrl = $"Default.aspx?ID={productPageUrl}&GroupID={product.GetString("Ecom:Product.PrimaryOrFirstGroupID")}&ProductID={product.GetString("Ecom:Product.ID")}";
+                var url = $"{solutionBaseUrl}/" + Dynamicweb.Frontend.SearchEngineFriendlyURLs.GetFriendlyUrl(rawUrl);
+                var imageUrl = $"{solutionBaseUrl}{product.GetString("Ecom:Product.PrimaryImage")}";
+                
+                var title = System.Web.HttpContext.Current.Server.HtmlEncode(product.GetString("Ecom:Product.Name"));
+     
+                var productDescription = string.Empty;
+                if (!string.IsNullOrWhiteSpace(product.GetString("Ecom:Product.ShortDescription"))) {
+                    productDescription += System.Web.HttpContext.Current.Server.HtmlDecode(product.GetString("Ecom:Product.ShortDescription"));
+                }
+                if (!string.IsNullOrWhiteSpace(product.GetString("Ecom:Product.LongDescription"))) {
+                    if (!string.IsNullOrWhiteSpace(product.GetString("Ecom:Product.ShortDescription")))
+                    {
+                        productDescription += " | ";
+                    }
+                    productDescription += System.Web.HttpContext.Current.Server.HtmlDecode(product.GetString("Ecom:Product.LongDescription"));
+                }
+                productDescription = Regex.Replace(productDescription, @"<(.|\n)*?>", "");
+                
+                <item>
+                    <g:id><![CDATA[@product.GetValue("Ecom:Product.Number")]]></g:id>
+                    <g:title><![CDATA[@title]]></g:title>
+                    <g:gtin><![CDATA[@product.GetString("Ecom:Product.EAN")]]></g:gtin>
+                    <g:description><![CDATA[@productDescription]]></g:description>
+                    <g:link><![CDATA[@url]]></g:link>
+                    <g:image_link><![CDATA[@(!imageUrl.Contains("missing_image") ? imageUrl : string.Empty)]]></g:image_link>
+                    <g:brand><![CDATA[@product.GetString("Ecom:Product.CategoryField.Model_description.Brand.Value")]]></g:brand>
+                    <g:condition>new</g:condition>
+                    <g:availability>@stockStatus</g:availability>
+                    <g:price>@product.GetString("Ecom:Product.Price.Price.Value").Replace(",", ".") @product.GetString("Ecom:Product.Price.Currency.Code")</g:price>
+                    <g:google_product_category><![CDATA[@product.GetString("Ecom:Product.CategoryField.Model_description.ProductType.Value")]]></g:google_product_category>
+                    <product_type><![CDATA[@product.GetString("Ecom:Product.CategoryField.Model_description.ProductType.Value")]]></product_type>
+                    <color><![CDATA[@product.GetString("Ecom:Product.CategoryField.Design_shape_and_placement.COL_MAIN.Value")]]></color>
+                    <energy_efficiency_class><![CDATA[@product.GetString("Ecom:Product.CategoryField.Energy_and_power.ENERGY_CLASS_2010.Value")]]></energy_efficiency_class>
+                </item>
+            }
+        }
+    </channel>
+</rss>

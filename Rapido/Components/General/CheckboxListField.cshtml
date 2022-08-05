@@ -1,0 +1,67 @@
+﻿@using System.Reflection
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+
+@* Component *@
+
+@helper RenderCheckboxListField(CheckboxListField settings)
+{
+    <div class="form__field-group @settings.WrapperCssClass u-margin-bottom dw-mod" @ComponentMethods.AddAttributes(settings.ExtraAttributes)>
+        @if (!string.IsNullOrEmpty(settings.Label) || settings.Link != null )
+        {
+            <div class="u-full-width"> 
+                @if (!string.IsNullOrEmpty(settings.Label)) { <label for="@settings.Id" class="u-pull--left">@settings.Label</label> }
+                @if (settings.Link != null) {
+                    <div class="u-pull--right">
+                        @{ settings.Link.ButtonLayout = ButtonLayout.LinkClean; }
+                        @Render(settings.Link)
+                    </div>
+                }
+            </div>
+            
+        }
+
+        <div class="u-pull--left">
+            @if (!string.IsNullOrEmpty(settings.HelpText))
+            {
+                <small class="form__help-text">@settings.HelpText</small>
+            }
+
+            @foreach (var item in settings.Options)
+            {
+                if (settings.Required)
+                {
+                    item.Required = true;
+                }
+                if (settings.Disabled)
+                {
+                    item.Disabled = true;
+                }
+                if (!string.IsNullOrEmpty(settings.Name))
+                {
+                    item.Name = settings.Name;
+                }
+                if (!string.IsNullOrEmpty(settings.CssClass))
+                {
+                    item.CssClass += settings.CssClass;
+                }
+
+                /* value is not supported */
+
+                if (!string.IsNullOrEmpty(settings.OnClick))
+                {
+                    item.OnClick += settings.OnClick;
+                }
+                if (!string.IsNullOrEmpty(settings.OnChange))
+                {
+                    item.OnChange += settings.OnChange;
+                }
+                @Render(item)
+            }
+
+            @Render(new NotificationMessage { Message = settings.ErrorMessage })
+        </div>
+        
+    </div>
+}

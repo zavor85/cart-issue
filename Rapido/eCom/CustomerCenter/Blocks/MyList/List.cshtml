@@ -1,0 +1,160 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+
+@functions {
+    BlocksPage myListItemsContainerPage = BlocksPage.GetBlockPage("MyList");
+}
+
+@{
+    Block myListItems = new Block
+    {
+        Id = "MyListItems",
+        SortId = 10,
+        Template = RenderList(),
+        SkipRenderBlocksList = true
+    };
+    myListItemsContainerPage.Add("PageContainer", myListItems);
+
+    Block myListSnippets = new Block
+    {
+        Id = "MyListSnippets",
+        SortId = 20,
+        Template = RenderListSnippets()
+    };
+    myListItemsContainerPage.Add("PageContainer", myListSnippets);
+}
+
+@helper RenderList()
+{
+    int pageId = Int32.Parse(GetGlobalValue("Global:Page.ID"));
+    string pid = "CC" + GetString("Ecom:CustomerCenter.PID");
+    int areaId = Int32.Parse(GetGlobalValue("Global:Area.ID"));
+    string favoriteIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon") != null ? "fa-" + Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon").SelectedValue : "fas fa-star";
+
+    var mode = GetString("Ecom:CustomerCenter.ProductList.Mode");
+
+    if (mode.Contains("showAll") && !mode.Contains("edit") && !mode.Contains("create"))
+    {
+        <div>
+            @Render(new Heading { Title = GetGlobalValue("Global:Page.Name"), CssClass = "u-pull--left", Icon = new Icon { Prefix = "fas", Name = favoriteIcon, LabelPosition = IconLabelPosition.After } })
+            @Render(new Link { Href = GetString("Ecom:CustomerCenter.List.AddURL"), CssClass = "u-pull--right", Title = Pageview.Device.ToString() != "Mobile" ? Translate("Add new list") : "", ButtonLayout = ButtonLayout.Primary, Icon = new Icon { Prefix = "fal", Name = "fa-plus", LabelPosition = IconLabelPosition.After } })
+        </div>
+
+        if (GetInteger("Ecom:CustomerCenter.List.Count") <= 0)
+        {
+            <div class="u-pull--left u-full-width">
+                @Render(new Text { Content = Translate("No favorites lists found") })
+            </div>
+        }
+        else
+        {
+            CustomerCenterList list = new CustomerCenterList { };
+
+            list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Title") });
+            list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Qty") });
+            if (Pageview.Device.ToString() != "Mobile") {
+                list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Published until") });
+                list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("State"), Align = CustomerCenterListInfoItemAlignment.Right });
+            }
+            list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "&nbsp;", CssClass = "u-w32px" });
+
+            foreach (LoopItem favoriteList in GetLoop("Lists").OrderByDescending(listitem => listitem.GetString("Ecom:CustomerCenter.List.IsDefault")).ToList())
+            {
+                string publishPeriod = favoriteList.GetBoolean("Ecom:CustomerCenter.List.IsPublished") ? favoriteList.GetDate("Ecom:CustomerCenter.List.PublishToDate").ToString("d") : Translate("Never");
+                string state = favoriteList.GetBoolean("Ecom:CustomerCenter.List.IsDefault") ? Translate("Default") : "";
+
+                CustomerCenterListItem listItem = new CustomerCenterListItem
+                {
+                    Id = favoriteList.GetString("Ecom:CustomerCenter.List.Id"),
+                    Title = favoriteList.GetString("Ecom:CustomerCenter.List.Name"),
+                    OnClick = "window.location = '/Default.aspx?ID=" + Converter.ToString(GetPageIdByNavigationTag("ProductsPage")) + "&ListID=" + favoriteList.GetString("Ecom:CustomerCenter.ListTypes.List.ID") + "&ListName=" + favoriteList.GetString("Ecom:CustomerCenter.List.Name") + "'"
+                };
+
+                Button deleteButton = new Button
+                {
+                    Id = "DeleteWarning_" + favoriteList.GetString("Ecom:CustomerCenter.ListTypes.List.ID") + "_",
+                    ConfirmTitle = "Warning",
+                    ConfirmText = Translate("Are you sure you wish to delete this favorite list?"),
+                    OnClick = "window.location.href='" + favoriteList.GetString("Ecom:CustomerCenter.List.RemoveURL") + "'",
+                    Icon = new Icon
+                    {
+                        Prefix = "fal",
+                        Name = "fa-trash-alt"
+                    },
+                    ButtonLayout = ButtonLayout.LinkClean,
+                    CssClass = "data-list__remove-btn"
+                };
+
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = favoriteList.GetString("Ecom:CustomerCenter.List.ProductCount") + " " + Translate("products") });
+                if (Pageview.Device.ToString() != "Mobile") {
+                    listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = publishPeriod });
+                    listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = state, Align = CustomerCenterListInfoItemAlignment.Right });
+                }
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = Render(deleteButton).ToString(), CssClass = "u-w32px" });
+
+                if (Pageview.Device.ToString() != "Mobile") {
+                    listItem.AddActions(
+                        new Button
+                        {
+                            Href = favoriteList.GetString("Ecom:CustomerCenter.List.EditURL"),
+                            Title = Translate("Edit"),
+                            Icon = new Icon
+                            {
+                                Prefix = "fal",
+                                Name = "fa-pen",
+                                LabelPosition = IconLabelPosition.After
+                            }
+                        }  
+                    );
+                
+                    if (!favoriteList.GetBoolean("Ecom:CustomerCenter.List.IsDefault"))
+                    {
+                        listItem.AddAction(new Button
+                        {
+                            OnClick = "makeDefault('/Default.aspx?ID=" + pageId + "&" + pid + "=EditList&ListID=" + favoriteList.GetString("Ecom:CustomerCenter.ListTypes.List.ID")
+                                      + "&CC_IsDefault=on&CC_Name=" + favoriteList.GetString("Ecom:CustomerCenter.ListTypes.List.Name")
+                                      // added to allow fields to be saved 
+                                      + "&CC_IsPublished=True"
+                                      + "&CC_Type=" + favoriteList.GetString("Ecom:CustomerCenter.List.Type")
+                                      + "&CC_Description=" + favoriteList.GetString("Ecom:CustomerCenter.ListTypes.List.Description")
+                                      + "&CC_PublishedToDay=" + favoriteList.GetDate("Ecom:CustomerCenter.List.PublishToDate").ToString("dd")
+                                      + "&CC_PublishedToMonth=" + favoriteList.GetDate("Ecom:CustomerCenter.List.PublishToDate").ToString("MM")
+                                      + "&CC_PublishedToYear=" + favoriteList.GetDate("Ecom:CustomerCenter.List.PublishToDate").ToString("yyyy")
+                                      + "')",
+
+                            Title = Translate("Set as default"),
+                            Icon = new Icon
+                            {
+                                Prefix = "fal",
+                                Name = "fa-check",
+                                LabelPosition = IconLabelPosition.After
+                            }
+                        });
+                    }
+                }
+
+                list.AddListItem(listItem);
+            }
+
+            @Render(list);
+        }
+    }
+}
+
+@helper RenderListSnippets()
+{
+    <script>
+        function makeDefault(url) {
+            Request.Fetch().get(url, function () {
+                location.reload();
+            }, function () { }, false);
+        }
+    </script>
+}

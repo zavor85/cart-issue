@@ -1,0 +1,665 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Core
+@using System.Linq
+
+@Include("../../../../Json/eCom7/CartV2/Step/CVRNumber.cshtml")
+
+
+ 
+
+@helper RenderAddresses() {
+
+ 
+
+    var settings = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout");
+    var billingAddressesEditing = settings.GetList("AddressesEditing");
+    var userLoggedIn = Pageview.User != null;
+
+    if ( userLoggedIn ) {
+        if ( billingAddressesEditing.SelectedValue == "readonly" ) {
+            @RenderReadOnlyBillingAddress()
+            @RenderReadOnlyShippingAddress()
+        } else if ( billingAddressesEditing.SelectedValue == "static" ) {
+             
+            if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Address"))) {
+          
+                @RenderReadOnlyBillingAddress()
+            } else {
+                @RenderEditableBillingAddress()
+            }
+            @RenderStaticShippingAddress()
+        }  else {
+       
+            @RenderEditableBillingAddress()
+            <span id="onepage-shipping-address">
+            @RenderEditableShippingAddress()
+            </span>
+        }
+    } else {
+        @RenderEditableBillingAddress()
+         <span id="onepage-shipping-address">
+        @RenderEditableShippingAddress()
+        </span>
+    }
+}
+
+@helper RenderEditableBillingAddress() { 
+
+   
+
+    var countrySelected = GetLoop("Countries").FirstOrDefault(x => x.GetBoolean("Ecom:Country.IsCustomerCountryOrDefault")).GetString("Ecom:Country.Code2");
+    var getRegions = ( countrySelected != null ? Dynamicweb.Ecommerce.Services.Countries.GetRegions(countrySelected) : null );
+
+    <div class="u-margin-bottom--xl">
+        <h2 class="u-margin-bottom--lg">@Translate("Billing address")</h2>
+
+     
+        <div class="u-position-relative">
+            <div id="AjaxClientType" class="checkout-input__wrapper"></div>
+        </div>
+         
+        <div class="u-position-relative">
+            <div id="AjaxBillingRegions" class="checkout-input__wrapper"></div>
+        </div>
+
+         <div class="u-position-relative">
+            <div id="AjaxSelectCountry" class="checkout-input__wrapper"></div>
+        </div>
+
+    </div>
+}
+
+@helper RenderReadOnlyBillingAddress() { 
+    <div class="u-margin-bottom--xl">
+        <h2 class="u-margin-bottom--lg">@Translate("Billing address")</h2>
+
+        <div class="form__field-group--bordered">
+            @Render(new RadioButtonField {
+                Name = "BillingAddress",
+                Id = "BillingAddress",
+                Checked = true,
+                Label = getLabel(GetString("Ecom:Order.Customer.Name"), GetString("Ecom:Order.Customer.Address"), GetString("Ecom:Order.Customer.Zip"), GetString("Ecom:Order.Customer.City"), GetString("Ecom:Order.Customer.Country"), GetString("Ecom:Order.Customer.Email"), GetString("Ecom:Order.Customer.Phone"), "0"),
+                WrapperCssClass = "u-no-margin form__field-group--hide-radio",
+                Disabled = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetList("AddressesEditing").SelectedValue == "readonly" ? true : false
+            })
+        </div>
+    </div>
+}
+
+@helper RenderReadOnlyShippingAddress() {
+    var userAddresses = GetLoop("UserManagement:User.UserAddresses");
+
+    <h2 class="u-margin-bottom--lg">@Translate("Shipping address")</h2>
+
+    if ( userAddresses.Count == 0 ) {
+        @RenderDefaultAddress("", true)
+    }
+
+    if ( userAddresses != null && userAddresses.Any() ) {
+    
+        // Set selected item (optionally parsed in, used in other areas as OrderDraftDetails)
+        @* Eventhough the address is not included in this loop, it is saved on the first item in the loop *@
+        string selectedId = userAddresses.FirstOrDefault().GetString("UserManagement:User.UserAddress.SelectedAddressID"); 
+
+        @Render(new HiddenField {
+            Name = "UserManagementUserUserAddressSelectedAddressID",
+            Id = "UserManagementUserUserAddressSelectedAddressID",
+            Value = selectedId
+        })
+
+        // Add searchfield
+        if ( userAddresses.Count > 5 ) {
+            @Render(new TextField {
+                Name = "UserAddressesSearch",
+                Id = "UserAddressesSearch",
+                Placeholder = Translate("Search addresses"),
+                Type = TextFieldType.Text,
+                OnKeyUp = "Filter.FilterItems(event)"
+            })
+        }
+
+        var countryCode2 = "";
+
+        foreach ( LoopItem country in GetLoop("Countries") ) {
+            if (country.GetBoolean("Ecom:Country.IsCustomerCountryOrDefault")) {
+                countryCode2 = country.GetString("Ecom:Country.Code2");
+            }
+        }
+
+        @Render(new HiddenField { Name = "EcomOrderDeliveryName", Id = "EcomOrderDeliveryName", Value = GetString("Ecom:Order.Customer.Name") })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryZip", Id = "EcomOrderDeliveryZip", Value = GetString("Ecom:Order.Customer.Zip") })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryCity", Id = "EcomOrderDeliveryCity", Value = GetString("Ecom:Order.Customer.City") })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryCountry", Id = "EcomOrderDeliveryCountry", Value = countryCode2 })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryAddress", Id = "EcomOrderDeliveryAddress", Value = GetString("Ecom:Order.Customer.Address") })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryEmail", Id = "EcomOrderDeliveryEmail", Value = GetString("Ecom:Order.Customer.Email") })
+        @Render(new HiddenField { Name = "EcomOrderDeliveryPhone", Id = "EcomOrderDeliveryPhone", Value = GetString("Ecom:Order.Customer.Phone") })
+
+        <div class="form__group">
+            @if (userAddresses.Count > 0) {
+                <div class="form__field-group--bordered" data-filter-value="@GetString("Ecom:Order.Customer.Address")">
+                    @Render(new RadioButtonField {
+                        Name = "UserManagementUserSelectedAddress",
+                        Id = "UserManagementUserAddress_" + Pageview.User.ID,
+                        Value = Pageview.User.ID.ToString(),
+                        Checked = selectedId == Pageview.User.ID.ToString() ? true : false,
+                        Label = Translate("Same as billing address"),
+                        WrapperCssClass = "u-no-margin",
+                        OnClick = "FillCustomerAddressFields('" + GetString("Ecom:Order.Customer.Name") + "', '" + GetString("Ecom:Order.Customer.Address") + "', '" + GetString("Ecom:Order.Customer.Zip") + "', '" + GetString("Ecom:Order.Customer.City") + "', '" + countryCode2 + "', '" + GetString("Ecom:Order.Customer.Email") + "', '" + GetString("Ecom:Order.Customer.Phone") + "')",
+                        ExtraAttributes = new Dictionary<string, string>{
+                            { "data-bind-reactive", "Shipping, Payment, Summary" },
+                            { "data-reactive-delay", "300" }
+                        }
+                    })
+                </div>
+
+                foreach ( LoopItem item in userAddresses ) {
+                    string value = Converter.ToString(item.GetInteger("UserManagement:User.UserAddress.ID"));
+
+                    string name = item.GetString("UserManagement:User.UserAddress.AccessUserAddress_UserName");
+                    string address = item.GetString("UserManagement:User.UserAddress.Address");
+                    string zipCode = item.GetString("UserManagement:User.UserAddress.Zip");
+                    string city = item.GetString("UserManagement:User.UserAddress.City");
+                    string country = item.GetString("UserManagement:User.UserAddress.Culture.CountryName");
+                    string countryCode = item.GetString("UserManagement:User.UserAddress.CountryCode");
+                    string email = item.GetString("UserManagement:User.UserAddress.Email");
+                    string phone = item.GetString("UserManagement:User.UserAddress.Phone");
+                
+                    @RenderAddressSelect(name, address, zipCode, city, country, countryCode, email, phone, value, selectedId)
+                }
+            } else {
+                @RenderDefaultAddress(selectedId, true)
+            }
+        </div>
+    }
+}
+
+@helper RenderDefaultAddress( string selectedId = "", bool hideRadio = false ) {
+    string value = GetString("UserManagement:User.ID");
+    string name = GetString("UserManagement:User.Name");
+    string address = GetString("UserManagement:User.Address");
+    string zipCode = GetString("UserManagement:User.Zip");
+    string city = GetString("UserManagement:User.City");
+    string country = GetString("UserManagement:User.Culture.CountryName");
+    string countryCode = GetString("UserManagement:User.CountryCode");
+    string email = GetString("UserManagement:User.Email");
+    string phone = GetString("UserManagement:User.Phone");
+
+    @RenderAddressSelect(name, address, zipCode, city, country, countryCode, email, phone, value, selectedId, hideRadio)
+}
+
+
+@helper RenderAddressSelect( string name, string address, string zipCode, string city, string country, string countryCode, string email, string phone, string value, string selectedId, bool hideRadio = false ) {
+    string label = getLabel(name, address, zipCode, city, country, email, phone, value);
+    bool selected = value == selectedId ? true : false;
+
+    <div class="form__field-group--bordered" data-filter-value="@address">
+        @Render(new RadioButtonField {
+            Name = "UserManagementUserSelectedAddress",
+            Id = "UserManagementUserAddress_" + value,
+            Value = value,
+            Checked = selected,
+            Label = label,
+            WrapperCssClass = hideRadio ? "u-no-margin form__field-group--hide-radio" : "u-no-margin",
+            OnClick = "FillCustomerAddressFields('" + name + "', '" + address + "', '" + zipCode + "', '" + city + "', '" + countryCode + "', '" + email + "', '" + phone + "')",
+            ExtraAttributes = new Dictionary<string, string>{
+                { "data-bind-reactive", "Shipping, Payment, Summary" }
+            }
+        })
+    </div>
+}
+
+
+@helper RenderStaticShippingAddress() {
+    if ( Pageview.User != null ) {
+        @RenderReadOnlyShippingAddress()
+    }
+    else {
+        @RenderEditableShippingAddress()
+    }
+}
+
+
+@helper RenderEditableShippingAddress() {
+    var countries = GetLoop("Countries");
+
+    <h2 class="u-margin-bottom--lg">@Translate("Shipping address")</h2>
+
+    <div class="chose-delivery-address card u-color-light--bg dw-mod">
+        <div class=" dw-mod">
+            <div class="form__field-group u-margin-bottom dw-mod">
+                <div class="form__field-group dw-mod">
+                    <input id="useBillingAddress" OnChange="document.getElementById('onepage-shipping-address').classList.remove('active');"  name="ShippingAddressSelector" type="radio" checked="true" value="useBillingAddress" class="form__control  dw-mod">
+                        <label for="useBillingAddress" class="dw-mod">@Translate("Ship to the billing address")</label>
+                </div>
+                <div class="form__field-group dw-mod">
+                    <input id="useAnotherAddress" OnChange="document.getElementById('onepage-shipping-address').classList.add('active');" name="ShippingAddressSelector" type="radio" value="useAnotherAddress" class="form__control  dw-mod">
+                        <label for="useAnotherAddress" class="dw-mod">@Translate("Ship to another address")</label>
+                </div>
+            </div>
+        </div>
+     </div>
+
+    @Render(new TextField {
+        Name = "EcomOrderDeliveryName",
+        Id = "EcomOrderDeliveryName",
+        Value = GetString("Ecom:Order.Delivery.Name"),
+        Label = Translate("Name"),
+        ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryName.ErrorMessage"),
+    })
+
+    @Render(new TextField {
+        Name = "EcomOrderDeliveryCompany",
+        Id = "EcomOrderDeliveryCompany",
+        Value = GetString("Ecom:Order.Delivery.Company"),
+        Label = $"{Translate("Company")} <small>({Translate("Optional")})</small>",
+        ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryCompany.ErrorMessage"),
+    })
+
+
+    <fieldset>
+        @Render(new TextField {
+            Name = "EcomOrderDeliveryAddress",
+            Id = "EcomOrderDeliveryAddress",
+            Value = GetString("Ecom:Order.Delivery.Address"),
+            Label = Translate("Address"),
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryAddress.ErrorMessage"),
+        }) 
+
+        <div class="form__fields-collection">
+            @Render(new TextField {
+                Name = "EcomOrderDeliveryZip",
+                Id  = "EcomOrderDeliveryZip",
+                Value = GetString("Ecom:Order.Delivery.Zip"),
+                Label = Translate("Zip code"),
+                WrapperCssClass = "u-flex-basis--40",
+                ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryZip.ErrorMessage"),
+            })
+
+            @Render(new TextField {
+                Name = "EcomOrderDeliveryCity",
+                Id = "EcomOrderDeliveryCity",
+                Value = GetString("Ecom:Order.Delivery.City"),
+                Label = Translate("City"),
+                ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryCity.ErrorMessage"),
+            })
+        </div>
+    </fieldset>
+
+    <div class="u-position-relative">
+        <div id="AjaxDeliveryRegions" class="checkout-input__wrapper"></div>
+    </div>
+
+    if ( countries != null ) {
+        SelectField select = new SelectField {
+            Name = "EcomOrderDeliveryCountry",
+            Id = "AjaxCountry",
+            Label = Translate("Country"),
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryCountry.ErrorMessage"),
+            ExtraAttributes = new Dictionary<string, string>{
+                { "data-bind-reactive", "Shipping, Summary, Parcel, Payment, DeliveryRegions" },
+            }
+        };
+
+        foreach ( LoopItem country in countries ) {
+            select.Options.Add(new SelectFieldOption {
+                Value = country.GetString("Ecom:Country.Code2"),
+                Checked = country.GetBoolean("Ecom:Country.IsCustomerCountryOrDefault"),
+                Label = country.GetString("Ecom:Country.Name"),
+            });
+        }
+                    
+        @Render(select)
+    }
+
+    <div class="form__fields-collection form__fields-collection--2-3">
+        @Render(new TextField {
+            Name = "EcomOrderDeliveryPhone",
+            Id = "EcomOrderDeliveryPhone",
+            Value = GetString("Ecom:Order.Delivery.Phone"),
+            Label = Translate("Phone"),
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryPhone.ErrorMessage"),
+        })
+
+        @Render(new TextField {
+            Name = "EcomOrderDeliveryEmail",
+            Id = "EcomOrderDeliveryEmail",
+            Value = GetString("Ecom:Order.Delivery.Email"),
+            Label = Translate("Email"),
+            Type = TextFieldType.Email,
+            HelpText = Translate("We'll send your receipt to this address"),
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryEmail.ErrorMessage"),
+        })
+    </div>
+
+    <div></div>
+}
+
+
+@helper RenderBillingRegions() {
+
+    var customerRegions = GetLoop("CustomerRegions");
+    var countries = GetLoop("Countries");
+    var countrySelected = countries.FirstOrDefault(x => x.GetBoolean("Ecom:Country.IsCustomerCountryOrDefault")).GetString("Ecom:Country.Code2");
+    var getRegions = ( countrySelected != null ? Dynamicweb.Ecommerce.Services.Countries.GetRegions(countrySelected) : null );
+
+    if (customerRegions.Count > 0) {
+        SelectField selectState = new SelectField {
+            Id = "EcomOrderCustomerRegion",
+            Name = "EcomOrderCustomerRegion",
+            Label = Translate("State/Region"),
+            Value = GetString("Ecom:Order.Customer.Region"),
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerRegion.ErrorMessage"),
+            ExtraAttributes = new Dictionary<string, string>{
+                { "data-bind-reactive", "Shipping, Summary, Parcel, Payment" },
+            }
+        };
+
+        selectState.Options.Add(new SelectFieldOption {
+            Label = Translate("Nothing selected"),
+            Value = "",
+            Disabled = true,
+            Checked = true
+        });
+
+        foreach ( LoopItem state in customerRegions ) {
+            selectState.Options.Add(new SelectFieldOption {
+                Label = state.GetString("Ecom:CustomerRegion.Name"),
+                Checked = state.GetBoolean("Ecom:CustomerRegion.IsCustomerRegion"),
+                Value = state.GetString("Ecom:CustomerRegion.RegionCode")
+            });
+        }
+
+        @Render(selectState)
+    } else if ( getRegions != null && getRegions.FirstOrDefault() != null ) {
+    
+        SelectField selectState = new SelectField {
+            Id = "EcomOrderCustomerRegion",
+            Name = "EcomOrderCustomerRegion",
+            Label = Translate("State/Region"),
+            Value = getRegions.FirstOrDefault().RegionCode,
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerRegion.ErrorMessage"),
+            ExtraAttributes = new Dictionary<string, string>{
+                { "data-bind-reactive", "Billing, Summary, Parcel, Payment" },
+            }
+        };
+    
+        selectState.Options.Add(new SelectFieldOption {
+            Label = Translate("Nothing selected"),
+            Value = "",
+            Disabled = true,
+            Checked = true
+        });
+
+        foreach (var state in getRegions) {
+            selectState.Options.Add(new SelectFieldOption {
+                Label = state.Name,
+                Value = state.RegionCode
+            });
+        }
+
+        @Render(selectState)
+    }
+
+}
+
+@helper RenderDeliveryRegions() {
+
+    var deliveryRegions = GetLoop("DeliveryRegions");
+    var countries = GetLoop("Countries");
+    var countrySelected = countries.FirstOrDefault(x => x.GetBoolean("Ecom:Country.IsDeliveryCountryOrDefault")).GetString("Ecom:Country.Code2");
+    var getRegions = ( countrySelected != null ? Dynamicweb.Ecommerce.Services.Countries.GetRegions(countrySelected) : null );
+
+    if (deliveryRegions.Count > 0) {
+        SelectField selectState = new SelectField {
+            Id = "EcomOrderDeliveryRegion",
+            Name = "EcomOrderDeliveryRegion",
+            Label = Translate("State/Region"),
+            Value = GetString("Ecom:Order.Delivery.Region"),
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryRegion.ErrorMessage"),
+            ExtraAttributes = new Dictionary<string, string>{
+                { "data-bind-reactive", "Shipping, Summary, Parcel, Payment" },
+            }
+        };
+
+        selectState.Options.Add(new SelectFieldOption {
+            Label = Translate("Nothing selected"),
+            Value = "",
+            Disabled = true,
+            Checked = true
+        });
+
+        foreach ( LoopItem state in deliveryRegions ) {
+            selectState.Options.Add(new SelectFieldOption {
+                Label = state.GetString("Ecom:DeliveryRegion.Name"),
+                Checked = state.GetBoolean("Ecom:DeliveryRegion.IsCustomerRegion"),
+                Value = state.GetString("Ecom:DeliveryRegion.RegionCode")
+            });
+        }
+
+        @Render(selectState)
+    } else if ( getRegions != null && getRegions.FirstOrDefault() != null ) {
+    
+        SelectField selectState = new SelectField {
+            Id = "EcomOrderDeliveryRegion",
+            Name = "EcomOrderDeliveryRegion",
+            Label = Translate("State/Region"),
+            Value = getRegions.FirstOrDefault().RegionCode,
+            ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderDeliveryRegion.ErrorMessage"),
+            ExtraAttributes = new Dictionary<string, string>{
+                { "data-bind-reactive", "Shipping, Summary, Parcel, Payment" },
+            }
+        };
+    
+        selectState.Options.Add(new SelectFieldOption {
+            Label = Translate("Nothing selected"),
+            Value = "",
+            Disabled = true,
+            Checked = true
+        });
+
+        foreach (var state in getRegions) {
+            selectState.Options.Add(new SelectFieldOption {
+                Label = state.Name,
+                Value = state.RegionCode
+            });
+        }
+
+        @Render(selectState)
+    }
+
+}
+
+
+
+@helper RenderClientType(){
+
+
+    //  Implementing CVR 
+    CompanyDetails company = new CompanyDetails();
+
+    var businessClient = company.GetBusinessClientDetails(GetString("CVR.Clean"));
+    if (businessClient.error == "NOT_FOUND")
+    {
+        <div class="alert alert-danger" id="cvr-error" style="background-color: #ebccd1; color: #a94442; padding: 20px">
+            Vi kunne ikke finde informationer for det oplyste cvr- / p-nummer.
+        </div>
+    }
+
+
+
+
+       <fieldset class="end-border">
+    @{
+     SelectField ClientType = new SelectField
+     {
+         Id = "ClientType",
+         Name = "ClientType",
+         Label = Translate("I ACT AS"),
+         ExtraAttributes = new Dictionary<string, string>
+         {
+             {"data-bind-reactive", "Shipping, Summary, Parcel, Payment, BillingRegions, ClientType"}
+         }
+     };
+
+     ClientType.Options.Add(new SelectFieldOption
+     {
+         Label = Translate("Private customer"),
+         Value = "b2c",
+         Disabled = false,
+         Checked = GetString("ClientType.Clean") == "b2c" ? true : false
+     });
+
+     ClientType.Options.Add(new SelectFieldOption
+     {
+         Label = Translate("Business customer"),
+         Value = "b2b",
+         Disabled = false,
+         Checked = GetString("ClientType.Clean") == "b2b" ? true : false
+     });
+
+     @Render(ClientType)
+ }
+      </fieldset>
+
+     foreach (var client in ClientType.Options)
+     {
+         if (client.Value == "b2b" && client.Checked == true)
+         {
+             <label class="control-label" for="cvrno" data-label="CVR nummer" data-label-org="CVR- / P-nummer">CVR nummer</label>
+             <div id="CVR-form-container">
+                 <div class="CVR-wrapper">
+                 @Render(new TextField {Name = "CVR", Id = "CVR", Value = GetString("CVR.Clean"), ErrorMessage = GetString("Ecom:Cart.ValidationError.test.ErrorMessage"),})
+                 </div>
+                 <div class="CVR-wrapper">
+                 
+
+             
+         
+                 @Render(new CheckboxField {
+                    Name = "CVRButton",
+                    Id = "CVRButton",
+                    Label = Translate("Get information"),
+                    CssClass = "btn--full more", 
+                    OnClick = "resetStateField('EcomOrderCustomerCompany');resetStateField('EcomOrderCustomerPhone');resetStateField('EcomOrderCustomerEmail');resetStateField('EcomOrderCustomerAddress');resetStateField('EcomOrderCustomerCity');resetStateField('EcomOrderCustomerZip')",
+                    ExtraAttributes = new Dictionary<string, string>{{ "data-bind-reactive", "Shipping, Summary, Parcel, Payment, BillingRegions, SelectCountry, ClientType" }}
+                 })
+                 </div>
+             </div>
+         }
+     }
+
+       if (GetString("ClientType.Clean") == "b2b")
+    {
+        @Render(new TextField {Label = Translate("Company"), Name = "EcomOrderCustomerCompany", Id = "EcomOrderCustomerCompany", Value = string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Company")) ? businessClient.name : GetString("Ecom:Order.Customer.Company"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerCompany.ErrorMessage")}) 
+        @Render(new TextField {Label = Translate("EAN"), Name = "EcomOrderCustomerEAN", Id = "EcomOrderCustomerEAN", Value = string.IsNullOrEmpty(GetString("Ecom:Order.Customer.EAN")) ? businessClient.name : GetString("Ecom:Order.Customer.EAN"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerEAN.ErrorMessage")})
+
+    }
+
+    
+        @Render(new TextField { Label = Translate("Name"), Name = "EcomOrderCustomerName", Id = "EcomOrderCustomerName", Value = GetString("Ecom:Order.Customer.Name"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerName.ErrorMessage") })
+
+
+      <div class="form__fields-collection form__fields-collection--2-3">
+             @Render(new TextField {Label = Translate("Phone"), Name = "EcomOrderCustomerPhone", Id = "EcomOrderCustomerPhone", Value = string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Phone")) ? businessClient.phone : GetString("Ecom:Order.Customer.Phone"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerPhone.ErrorMessage")}) 
+            @Render(new TextField {Label = Translate("Email"), Name = "EcomOrderCustomerEmail", Id = "EcomOrderCustomerEmail", Value = string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Email")) ? businessClient.email : GetString("Ecom:Order.Customer.Email"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerEmail.ErrorMessage")}) 
+        </div>
+
+      
+
+          @Render(new TextField {Label = Translate("Address"), Name = "EcomOrderCustomerAddress", Id = "EcomOrderCustomerAddress", Value = string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Address")) ? businessClient.address : GetString("Ecom:Order.Customer.Address"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerAddress.ErrorMessage")}) 
+
+        <div class="form__fields-collection form__fields-collection--2-3">
+           @Render(new TextField {Label = Translate("Zip"), Name = "EcomOrderCustomerZip", Id = "EcomOrderCustomerZip", Value = string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Zip")) ? businessClient.zipcode : GetString("Ecom:Order.Customer.Zip"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerZip.ErrorMessage")}) 
+            @Render(new TextField {Label = Translate("City"), Name = "EcomOrderCustomerCity", Id = "EcomOrderCustomerCity", Value = string.IsNullOrEmpty(GetString("Ecom:Order.Customer.City")) ? businessClient.city : GetString("Ecom:Order.Customer.City"), ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerCity.ErrorMessage")}) 
+        </div>
+
+}
+
+
+@helper RenderSelectCountry() {
+
+    //  Implementing CVR 
+    CompanyDetails company = new CompanyDetails();
+
+    
+
+       
+            SelectField selectCountry = new SelectField
+            {
+                Id = "AjaxCustomerCountry",
+                Name = "EcomOrderCustomerCountry",
+                Label = Translate("Country"),
+                OnChange = "resetStateField('EcomOrderCustomerRegion')",
+                ErrorMessage = GetString("Ecom:Cart.ValidationError.EcomOrderCustomerCountry.ErrorMessage"),
+                ExtraAttributes = new Dictionary<string, string>{
+                    { "data-bind-reactive", "Shipping, Summary, Parcel, Payment, BillingRegions" }
+                }
+            };
+
+
+            foreach (LoopItem country in GetLoop("Countries"))
+            {
+                selectCountry.Options.Add(new SelectFieldOption { Label = country.GetString("Ecom:Country.Name"), Value = country.GetString("Ecom:Country.Code2"), Checked = country.GetBoolean("Ecom:Country.IsCustomerCountryOrDefault") });
+            }
+         
+
+         @Render(selectCountry)
+
+       
+
+      
+}
+
+
+
+@functions {
+
+    // Render label for radio buttons
+    public string getLabel( string name, string address, string zipCode, string city, string country, string email, string phone, string value ) {
+        var settings = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout");
+        var billingAddressesEditing = settings.GetList("AddressesEditing");
+
+        string label = $@"<span style=""width: calc(100% - 40px)"">
+            <strong>{name}</strong>, {address}, {zipCode} {city}, {country}
+            <small class=""checkout-input__item-description"">{email}, {phone}</small>
+        </span>";
+
+        if ( billingAddressesEditing.SelectedValue == "static" ) {
+            var page = ( value == "0" ? "ManageAddressesPage" : "CustomerAddresses" );
+            label += $"<a href=\"/Default.aspx?ID={GetPageIdByNavigationTag(page)}\" class=\"checkout-input__item-edit u-color-gray u-font-size--md\"><i class=\"fal fa-pencil\"></i></a>";
+        }
+
+        return label;
+    }
+
+   
+ 
+
+   
+
+}
+
+    <script>
+        function resetStateField(stateFieldId) {
+            let stateField = document.getElementById(stateFieldId);
+            if (stateField) {
+                stateField.value = "";
+                let disabledOption = stateField.querySelector("option:checked");
+                if (disabledOption) {
+                    disabledOption.disabled = false;
+                    disabledOption.removeAttribute("disabled");
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            regionLabels.InitDictionary({
+                "CA": "@Translate("Province")",
+                "US": "@Translate("State")"
+            });
+            regionLabels.LocalizeRegionLabels("EcomOrderCustomerRegion", "EcomOrderCustomerCountry");
+            regionLabels.LocalizeRegionLabels("EcomOrderDeliveryRegion", "EcomOrderDeliveryCountry");
+        });
+    </script>

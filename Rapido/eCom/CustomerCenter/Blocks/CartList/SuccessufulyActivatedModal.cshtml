@@ -1,0 +1,38 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage successufulyActivatedModalPage = BlocksPage.GetBlockPage("CartList");
+}
+
+@{
+    if (string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.Carts.EmptyList")))
+    {
+        var successufulyActivatedModal = new Modal
+        {
+            Id = "SuccessufulyActivated",
+            Heading = new Heading { Title = Translate("Activate draft") },
+            Width = ModalWidth.Sm,
+            BodyText = Translate("Draft was successufuly activated")
+        };
+
+        successufulyActivatedModal.AddActions(
+            new Button
+            {
+                ButtonLayout = ButtonLayout.Primary,
+                Title = Translate("OK"),
+                OnClick = "document.getElementById('SuccessufulyActivatedModalTrigger').checked = false"
+            }
+        );
+
+        successufulyActivatedModalPage.Add("List", new Block
+        {
+            Id = "SuccessufulyActivatedModal",
+            SortId = 50,
+            Component = successufulyActivatedModal
+        });
+    }
+}

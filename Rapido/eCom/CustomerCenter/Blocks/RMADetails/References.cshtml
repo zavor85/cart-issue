@@ -1,0 +1,78 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage referencesPage = BlocksPage.GetBlockPage("RMADetails");
+}
+
+@{
+    Block scripts = new Block
+    {
+        Id = "Scripts",
+        SortId = 200,
+        Template = RenderRmaDetailsScripts()
+    };
+
+    referencesPage.Add(scripts);
+}
+
+@helper RenderRmaDetailsScripts()
+{
+    <script type="text/javascript">
+        function changeRMAParameters()
+        {
+            let orderEl = document.getElementById("RMAOrderID");
+            let orderSelectError = document.getElementById("orderSelectError");
+            
+            if (orderEl.value == "") {
+                orderSelectError.classList.remove("u-hidden");
+                return;
+            } else {
+                orderSelectError.classList.add("u-hidden");
+                let form = document.getElementById("RMAForm");
+                form.submit();
+            }
+        }
+
+        function selectRMAProduct(el)
+        {
+            let comment = el.closest(".js-rma-item").querySelector(".js-comment");
+            if (comment) {
+                comment.classList.toggle("u-hidden", !el.checked);
+            }
+        }
+
+        function createRMARequest()
+        {
+            let selectProductModalTrigger = document.getElementById("SelectRmaProductsMessageModalTrigger");
+            let specifyInfoModalTrigger = document.getElementById("AddInfoMessageModalTrigger");
+            let checkedProducts = document.querySelectorAll(".js-rma-item-checkbox:checked");
+            if (checkedProducts.length == 0) {
+                selectProductModalTrigger.checked = true;
+                return;
+            }
+            let additionalInfo = document.getElementById("RMAComment");
+            if (additionalInfo && additionalInfo.value == "")
+            {
+                specifyInfoModalTrigger.checked = true;
+                return;
+            }
+
+            //comments are required
+            for (let i = 0; i < checkedProducts.length; i++) {
+                let el = checkedProducts[i];
+                let comment = el.closest(".js-rma-item").querySelector(".js-comment textarea");
+                if (comment && comment.value == "") {
+                    specifyInfoModalTrigger.checked = true;
+                    return;
+                }
+            }
+
+            let form = document.getElementById("RMAForm");
+            form.submit();
+        }
+    </script>
+}

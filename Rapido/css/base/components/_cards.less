@@ -1,0 +1,113 @@
+//Cards
+
+.card {
+    position: relative;
+    padding: @reflex-cell-spacing-lg;
+    background-color: @white;
+    border-radius: @global-radius;
+    border: @border-width solid @border-color;
+
+    @media (min-width: @reflex-md) {
+        padding: @reflex-cell-spacing-xl;
+    }
+
+
+    &__wrapper {                                                                          
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    &__item {
+        width: 100%;
+        padding-bottom: @reflex-cell-spacing-md;
+
+        @media (min-width: @reflex-md) {
+            padding-bottom: @reflex-cell-spacing-lg;
+        }
+
+        & + & {
+            margin-top: @reflex-cell-spacing-lg;
+
+            @media (min-width: @reflex-md) {
+                margin-top: @reflex-cell-spacing-lg;
+            }
+        }
+
+        &-subset {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: -10px;
+            margin-right: -10px;
+
+            &-item {
+                flex-grow: 1;
+                padding: 0 10px;
+
+                @media (min-width: @reflex-sm) {
+                    flex-basis: 50%;
+                }
+            }
+        }
+    }
+
+
+    &-header {
+        padding: 1.5em;
+        padding-bottom: 0;
+        border-top-left-radius: @global-radius;
+        border-top-right-radius: @global-radius;
+        border: @border-width solid @border-color;
+        border-bottom: none;
+
+        & + .card {
+            border-top: none;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+    }
+
+
+    &-body {
+        margin-top: @reflex-cell-spacing-md;
+
+        @media (min-width: @reflex-md) {
+            margin-top: @reflex-cell-spacing-lg;
+        }
+    }
+}
+
+.card-header__status {
+    display: inline-block;
+    border: @border-width @gray-light solid;
+    padding: 0 @reflex-cell-spacing-md;
+    font-size: @font-size--md;
+
+    &.card-header__status--green {
+        background-color: @color-status--green;
+        color: white;
+        border-color: @color-status--green;
+    }
+}
+
+.card-header h3 {
+    font-size: @font-size--lg;
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+.card-footer {
+    margin: 0;
+    margin-top: auto;
+    padding: @reflex-cell-spacing-lg;
+    background-color: @gray-lightest;
+    min-height: 65px; 
+}
+
+//Paragraph cards
+.paragraph-card {
+	height: 100%;
+    border: @border-width solid @gray-light;
+    background-color: @white; 
+    padding: @reflex-cell-spacing-md;
+    position: relative;
+}

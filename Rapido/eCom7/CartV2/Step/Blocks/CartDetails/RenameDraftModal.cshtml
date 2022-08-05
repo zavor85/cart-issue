@@ -1,0 +1,78 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage cartDetailsPage = BlocksPage.GetBlockPage("CartDetails");
+}
+
+@{
+    var renameDraftModal = new Modal {
+        Id = "RenameDraft",
+        Heading = new Heading { Title = Translate("Rename draft") },
+        Width = ModalWidth.Md,
+        BodyTemplate = RenderRenameDraftModalBody(),
+    };
+
+    renameDraftModal.AddActions(
+        new Button {
+            ButtonLayout = ButtonLayout.Secondary,
+            Title = Translate("Cancel"),
+            OnClick = "document.getElementById('RenameDraftModalTrigger').checked = false;"
+        },
+        new Button {
+            ButtonLayout = ButtonLayout.Primary,
+            Title = Translate("Save"),
+            OnClick = "document.getElementById('RenameDraftForm').submit()"
+        }
+    );
+
+    cartDetailsPage.Add("PageContainer", new Block {
+        Id = "RenameModal",
+        SortId = 30,
+        Component = renameDraftModal
+    });
+
+    cartDetailsPage.Add("BottomSnippets", new Block {
+        Id = "RenameModalScript",
+        SortId = 30,
+        Template = RenderRenameDraftModalScript()
+    });
+}
+
+
+@helper RenderRenameDraftModalBody() {
+
+    var form = new Form {
+        Method = FormMethod.Post,
+        ExtraAttributes = new Dictionary<string, string>() { { "Id", "RenameDraftForm" } },
+        Action = "Default.aspx?ID=" + Pageview.Page.ID + "&cartcmd=setname"
+    };
+
+    form.Add(new HiddenField {
+        Id = "RenameDraftId",
+        Name = "CartId"
+    });
+
+    form.Add(new TextField {
+        Id = "RenameDraftName",
+        Label = Translate("Draft name"),
+        Name = "CartName",
+        Required = true
+    });
+
+    @Render(form)
+}
+
+@helper RenderRenameDraftModalScript() {
+    <script>
+        function openRenameDraftModal(cartName, cartId) {
+            document.getElementById("RenameDraftName").value = cartName;
+            document.getElementById("RenameDraftId").value = cartId;
+            document.getElementById("RenameDraftModalTrigger").checked = true;
+        }
+    </script>
+}

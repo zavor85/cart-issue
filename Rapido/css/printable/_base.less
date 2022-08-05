@@ -1,0 +1,123 @@
+
+
+@page { margin: 0 }
+body { margin: 0 }
+.sheet {
+  margin: 0;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  page-break-after: always;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/** Paper sizes **/
+body.a3               .sheet { width: 297mm; height: 419mm }
+body.a3.landscape     .sheet { width: 420mm; height: 296mm }
+body.a4               .sheet { width: 210mm; height: 296mm }
+body.a4.landscape     .sheet { width: 297mm; height: 209mm }
+body.a5               .sheet { width: 148mm; height: 209mm }
+body.a5.landscape     .sheet { width: 210mm; height: 147mm }
+body.letter           .sheet { width: 216mm; height: 279mm }
+body.letter.landscape .sheet { width: 280mm; height: 215mm }
+body.legal            .sheet { width: 216mm; height: 356mm }
+body.legal.landscape  .sheet { width: 357mm; height: 215mm }
+
+/** Padding area **/
+.sheet.padding-10mm { padding: 10mm }
+.sheet.padding-15mm { padding: 15mm }
+.sheet.padding-20mm { padding: 20mm }
+.sheet.padding-25mm { padding: 25mm }
+
+/** Tables **/
+td {
+    vertical-align: top;
+
+    p {
+        margin: 0;
+    }
+}
+
+/** Paper tools **/
+.paper-tools {
+    margin: 0 5mm;
+    position: fixed;
+    right: 0;
+    z-index: 1;
+}
+
+.paper-tools__action-btn {
+    background-color: transparent;
+    border-radius: 0;
+    color: inherit;
+    cursor: pointer;
+    display: inline-block;
+    font-size: inherit;
+    font-weight: 500;
+    letter-spacing: .1rem;
+    margin-bottom: 1em;
+    text-align: center;
+    text-decoration: none;
+    transition-duration: 200ms;
+    vertical-align: top;
+    word-spacing: initial;
+    word-break: break-all;
+    border: none;
+    line-height: 28px;
+    outline: none;
+    background-color: #e0e0e0;
+    
+    &:hover {
+        &:not(.disabled),
+        &:not(:disabled),
+        &:not([disabled]) {
+            outline: none;
+            background-color: rgba(0,0,0,0.3);
+        }
+    }
+
+    &:focus {
+        &:not(.disabled),
+        &:not(:disabled),
+        &:not([disabled]) {
+            outline: none;
+        }
+    }
+}
+
+
+/** For screen preview **/
+@media screen {
+    body {
+        background: #e0e0e0
+    }
+
+    .sheet {
+        background: white;
+        box-shadow: 0 .5mm 2mm rgba(0,0,0,.3);
+        margin: 5mm auto;
+    }
+}
+
+/** Fix for Chrome issue #273306 **/
+@media print {
+           body.a3.landscape { width: 420mm }
+  body.a3, body.a4.landscape { width: 297mm }
+  body.a4, body.a5.landscape { width: 210mm }
+  body.a5                    { width: 148mm }
+  body.letter, body.legal    { width: 216mm }
+  body.letter.landscape      { width: 280mm }
+  body.legal.landscape       { width: 357mm }
+  * {-webkit-print-color-adjust:exact;}
+
+  /** Exclude class **/
+  .exclude-in-print {
+    display: none;   
+  }
+
+    /** Hack to fix the IronPDF scale bug**/
+    .paper-body {
+        zoom: 126%;
+    }
+}

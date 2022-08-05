@@ -1,0 +1,121 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@Include("ParagraphBase.cshtml")
+
+@functions {
+    public string GenerateRgba(string color, string opacity)
+    {
+        color = color.Replace("#", "");
+        if (color.Length == 6) {
+            return "rgba(" + Convert.ToInt32(color.Substring(0, 2), 16) + ", " + Convert.ToInt32(color.Substring(2, 2), 16) + ", " + Convert.ToInt32(color.Substring(4, 2), 16) + ", " + opacity + ");";
+        } else {
+            return Convert.ToInt16(color).ToString();
+        }
+    }
+}
+
+@{ 
+    string link = !string.IsNullOrEmpty(Model.Item.GetString("Link")) ? Model.Item.GetString("Link") : "";
+    string linkTarget = link.Contains("http") ? "_blank" : "_self";
+}
+
+@if (!string.IsNullOrEmpty(link)) {
+    <a href="@link" target="@linkTarget">
+         @RenderTheContent()
+    </a>
+} else {
+    @RenderTheContent()
+}
+
+@helper RenderTheContent() {
+    string innerPadding = Model.Item.GetList("Padding") != null ? " padding-size-" + Model.Item.GetList("Padding").SelectedValue.ToLower() : "";
+    innerPadding += Model.Item.GetList("PaddingPosition") != null ? " padding-position-" + Model.Item.GetList("PaddingPosition").SelectedValue.ToLower() : "";
+
+    <div class="u-full-height">
+        @if (!string.IsNullOrEmpty(Model.Item.GetString("Image"))) {
+            int cropMode = !string.IsNullOrEmpty(Convert.ToString(Model.Item.GetList("ImageCrop"))) ? Convert.ToInt32(Model.Item.GetList("ImageCrop").SelectedValue) : 0;
+
+            Image image = new Image
+            {
+                Path = Model.Item.GetFile("Image") != null ? Model.Item.GetFile("Image").Path : "",
+                CssClass = "background-image__cover",
+                ImageDefault = new ImageSettings
+                {
+                    Crop = cropMode,
+                    Height = 845,
+                    Width = 1920
+                },
+                ImageMedium = new ImageSettings
+                {
+                    Crop = cropMode,
+                    Height = 450,
+                    Width = 1024
+                },
+                ImageSmall = new ImageSettings
+                {
+                    Crop = cropMode,
+                    Height = 544,
+                    Width = 640
+                }
+            };
+
+            image.FilterColor = Model.Item.GetString("ColorForTheFilter").StartsWith("#") ? GenerateRgba(Model.Item.GetString("ColorForTheFilter"), "0.3") : "";
+            image.FilterPrimary = !string.IsNullOrEmpty(Model.Item.GetList("ImageFilterPrimary").SelectedValue) ? (ImageFilter) Enum.Parse(typeof(ImageFilter), Model.Item.GetList("ImageFilterPrimary").SelectedValue.Replace("-", ""), true) : ImageFilter.None;
+            image.FilterSecondary = !string.IsNullOrEmpty(Model.Item.GetList("ImageFilterSecondary").SelectedValue) ? (ImageFilter) Enum.Parse(typeof(ImageFilter), Model.Item.GetList("ImageFilterSecondary").SelectedValue.Replace("-", ""), true) : ImageFilter.None;
+
+            <div class="background-image dw-mod">
+                <div class="background-image__wrapper dw-mod">
+                    @Render(image)
+                </div> 
+            </div>
+        }
+
+        <div class="content-row__item__body @innerPadding dw-mod">
+            @if (!string.IsNullOrEmpty(Model.Item.GetString("Title")) || !string.IsNullOrEmpty(Model.Item.GetString("Text"))) {
+                <div class="u-margin-bottom--lg">
+                    @if (!Model.Item.GetBoolean("HideTitle")) { 
+                        @Render(new Heading { Title = Model.Item.GetString("Title"), Level = 2 })
+                    }
+                    @Render(new Text { Content = Model.Item.GetString("Text") })
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Item.GetItem("ButtonOne").GetString("Title")) || !string.IsNullOrEmpty(Model.Item.GetItem("ButtonTwo").GetString("Title")) || !string.IsNullOrEmpty(Model.Item.GetItem("ButtonThree").GetString("Title"))) {
+                <div class="buttons-collection u-block dw-mod">
+                    @ParagraphButton(Model.Item.GetItem("ButtonOne")) 
+                    @ParagraphButton(Model.Item.GetItem("ButtonTwo")) 
+                    @ParagraphButton(Model.Item.GetItem("ButtonThree")) 
+                </div>
+            }
+        </div>
+    </div>
+}
+
+
+
+@helper ParagraphButton(ItemViewModel item) { 
+    if (item != null) {
+        if (!string.IsNullOrEmpty(item.GetString("Title"))) {
+            Button button = new Button {
+                Title = item.GetString("Title"),
+                Href = item.GetString("Link"),
+                ButtonLayout = (ButtonLayout)System.Enum.Parse(typeof(ButtonLayout), char.ToUpper(item.GetList("Layout").SelectedValue[0]) + item.GetList("Layout").SelectedValue.Substring(1))
+            };
+
+            if (!string.IsNullOrEmpty(item.GetString("Icon"))) {
+                button.Icon = new Icon { 
+                    CssClass = item.GetString("Icon")
+                };
+            }
+
+            @Render(button)
+        }    
+    }
+}
+
+
+
+

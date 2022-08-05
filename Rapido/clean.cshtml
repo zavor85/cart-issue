@@ -1,0 +1,6 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+
+@Model.Placeholder("contentmain", "Main content", "template:moduleonly.html;unwrap:true;")
+
+@* Render the grid *@
+@Model.Grid("Grid", "Grid", "default:true;sort:1", "Pages")

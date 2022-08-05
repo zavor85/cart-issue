@@ -1,0 +1,444 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Frontend.Devices
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using Dynamicweb.Core
+@using System
+@using System.IO
+@using System.Web
+@using System.Collections.Generic;
+@using System.Linq
+@using System.Text.RegularExpressions
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage productListPage = BlocksPage.GetBlockPage("ProductList");
+    Dynamicweb.Frontend.ItemViewModel productListSettings = null;
+
+    string favoriteListId = HttpContext.Current.Request.QueryString.Get("ListID");
+    bool isFavoriteList = !string.IsNullOrEmpty(HttpContext.Current.Request.QueryString.Get("ListID"));
+
+}
+
+
+@{
+    productListSettings = Pageview.AreaSettings.GetItem("ProductList");
+
+
+
+    Block pageContainer = new Block()
+    {
+        Id = "PageContainer",
+        Template = RenderPageContainer(),
+        SkipRenderBlocksList = true,
+        BlocksList = new List<Block> {
+
+            new Block
+            {
+                Id = "ProductListHeader",
+                SortId = 10,
+                Template = RenderProductListHeader(),
+                SkipRenderBlocksList = true,
+                BlocksList = new List<Block> {
+                    new Block
+                    {
+                        Id = "ProductListTitle",
+                        SortId = 10,
+                        Design = new Design
+                        {
+                            CssClass = isFavoriteList ? "grid__col-xs-12 grid__col-md-4" : "grid__col-xs-12 grid__col-md-6"
+                        },
+                        Template = RenderProductListTitle()
+                    }
+                }
+            }
+        }
+    };
+    productListPage.Add(pageContainer);
+
+   
+   
+    Block productGroupListContainer = new Block()
+    {
+        Id = "ProductGroupList",
+        SortId = 20,
+        Template = RenderProductGroupList(),
+        SkipRenderBlocksList = true
+    };
+    productListPage.Add("PageContainer", productGroupListContainer);
+
+
+	Block productListNavigation = new Block()
+    {
+        Id = "Navigation",
+        SortId = 30,
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "3"
+        }
+    };
+    productListPage.Add("PageContainer", productListNavigation);
+
+    Block productListContainer = new Block()
+    {
+        Id = "ProductList",
+        SortId = 40,
+        Template = RenderProductList(),
+        SkipRenderBlocksList = true
+    };
+    productListPage.Add("PageContainer", productListContainer);
+
+   
+   
+   
+   
+   
+    if (isFavoriteList)
+    {
+        productListPage.Add("ProductListHeader", new Block
+        {
+            Id = "FavoriteListSearch",
+            SortId = 20,
+            Template = RenderFavoriteListSearch(),
+            Design = new Design
+            {
+                CssClass = "grid__col-sm-4 u-margin-bottom u-margin-top grid--align-self-center"
+            }
+        });
+    }
+
+    Block productListSnippets = new Block()
+    {
+        Id = "BottomSnippets",
+        SortId = 40
+    };
+    productListPage.Add(productListSnippets);
+}
+
+@* This is required for the product list feed to work *@
+@GetValue("DoNotRenderProductListTemplate")
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/EcommerceComponents.cshtml")
+
+@* Include the Blocks for the page *@
+@Include("Blocks/Products.cshtml")
+
+@Include("Blocks/ViewList.cshtml")
+@Include("Blocks/ViewGrid.cshtml")
+@Include("Blocks/ViewDetails.cshtml")
+@Include("Blocks/ViewTiles.cshtml")
+@Include("Blocks/Promotions.cshtml")
+@Include("Blocks/Menu.cshtml")
+@Include("Blocks/Facets.cshtml")
+@Include("Blocks/ListMore.cshtml")
+@Include("Blocks/BottomSnippets.cshtml")
+@Include("Blocks/ListActions.cshtml")
+
+@Include("Blocks/Custom__Blocks.cshtml")
+
+
+@if (productListNavigation.BlocksList.Count == 0)
+{
+    productListNavigation.Design.RenderType = RenderType.Hide;
+}
+
+
+<form name="multiForm" id="multiForm" method="post" onkeypress="return event.keyCode != 13;">
+    @* onkeypress is the fix for disabling submit form on Enter key from any field in product list *@
+	<input type="hidden" name="CartCmd" id="CartCmd" value="addMulti" />
+    @* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+    @RenderBlockList(productListPage.BlocksRoot.BlocksList)
+</form>
+
+@helper RenderPageContainer()
+{
+    List<Block> subBlocks = this.productListPage.GetBlockListById("PageContainer").OrderBy(item => item.SortId).ToList();
+
+    string pageUrl = GetGlobalValue("Global:Pageview.Url.Raw");
+    string feedFullUrl = pageUrl + "&feed=true";
+    feedFullUrl += !isFavoriteList ? "&DoNotShowVariantsAsSingleProducts=True" : "";
+    string smallDeviceCss = Pageview.Device.ToString() == "Mobile" ? "" : "u-padding"; 
+
+   
+    <div class="grid grid--align-content-start @smallDeviceCss js-handlebars-root" id="productList" data-template="ProductContainer" data-pre-render-template="ProductPreRenderContainer" data-json-feed="@feedFullUrl" data-preloader="overlay"></div>
+
+    <script id="ProductContainer" type="text/x-template">
+		{{#unless hasSubGroups}}
+			{{#each .}}
+					@RenderBlockList(subBlocks)
+			{{else}}
+				<div class="grid__col-12">
+					<h2 class="u-ta-center">@Translate("Your search gave 0 results")</h2>
+				</div>
+			{{/each}}
+		{{/unless}}		
+    </script>
+
+}
+
+
+
+@helper RenderProductList()
+{
+    @*This is part of a script template *@
+
+    List<Block> subBlocks = productListPage.GetBlockListById("ProductList").OrderBy(item => item.SortId).ToList();
+    string smallDeviceCss = Pageview.Device.ToString() == "Mobile" ? "u-no-padding" : "";
+    string columnClass = "auto";
+    
+    if (productListPage.GetBlockListById("Navigation").Count == 0)
+    {
+        columnClass = "12";
+    }
+<text>
+	{{#unless hasSubGroups}}    
+
+    <div class="grid__col-@columnClass @smallDeviceCss">
+        @RenderBlockList(subBlocks)
+    </div>
+    	{{/unless}}		
+</text>  
+    
+}
+
+
+
+
+@helper RenderProductListHeader() {
+    List<Block> subBlocks = this.productListPage.GetBlockListById("ProductListHeader");
+    bool enableSeparationLine = productListSettings.GetBoolean("EnableSeparationLine");
+    string className = ( enableSeparationLine != null && enableSeparationLine ? "u-border-bottom u-padding-bottom" : "" );
+<text>
+	{{#unless hasSubGroups}}
+   
+    <div class="grid grid--align-content-start grid--justify-end grid--bleed u-margin-bottom--lg u-padding grid--wrap u-flex-grow--0 dw-mod">
+        <div class="grid @className">
+            @RenderBlockList(subBlocks)
+        </div>
+    </div>
+	{{/unless}}		
+</text>    
+}
+ 
+   
+@helper RenderProductListTitle()
+{
+    var header = new Heading { Title = "{{{header}}}", CssClass = "u-no-margin" };
+
+    if (isFavoriteList) 
+    {
+        var selectedFavoriteIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon").SelectedValue : "star";
+        header.Icon = new Icon { Prefix = "fas", Name = "fa-" + selectedFavoriteIcon, LabelPosition = IconLabelPosition.After };
+    }
+
+    @Render(header)
+}
+
+@helper RenderFavoriteListSearch()
+{
+    string pageId = GetGlobalValue("Global:Page.ID");
+    string pageUrl = GetGlobalValue("Global:Pageview.Url.Raw");
+    string feedFullUrl = pageUrl + "&feed=true";
+    string searchPlaceholder = Translate("Search favorite products");
+    string searchValue = HttpContext.Current.Request.QueryString.Get("Search") ?? "";
+    
+    <div class="typeahead u-color-inherit typeahead--favorites js-typeahead" data-page-size="10" id="FavoritesSearch" data-list-id="@favoriteListId" data-search-feed-id="@pageId&feed=true" data-result-page-id="@pageId">
+        <input type="text" class="typeahead-search-field u-no-margin u-full-width js-typeahead-search-field" placeholder="@searchPlaceholder" value="@searchValue">
+        <ul class="dropdown dropdown--absolute-position u-full-width js-handlebars-root js-typeahead-search-content u-min-w220px u-full-width dw-mod" id="FavoritesSearchContent" data-template="SearchProductsTemplate" data-json-feed="@feedFullUrl&ListID=@favoriteListId" data-init-onload="false" data-preloader="minimal"></ul>
+        <button type="button" class="btn btn--condensed btn--primary u-no-margin dw-mod js-typeahead-enter-btn"><i class="fas fa-search"></i></button>
+    </div>
+} 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@helper RenderProductGroupList()
+{
+    @*This is part of a script template *@
+	List<Block> subBlocks = productListPage.GetBlockListById("ProductGroupList").OrderBy(item => item.SortId).ToList();
+    string smallDeviceCss = Pageview.Device.ToString() == "Mobile" ? "u-no-padding" : "";
+    string columnClass = "12";
+
+
+	<text>
+	{{#if hasSubGroups}}    
+		<div class="grid__col-@columnClass @smallDeviceCss">
+			<div id="ProductsContainer" grp="{{groupId}}" class="grid product-list grid--external-bleed-x dw-mod grid--align-content-start" >		
+			{{#ProductGroupContainer}}
+				{{#ProductGroup}}
+					{{#if groupShowInMenu}}    
+						<div id="Group{{groupId}}" class="grid__col-lg-{{../../grpW1}} grid__col-md-{{../../grpW1}} grid__col-sm-{{../../grpW1}} grid__col-xs-{{../../grpW2}}  product-list__grid-item image-hover--zoom dw-mod">
+							<div class="grid__col--auto js-product-scroll-trigger u-no-padding u-full-height">			
+@*
+	{{../template}} {{../id}} {{../../groupId}}
+	{{groupId}} {{groupIdId}} {{groupNumber}} {{groupLink}} {{groupShowInMenu}} {{groupLargeImage}} {{groupSmallImage}} 
+	{{groupPromotionImage}}	{{groupPromotionHeader}} {{groupPromotionLink}} {{groupPromotionButtonText}}
+*@			
+			
+			<div class="grid__cell product-list__grid-item__image dw-mod ">
+				<a href="{{groupLinkClean}}" title="{{groupName}}" class="u-block u-position-relative image-hover__wrapper dw-mod" idid="{{groupIdId}}">	
+					{{#if groupPromotionImage}}  
+					    {{#if ../../isBrands}}  
+    <img class="grid__cell-img grid__cell-img--centered u-padding b-lazy b-loaded" src="/Admin/Public/GetImage.ashx?width=200&amp;height=200&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{groupPromotionImage}}" data-secondary-image-src="/Admin/Public/GetImage.ashx?width=200&amp;height=200&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{groupPromotionImage}}" alt="{{groupName}}" data-src="/Admin/Public/GetImage.ashx?width=200&amp;height=200&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{groupPromotionImage}}">
+	    				{{else}}
+    <img class="grid__cell-img grid__cell-img--centered u-padding b-lazy b-loaded" src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{groupPromotionImage}}" data-secondary-image-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{groupPromotionImage}}" alt="{{groupName}}" data-src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image={{groupPromotionImage}}">
+		    			{{/if}}	        
+
+                    {{else}}
+@*<img class="grid__cell-img grid__cell-img--centered u-padding b-lazy b-loaded" src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;image=%2fImages%2fmissing_image.jpg" alt="{{groupName}}">*@
+
+			<img class="grid__cell-img grid__cell-img--centered u-padding b-lazy b-loaded" src="/Admin/Public/GetImage.ashx?width=300&amp;height=300&amp;crop=5&amp;Compression=75&amp;FillCanvas=true&amp;DoNotUpscale=true&amp;Image=/Files/Images/Kategoribilleder/{{groupIdId}}_categorydefault.jpg&amp;altFmImage_path=%2fImages%2fmissing_image.jpg" alt="{{groupName}}">
+				
+					{{/if}}	        
+				</a>
+			</div>
+					{{#unless ../../isBrands}}                                    
+			<a href="{{groupLinkClean}}" class="btn btn--primary">{{groupName}}</a>
+{{/unless}}	                                        
+
+							</div>
+						</div>
+					{{/if}}	        
+				{{/ProductGroup}}  				
+			{{/ProductGroupContainer}}  				
+		</div>
+		</div>
+	{{/if}}	        
+	</text>  
+}
+
+
+
+
+
+
+
+
+@helper RenderProductGroupListHeader() {
+    List<Block> subBlocks = this.productListPage.GetBlockListById("ProductGroupListHeader");
+    bool enableSeparationLine = productListSettings.GetBoolean("EnableSeparationLine");
+    string className = ( enableSeparationLine != null && enableSeparationLine ? "u-padding-bottom" : "" );
+    
+	<text>
+		{{#if hasSubGroups}}
+			<div class="grid grid--align-content-start grid--justify-end grid--bleed u-margin-bottom--lg u-padding grid--wrap u-flex-grow--0 dw-mod">
+				<div class="grid @className">
+					@RenderBlockList(subBlocks)
+				</div>
+			</div>
+		{{/if}}		
+	</text>    
+}
+
+@helper RenderProductGroupListTitle()
+{
+    var header = new Heading { Title = "{{{GroupHeader}}}", CssClass = "u-no-margin" };
+    bool enableSeparationLine = productListSettings.GetBoolean("EnableSeparationLine");
+    string className = ( enableSeparationLine != null && enableSeparationLine ? " u-padding-bottom" : "" );
+
+	<text>
+		{{#if hasSubGroups}}
+			<div class="grid grid--align-content-start grid--bleed u-padding grid--wrap u-flex-grow--0 dw-mod">
+				<div class="@className">
+					@Render(header)
+				</div>
+			</div>
+		{{/if}}		
+	</text>    
+}
+
+
+
+
+@helper RenderProductGroupListTeaser()
+{
+	var text = new Text { Content = "{{{groupTeaser}}}" };
+	
+	<text>
+		{{#if hasSubGroups}}
+			{{#if groupTeaser}}
+				<div class="grid grid--align-content-start grid--bleed u-margin-bottom--lg u-padding grid--wrap u-flex-grow--0 dw-mod">
+					<div>
+						@Render(text)
+					</div>
+				</div>
+			{{/if}}		
+		{{/if}}		
+	</text>    
+}
+@helper RenderProductGroupListDescription()
+{
+	var text = new Text { Content = "{{{groupDescription}}}" };
+	
+	<text>
+		{{#if hasSubGroups}}
+			<div class="grid grid--align-content-start grid--bleed u-margin-bottom--lg u-padding grid--wrap u-flex-grow--0 dw-mod">
+				<div>
+					@Render(text)
+				</div>
+			</div>
+		{{/if}}		
+	</text>    
+}
+@helper RenderProductGroupListImage()
+{
+	<div class="grid grid--align-content-start grid--bleed u-margin-bottom--lg u-padding grid--wrap u-flex-grow--0 dw-mod">
+		<div>
+				
+		{{#if groupDescription}}    
+			{{#if groupPromotionImage}}    
+			@Render(new Image
+		   {
+			   Path = "{{{groupPromotionImage}}}",
+			   Title = "{{{GroupHeader}}}",
+			   ImageDefault = new ImageSettings
+			   {
+				   Width = 300,
+				   Height = 180,
+				   Crop = 5,
+				   Compression = 75,
+				   FillCanvas = true,
+				   DoNotUpscale = true
+			   }
+		   })		
+		   
+			{{else}}
+					
+			@Render(new Image
+		   {
+			   Path = "/Files/Images/Kategoribilleder/{{{groupNumber}}}_categorydefault.jpg",
+			   Title = "{{{GroupHeader}}}",
+			   ImageDefault = new ImageSettings
+			   {
+				   Width = 300,
+				   Height = 180,
+				   Crop = 5,
+				   Compression = 75,
+				   FillCanvas = true,
+				   DoNotUpscale = true
+			   }
+		   })		
+			{{/if}}	        
+		{{/if}}	        
+		   				
+		</div>
+	</div>
+}
+

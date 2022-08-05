@@ -1,0 +1,98 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+
+@using System
+@using System.Collections.Generic
+@using System.IO;
+@using System.Linq
+@using System.Text
+@using System.Web;
+@using System.Web.UI.WebControls
+@using System.Xml
+@using System.Xml.Linq
+@using System.Xml.Schema
+@using Dynamicweb
+@using Dynamicweb.Ecommerce
+@using Dynamicweb.Ecommerce.Products;
+
+
+@{
+    var path = "/Files/Files/Integration/TRADEPLACE/StockPush/TEST/";
+    var dateTimeNow = DateTime.Now.ToString("ddMMyy-HHmmss");
+    string fileName = $"StockPush{dateTimeNow}.xml";
+    string physicalPath = Dynamicweb.Core.SystemInformation.MapPath(path);
+
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"Stock push started. Getting data from Tradeplace");
+
+    var inputStream = HttpContext.Current.Request.InputStream;
+    if (inputStream.Position > 0)
+    {
+        inputStream.Position = 0;
+    }
+
+    Dictionary<string, string> stockPushLineItem = new Dictionary<string, string>();
+    XmlDocument doc = new XmlDocument(){XmlResolver = null};
+    doc.Load(inputStream);
+    doc.Save(physicalPath + fileName);
+    Dynamicweb.Logging.LogManager.Current.GetLogger("Tradeplace/StockPush").Log($"Data in file {physicalPath + fileName}");
+ @* 
+  Dictionary<string, DateTime> expectedStockDateList = new Dictionary<string, DateTime>();
+
+    XmlNodeList nodeList = doc.SelectNodes("TradeplaceMessage/BusinessMessage/StockPush/StockPushLineItems/StockPushLineItem");
+    //int counter = 0;
+    var result = new StringBuilder();
+
+     foreach (XmlNode node in nodeList)
+     {
+         XmlNode EAN = node.SelectSingleNode("Material[@materialQualifier = 'EAN']");
+         XmlNode inStock = node.SelectSingleNode("InStock");
+         XmlNode expectedStockDate = node.SelectSingleNode("ExpectedStockDate");
+         XmlNode year = node.SelectSingleNode("ExpectedStockDate/Year");
+         XmlNode month = node.SelectSingleNode("ExpectedStockDate/Month");
+         XmlNode day = node.SelectSingleNode("ExpectedStockDate/Day");
+
+         // counter++;
+         if ( EAN != null && inStock != null)
+         {
+             if (!stockPushLineItem.ContainsKey(EAN.InnerText))
+             {
+                 if (expectedStockDate != null && year != null && month != null && day != null)
+                 {
+                     expectedStockDateList.Add(EAN.InnerText, new DateTime(Convert.ToInt32(year.InnerText), Convert.ToInt32(month.InnerText), Convert.ToInt32(day.InnerText)));
+                 }
+                 stockPushLineItem.Add(EAN.InnerText, inStock.InnerText);
+                 result.Append($"{EAN.InnerText} {inStock.InnerText} {(expectedStockDate != null ? $"expected delivery date {day.InnerText}.{month.InnerText}.{year.InnerText}" : string.Empty)}\n");
+             }
+         }
+     }
+
+    ProductService productService = new ProductService();
+    var allProducts = productService.GetAllProducts("LANG2", false);
+    foreach (var product in allProducts)
+    {
+        if (stockPushLineItem.ContainsKey(product.EAN))
+        {
+            if (stockPushLineItem[product.EAN] == "Yes")
+            {
+                product.Stock = 10;
+            }
+            else if (stockPushLineItem[product.EAN] == "Low")
+            {
+                product.Stock = 2;
+            }
+            else if (stockPushLineItem[product.EAN] == "No")
+            {
+                if (expectedStockDateList.ContainsKey(product.EAN))
+                {
+                    product.ExpectedDelivery = expectedStockDateList[product.EAN];
+                }
+                product.Stock = 0;
+            }
+            productService.Save(product);
+        }
+    }
+    HttpContext.Current.Response.Write(result);
+        *@
+
+    inputStream.Close();
+
+}

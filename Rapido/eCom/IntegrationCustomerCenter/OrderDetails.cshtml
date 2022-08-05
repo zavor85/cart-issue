@@ -1,0 +1,44 @@
+@inherits RazorTemplateBase<RazorTemplateModel<Template>>
+@using Dynamicweb
+@using Dynamicweb.Rendering;
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage orderDetailsPage = BlocksPage.GetBlockPage("OrderDetails");
+}
+
+@{
+    orderDetailsPage.Add(new Block
+    {
+        Id = "Header",
+        SortId = 10,
+        Component = new Heading { Level = 1, Title = Translate("Order") + " #" + GetString("ID") }
+    });
+    
+    if (GetLoop("OrderLinesLoop").Count == 0)
+    {
+        orderDetailsPage.Add(
+            new Block
+            {
+                Id = "EmptyListMessage",
+                SortId = 20,
+                Component = new Text { Content = Translate("No items found") }
+            }
+        );
+    }
+}
+    
+@Include("Blocks/OrderDetails/DetailsTable.cshtml")
+@Include("Blocks/OrderDetails/Custom__Blocks.cshtml")
+
+@* Include the Rendering helpers *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(orderDetailsPage.BlocksRoot.BlocksList)
+
+

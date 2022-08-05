@@ -1,0 +1,98 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System.Web;
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage userItemPage = BlocksPage.GetBlockPage("UsersListPage");
+}
+
+@{ 
+    userItemPage.Add("UsersListContainer", new Block
+    {
+        Id = "UserItemList",
+        SortId = 10,
+        Template = RenderUserItemList()
+    });
+}
+
+@helper RenderUserItemList()
+{
+    var size = this.userItemPage.GetBlockById("UsersListContainer").Design.Size;
+    string selectedDepartment = !string.IsNullOrEmpty(HttpContext.Current.Request.QueryString.Get("Department")) ? HttpContext.Current.Request.QueryString.Get("Department") : "all";
+
+    foreach (LoopItem user in GetLoop("AllUsers"))
+    {
+        if (selectedDepartment.ToLower() != "all" && user.GetString("UserManagement:User.Department").ToLower() != selectedDepartment.ToLower()) 
+        {
+            continue;
+        }
+        <div class="grid__col-md-@size">
+            <div class="u-flex u-flex--column u-color-light--bg u-full-height u-position-relative">
+                <div class="u-color-light--bg u-no-padding dw-mod">
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.Department")))
+                    {
+                        @Render(new StickersCollection() {
+                           Position = StickersListPosition.TopLeft,
+                           Stickers = new List<Sticker> {
+                                new Sticker() {
+                                    Title = user.GetString("UserManagement:User.Department"),
+                                    BackgroundColor = "black",
+                                    Color = "white"
+                                }
+                            }
+                        });
+                    }
+                    <div class="flex-img image-hover__wrapper">
+                        @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.Image.Clean")))
+                        {
+                            <img class="b-lazy" src="/Files/Images/placeholder.gif" data-src="/Admin/Public/GetImage.ashx?width=1000&height=800&amp;crop=0&amp;DoNotUpscale=true&amp;Compression=75&amp;image=@user.GetString("UserManagement:User.Image.Clean")" alt="@user.GetString("UserManagement:User.UserName")" />
+                        }
+                        else
+                        {
+                            <img class="b-lazy" src="/Files/Images/placeholder.gif" data-src="/Admin/Public/GetImage.ashx?width=1000&height=800&amp;crop=0&amp;DoNotUpscale=true&amp;Compression=75&amp;image=/Files/Templates/Designs/Rapido/Images/userProfile.jpg" alt="@user.GetString("UserManagement:User.UserName")" />
+                        }
+                    </div>
+                </div>
+
+                <div class="card u-color-light--bg u-full-height dw-mod">
+                    <h3 class="article-list__item-header u-truncate-text dw-mod">@user.GetString("UserManagement:User.Name")</h3>
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.JobTitle")))
+                    {
+                        <div class="u-margin-bottom">@user.GetString("UserManagement:User.JobTitle")</div>
+                    }
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.Company")))
+                    {
+                        <div><span class="u-bold">@Translate("Company"):</span> @user.GetString("UserManagement:User.Company")</div>
+                    }
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.Email")))
+                    {
+                        <div><span class="u-bold">@Translate("Email"):</span> @user.GetString("UserManagement:User.Email")</div>
+                    }
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.Phone")))
+                    {
+                        <div><span class="u-bold">@Translate("Phone"):</span> @user.GetString("UserManagement:User.Phone")</div>
+                    }
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.PhoneBusiness")))
+                    {
+                        <div><span class="u-bold">@Translate("Phone business"):</span> @user.GetString("UserManagement:User.PhoneBusiness")</div>
+                    }
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.PhonePrivate")))
+                    {
+                        <div><span class="u-bold">@Translate("Phone business"):</span> @user.GetString("UserManagement:User.PhonePrivate")</div>
+                    }
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.Mobile")))
+                    {
+                        <div><span class="u-bold">@Translate("Mobile"):</span> @user.GetString("UserManagement:User.Mobile")</div>
+                    }
+                    @if (!string.IsNullOrEmpty(user.GetString("UserManagement:User.AccessUser_LinkedIn")))
+                    {
+                        <div class="u-margin-top"><a href="@user.GetString("UserManagement:User.AccessUser_LinkedIn")" target="_blank" rel="noopener">@Translate("Connect to LinkedIn")</a></div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@Include("../../../Components/GeneralComponents.cshtml")

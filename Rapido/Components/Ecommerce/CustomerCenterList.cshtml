@@ -1,0 +1,98 @@
+﻿@using Dynamicweb.Rapido.Blocks.Components
+
+@using Dynamicweb.Frontend
+@using Dynamicweb.Frontend.Devices
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using System.Collections.Generic;
+
+@* Component *@
+
+@helper RenderCustomerCenterList(CustomerCenterList settings)
+{   
+    bool isTouchDevice = Pageview.Device.ToString() == "Mobile" || Pageview.Device.ToString() == "Tablet" ? true : false;
+    string hideActions = isTouchDevice ? "u-block" : "";
+
+    <table class="table data-list dw-mod">
+        @if (settings.GetHeaders().Length > 0) {
+            <thead>
+                <tr class="u-bold">
+                    @foreach (CustomerCenterListHeaderItem header in settings.GetHeaders())
+                    {
+                        var attributes = new Dictionary<string, string>();
+                        if (!string.IsNullOrEmpty(header.Id)) { attributes.Add("id", header.Id); }
+                        if (!string.IsNullOrEmpty(header.CssClass)) { attributes.Add("class", header.CssClass); }
+                        attributes.Add("align", header.Align.ToString());
+                        attributes = attributes.Concat(header.ExtraAttributes).GroupBy(d => d.Key).ToDictionary (d => d.Key, d => d.Last().Value);
+
+                        <td @ComponentMethods.AddAttributes(attributes)>@header.Title</td>
+                    }
+                </tr>
+            </thead>
+        }
+        @foreach (CustomerCenterListItem listItem in settings.GetItems())
+        {
+            int columnCount = 0;
+            int totalColumns = listItem.GetInfoItems().Length;
+            string rowHasActions = listItem.GetActions().Length > 0 ? "data-list__item--has-actions" : "";
+            listItem.Id = !string.IsNullOrEmpty(listItem.Id) ? listItem.Id : Guid.NewGuid().ToString("N");
+
+            var attributes = new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(listItem.Title)) { attributes.Add("title", listItem.Title); };
+
+            attributes = attributes.Concat(listItem.ExtraAttributes).GroupBy(d => d.Key).ToDictionary (d => d.Key, d => d.Last().Value);
+            <tbody class="data-list__item @rowHasActions @listItem.CssClass dw-mod" @ComponentMethods.AddAttributes(attributes)>
+                <tr>
+                    @if (!string.IsNullOrEmpty(listItem.Title) || !string.IsNullOrEmpty(listItem.Description)) {
+                        string onClick = !string.IsNullOrEmpty(listItem.OnClick) ? "onclick=\"" + listItem.OnClick + "\"" : "";
+
+                        <td rowspan="2" @onClick class="data-list__main-item dw-mod">
+                            @if (!string.IsNullOrEmpty(listItem.Title)) {
+                                <div class="u-bold">@listItem.Title</div>
+                            }
+                            @if (!string.IsNullOrEmpty(listItem.Description)) {
+                                <div>@listItem.Description</div>
+                            }
+                        </td>
+                    }
+
+                    @foreach (CustomerCenterListInfoItem infoItem in listItem.GetInfoItems())
+                    {
+                        var infoAttributes = new Dictionary<string, string>();
+                        if (!string.IsNullOrEmpty(infoItem.Id)) { infoAttributes.Add("id", infoItem.Id); };
+                        if (!string.IsNullOrEmpty(infoItem.OnClick)) { infoAttributes.Add("onclick", infoItem.OnClick); };
+                        infoAttributes.Add("align", infoItem.Align.ToString());
+                    
+                        infoAttributes = infoAttributes.Concat(infoItem.ExtraAttributes).GroupBy(d => d.Key).ToDictionary (d => d.Key, d => d.Last().Value);
+                        string columnClick = columnCount < (totalColumns-1) && !string.IsNullOrEmpty(listItem.OnClick) ? "onclick=\"" + listItem.OnClick + "\"" : "";
+
+                        <td @ComponentMethods.AddAttributes(infoAttributes) @columnClick class="data-list__info-item dw-mod">
+                            @if (!string.IsNullOrEmpty(infoItem.Title)) {
+                                <div>@infoItem.Title</div>
+                            }
+                            @if (!string.IsNullOrEmpty(infoItem.Subtitle)) {
+                                <div><small>@infoItem.Subtitle</small></div>
+                            }
+                        </td>
+
+                        columnCount++;
+                    }
+                </tr>
+                <tr>
+                    <td colspan="7" align="right" class="u-va-bottom u-no-border">
+                        <div class="data-list__actions @hideActions dw-mod" id="ActionsMenu_@listItem.Id">
+                            @foreach (ButtonBase action in listItem.GetActions())
+                            {
+                                action.ButtonLayout = ButtonLayout.LinkClean;
+                                action.Icon.CssClass += " u-full-height";
+                                action.CssClass += " data-list__action-button link";
+
+                                @Render(action)   
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </tbody> 
+        }
+    </table>
+}

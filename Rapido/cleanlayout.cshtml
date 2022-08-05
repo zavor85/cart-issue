@@ -1,0 +1,232 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+
+@using System.Web;
+@using Dynamicweb.Frontend
+@using Dynamicweb.Frontend.Devices
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using Dynamicweb.Security
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.IO
+@using Dynamicweb.Rapido.Blocks
+@using System.Net
+
+@functions {
+    BlocksPage masterPage = BlocksPage.GetBlockPage("Master");
+
+    string getFontFamily(params string[] items)
+    {
+        var itemParent = Pageview.AreaSettings;
+        foreach (var item in items)
+        {
+            itemParent = itemParent.GetItem(item);
+            if (itemParent == null)
+            {
+                return null;
+            }
+        }
+
+        var googleFont = itemParent.GetGoogleFont("FontFamily");
+        if (googleFont == null)
+        {
+            return null;
+        }
+        return googleFont.Family.Replace(" ", "+");
+    }
+}
+
+@{
+    Block root = new Block
+    {
+        Id = "Root",
+        SortId = 10,
+        BlocksList = new List<Block>
+        {
+            new Block {
+                Id = "Head",
+                SortId = 10,
+                SkipRenderBlocksList = true,
+                Template = RenderMasterHead(),
+                BlocksList = new List<Block>
+                {
+                    new Block {
+                        Id = "HeadCss",
+                        SortId = 20,
+                        Template = RenderMasterCss(),
+                    }
+                }
+            },
+            new Block {
+                Id = "Body",
+                SortId = 20,
+                SkipRenderBlocksList = true,
+                Template = RenderMasterBody(),
+                BlocksList = new List<Block>
+                {
+                    new Block()
+                    {
+                        Id = "Master",
+                        SortId = 10,
+                        BlocksList = new List<Block> {
+                            new Block {
+                                Id = "MasterTopSnippets",
+                                SortId = 10
+                            },
+                            new Block {
+                                Id = "MasterMain",
+                                SortId = 20,
+                                Template = RenderMain(),
+                                SkipRenderBlocksList = true,
+                                BlocksList = new List<Block> {
+                                    new Block {
+                                        Id = "MasterPageContent",
+                                        SortId = 10,
+                                        Template = RenderPageContent()
+                                    }
+                                }
+                            },
+                            new Block {
+                                Id = "MasterFooter",
+                                SortId = 30
+                            },
+                            new Block {
+                                Id = "MasterReferences",
+                                SortId = 40
+                            },
+                            new Block {
+                                Id = "MasterBottomSnippets",
+                                SortId = 50
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    masterPage.Add(root);
+
+    Block footer = new Block
+    {
+        Id = "Footer",
+        SortId = 20,
+        Template = RenderNoLayoutFooter()
+    };
+    masterPage.Add("MasterFooter", footer);
+}
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("Components/GridBuilder.cshtml")
+
+@* Include the components that makes it possible to render articles *@
+@Include("Components/GeneralComponents.cshtml")
+@Include("Components/EcommerceComponents.cshtml")
+@Include("Components/ArticleComponents.cshtml")
+@Include("Components/DocumentationComponents.cshtml")
+
+@Include("MasterBlocks/References.cshtml")
+@Include("MasterBlocks/BottomSnippets.cshtml")
+@Include("PageBlocks/Cleanlayout/Custom__Blocks.cshtml")
+
+
+<!DOCTYPE html>
+<html lang="@Pageview.Area.CultureInfo.TwoLetterISOLanguageName">
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(masterPage.BlocksRoot.BlocksList)
+
+
+
+@helper RenderMasterHead() { 
+    List<Block> subBlocks = this.masterPage.GetBlockListById("Head").OrderBy(item => item.SortId).ToList();
+
+    <head>
+        <meta charset="utf-8" />
+        <title>@Model.Title</title>
+
+        <!-- Mobile specific meta -->
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+       @RenderBlockList(subBlocks)
+    </head>   
+}
+
+@helper RenderMasterCss() { 
+    var fonts = new string[] {
+        getFontFamily("Layout", "HeaderFont"),
+        getFontFamily("Layout", "SubheaderFont"),
+        getFontFamily("Layout", "TertiaryHeaderFont"),
+        getFontFamily("Layout", "Header", "ToolsFont"),
+        getFontFamily("Layout", "Header", "NavigationFont"),
+        getFontFamily("Layout", "MobileNavigation", "Font"),
+        getFontFamily("ProductList", "Facets", "HeaderFont"),
+        getFontFamily("ProductPage", "PriceFontDesign"),
+        getFontFamily("Ecommerce", "SaleSticker", "Font"),
+        getFontFamily("Ecommerce", "NewSticker", "Font"),
+        getFontFamily("Ecommerce", "CustomSticker", "Font")
+    };
+
+    string autoCssLink = "/Files/Templates/Designs/Rapido/css/rapido/rapido_" + Model.Area.ID.ToString() + ".min.css?ticks=" + Model.Area.UpdatedDate.Ticks;
+    bool useFontAwesomePro = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetBoolean("UseFontAwesomePro");
+    var family = string.Join("%7C", fonts.Where(x => !string.IsNullOrEmpty(x)).Distinct().Select(x => string.Format("{0}:100,200,300,400,500,600,700,800,900", x)));
+
+    <!-- Base (Default, wireframe) styles -->
+    <link rel="stylesheet" href="/Files/Templates/Designs/Rapido/css/base/base.min.css" type="text/css">
+
+    <!-- Rapido Css from Website Settings -->
+    <link rel="stylesheet" href="@autoCssLink" type="text/css">
+
+    <!-- Ignite Css (Custom site specific styles) -->
+    <link type="text/css" href="/Files/Templates/Designs/Rapido/css/ignite/ignite.min.css" rel="stylesheet">
+
+    <!-- Font awesome -->
+    <link rel="stylesheet" href="/Files/Templates/Designs/Rapido/css/fonts/FontAwesomePro/css/fontawesome-all.min.css" type="text/css">
+
+    <!-- Google fonts -->
+    <link href="https://fonts.googleapis.com/css?family=@family" rel="stylesheet">
+}
+
+@helper RenderMasterBody() { 
+    List<Block> subBlocks = this.masterPage.GetBlockListById("Body").OrderBy(item => item.SortId).ToList();
+
+    <body>
+       @RenderBlockList(subBlocks)
+    </body>   
+}
+
+@helper RenderMain()
+{
+    List<Block> subBlocks = this.masterPage.GetBlockListById("MasterMain").OrderBy(item => item.SortId).ToList();
+
+    <main class="site dw-mod">
+        @RenderBlockList(subBlocks)
+    </main>
+}
+
+@helper RenderPageContent()
+{
+    bool isNavigationStickyMenu = Pageview.Device.ToString() != "Mobile" && Pageview.Device.ToString() != "Tablet" && Model.Area.Item.GetItem("Layout").GetItem("Header").GetBoolean("StickyTop");
+    string pagePos = isNavigationStickyMenu ? "js-page-pos" : "";
+
+    <div id="Page" class="page @pagePos">
+        <section class="center-container content-container dw-mod" id="content">
+            @RenderSnippet("Content")
+        </section>
+    </div>
+}
+
+@helper RenderNoLayoutFooter() {
+    <footer class="footer dw-mod">
+        <div class="grid__col-12 footer__copyright dw-mod">
+            <p>@Model.Area.Item.GetItem("Layout").GetString("FooterCopyrightText")</p>
+        </div>
+    </footer>
+}
+
+@* Hack to support nested helpers *@
+@SnippetStart("Content")
+@ContentPlaceholder()
+@SnippetEnd("Content")
+
+</html>

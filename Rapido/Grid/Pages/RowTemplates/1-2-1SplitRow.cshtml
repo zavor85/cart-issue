@@ -1,0 +1,108 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.GridRowViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Content
+@using Dynamicweb.Content.Items
+
+
+@Include("ColumnBase.cshtml")
+
+@functions {
+    public string GenerateRgba(string color, string opacity)
+    {
+        color = color.Replace("#", "");
+        if (color.Length == 6) {
+            return "rgba(" + Convert.ToInt32(color.Substring(0, 2), 16) + ", " + Convert.ToInt32(color.Substring(2, 2), 16) + ", " + Convert.ToInt32(color.Substring(4, 2), 16) + ", " + opacity + ");";
+        } else {
+            return Convert.ToInt16(color).ToString();
+        }
+    }
+}
+
+@{ 
+    var colorService = new ColorSwatchService();
+    string rowWidth = Model.Item.GetList("Width") != null ? "content-row--" + Model.Item.GetList("Width").SelectedValue : "";
+    string rowHeight = Model.Item.GetList("Height") != null ? "content-row--height-" + Model.Item.GetList("Height").SelectedValue : "";
+    rowHeight = Pageview.Device.ToString() == "Mobile" ? "auto" : rowHeight;
+    string spacing = Model.Item.GetList("Spacing") != null ? "content-row--spacing-" + Model.Item.GetList("Spacing").SelectedValue : "";
+    string spacingPosition = Model.Item.GetList("SpacingPosition") != null ? "content-row--spacing-position-" + Model.Item.GetList("SpacingPosition").SelectedValue : "";
+    string columnGap = Model.Item.GetList("ColumnGap") != null ? "content-row--column-gap-" + Model.Item.GetList("ColumnGap").SelectedValue : "content-row--column-gap-sm";
+    string backgroundColor = Model.Item.GetString("BackgroundColor") != null ? Model.Item.GetString("BackgroundColor") : "";
+    string backgroundColor2 = Model.Item.GetString("BackgroundColor2") != null ? Model.Item.GetString("BackgroundColor2") : "";
+    var gradientBackground = Model.Item.GetBoolean("GradientBackground");
+   
+    if (gradientBackground){
+        
+        backgroundColor = "background: "+backgroundColor+";background: -moz-linear-gradient(0deg, "+backgroundColor2+" 0%, "+backgroundColor+" 100%);background: -webkit-linear-gradient(0deg, "+backgroundColor2+" 0%, "+backgroundColor+" 100%);background: linear-gradient(0deg, "+backgroundColor2+" 0%, "+backgroundColor+" 100%);";
+    
+    } else{
+        
+        backgroundColor = !backgroundColor.Contains("#") ? "background-color: " + colorService.GetHexColor(Pageview.AreaID, backgroundColor) : "background-color: " + backgroundColor;
+
+    }
+
+    Image image = new Image();
+
+    if (!string.IsNullOrEmpty(Model.Item.GetString("Image")))
+    {
+        int cropMode = !string.IsNullOrEmpty(Convert.ToString(Model.Item.GetList("ImageCrop"))) ? Convert.ToInt32(Model.Item.GetList("ImageCrop").SelectedValue) : 0;
+
+        image = new Image
+        {
+            Path = Model.Item.GetFile("Image") != null ? Model.Item.GetFile("Image").Path : "",
+            CssClass = "background-image__cover",
+            ImageDefault = new ImageSettings
+            {
+                Crop = cropMode,
+                Height = 845,
+                Width = 1920
+            },
+            ImageMedium = new ImageSettings
+            {
+                Crop = cropMode,
+                Height = 450,
+                Width = 1024
+            },
+            ImageSmall = new ImageSettings
+            {
+                Crop = cropMode,
+                Height = 544,
+                Width = 640
+            }
+        };
+
+        image.FilterPrimary = !string.IsNullOrEmpty(Model.Item.GetList("ImageFilterPrimary").SelectedValue) ? (ImageFilter)Enum.Parse(typeof(ImageFilter), Model.Item.GetList("ImageFilterPrimary").SelectedValue.Replace("-", ""), true) : ImageFilter.None;
+        image.FilterSecondary = !string.IsNullOrEmpty(Model.Item.GetList("ImageFilterSecondary").SelectedValue) ? (ImageFilter)Enum.Parse(typeof(ImageFilter), Model.Item.GetList("ImageFilterSecondary").SelectedValue.Replace("-", ""), true) : ImageFilter.None;
+
+        if (string.IsNullOrEmpty(Model.Item.GetString("ColorForTheFilter")))
+        {
+            image.FilterColor = Model.Item.GetString("ColorForTheFilter").StartsWith("#") ? GenerateRgba(Model.Item.GetString("ColorForTheFilter"), "0.3") : "";
+        }
+    }
+}
+
+
+<div class="content-container dw-mod" style="@backgroundColor">
+    @if (!string.IsNullOrEmpty(Model.Item.GetString("Image")))
+    {
+        <div class="background-image dw-mod">
+            <div class="background-image__wrapper dw-mod">
+                @Render(image)
+            </div> 
+        </div>
+    }
+
+    <div class="content-row content-row--1-2-1split @columnGap @rowWidth @rowHeight @spacing @spacingPosition dw-mod">
+        @{
+            int count = 0;
+
+            foreach (var column in Model.Columns)
+            {
+                int columnSize = count == 0 ? 8 : 4;
+
+                @RenderColumn(column)
+
+                count++;
+            }
+        } 
+    </div>
+</div>

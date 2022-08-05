@@ -1,0 +1,65 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.Navigation.NavigationTreeViewModel>
+
+@if (Model.Nodes.Count() > 0) {
+    <ul class="breadcrumb dw-mod">
+        @RenderNodes(Model.Nodes)
+        @{
+            var productID = Dynamicweb.Context.Current.Request.QueryString.Get("ProductID");
+        }
+
+        
+            @if (!String.IsNullOrEmpty(productID)){
+                var productService = new Dynamicweb.Ecommerce.Products.ProductService();
+                var product = productService.GetProductById(productID, "", "");
+                <span>@product.Name</span>
+            }
+        
+
+    </ul>
+}
+
+
+@helper RenderNodes(IEnumerable<Dynamicweb.Frontend.Navigation.NavigationTreeNodeViewModel> nodes)
+{
+    foreach (var node in nodes)
+    {
+        if (node.IsClickable){
+            <li class="breadcrumb__item @(node.IsActive ? "active" : "") dw-mod">
+                @if (node.Nodes.Count() > 0)
+                {
+                    <a href="@node.Link" title="@node.Name">@node.Name</a>
+                }
+                else
+                {
+                    <a href="@node.Link" title="@node.Name">@node.Name</a>
+                
+                }
+                </li>
+            
+        }
+        @RenderNodes(node.Nodes)
+      
+    }
+
+    
+}
+@helper RenderSchemaItem(IEnumerable<Dynamicweb.Frontend.Navigation.NavigationTreeNodeViewModel> nodes, int position)
+{
+    foreach (var node in nodes)
+    {
+        <text>{
+          "@@type": "ListItem",
+          "position": @position,
+          "name": "@node.Name",
+          "item": "@(Dynamicweb.Context.Current.Request.Url.Scheme + "://" + Dynamicweb.Context.Current.Request.Url.Host +  node.Link)"
+        }@(node.Nodes.Count() > 0 ? "," : "")</text>
+        @RenderSchemaItem(node.Nodes, position + 1)
+    }
+}
+<script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@type": "BreadcrumbList",
+      "itemListElement": [@RenderSchemaItem(Model.Nodes, 1)]
+    }
+</script>

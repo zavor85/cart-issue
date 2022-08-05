@@ -1,0 +1,63 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.GridRowViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Content
+@using Dynamicweb.Content.Items
+@using Dynamicweb
+
+@helper RenderColumn(GridColumnViewModel column) { 
+    Paragraph paragraph = column.ParagraphId > 0 ? Services.Paragraphs.GetParagraph(column.ParagraphId) : null;
+    var colorService = new ColorSwatchService();
+
+    //All paragraph settings may come from e.g. column.Item.GetITem("Common").GetItem("BackgroundColor") instead
+
+    if (paragraph != null) {
+        if (paragraph.Item != null) {
+            string backgroundColor = paragraph.Item["BackgroundColor"] != null ? paragraph.Item["BackgroundColor"].ToString() : "";
+            backgroundColor = !backgroundColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, backgroundColor) : backgroundColor;
+            string textColor = paragraph.Item["TextColor"] != null ? paragraph.Item["TextColor"].ToString() : "";
+            textColor = !textColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, textColor) : textColor;
+            string styles = "background-color: " + backgroundColor + "; color: " + textColor;
+
+            string horizontalAlign = paragraph.Item["HorizontalAlignment"] != null ? "u-align-" + paragraph.Item["HorizontalAlignment"].ToString().ToLower() : "";
+            string horizontalAlignContent = paragraph.Item["HorizontalAlignmentContent"] != null ? "u-align-content-" + paragraph.Item["HorizontalAlignmentContent"].ToString().ToLower() : "";
+            string verticalAlign = paragraph.Item["VerticalAlignment"] != null ? "u-align-self-" + paragraph.Item["VerticalAlignment"].ToString().ToLower() : "";
+            string alignmentCssClasses = horizontalAlign + " " + horizontalAlignContent + " " + verticalAlign;
+
+            string itemBodyCssClass = paragraph.Item["MoveBodyInside"] != null ? "u-full-width" : "content-row__item__body";
+            itemBodyCssClass += paragraph.Item["MoveBodyInside"] == null && paragraph.Item["Padding"] != null ? " padding-size-" + paragraph.Item["Padding"].ToString().ToLower() : "";
+            itemBodyCssClass += paragraph.Item["MoveBodyInside"] == null && paragraph.Item["PaddingPosition"] != null ? " padding-position-" + paragraph.Item["PaddingPosition"].ToString().ToLower() : "";
+
+            <div class="content-row__item rowItemContent-@column.ParagraphId dw-mod" style="@styles">
+                @if (!string.IsNullOrEmpty(textColor)) {
+                    <style>
+                        .rowItemContent-@column.ParagraphId p, .rowItemContent-@column.ParagraphId h1, .rowItemContent-@column.ParagraphId h2, .rowItemContent-@column.ParagraphId h3 {
+                             color: @textColor;
+                        }
+                    </style>
+                } 
+                <div class="@itemBodyCssClass @alignmentCssClasses dw-mod">
+                    @column.Output() 
+                </div>
+            </div> 
+        } else {
+            
+        }
+    } else { 
+       @RenderPlaceholderForTheContentBuilder(column)
+    }
+}
+
+@helper RenderPlaceholderForTheContentBuilder(GridColumnViewModel column) { 
+     //For the content builder - Empty columns
+
+    <div class="content-row__item dw-mod">
+        <div class="content-row__item__body dw-mod">
+            @column.Output() 
+        </div>
+    </div> 
+}
+
+
+@* Include the components *@
+@Include("../../../Components/GridBuilder.cshtml")
+@Include("../../../Components/GeneralComponents.cshtml") 

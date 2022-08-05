@@ -1,0 +1,385 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using System
+@using System.Web
+@using Dynamicweb.Rapido.Blocks.Extensibility
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Frontend
+@using Dynamicweb.Content.Items
+
+@Include("ParagraphBase.cshtml")
+
+@functions {
+    int impersonationPageId;
+    string impersonationLayout;
+    int impersonationFeed;
+    Block impersonationBar;
+
+    string getUserNameFromParams(string firstName, string middleName, string lastName, string name, string email, string userName)
+    {
+        string username = "";
+
+        if (!string.IsNullOrEmpty(firstName) && !string.IsNullOrEmpty(lastName))
+        {
+            username = firstName + " " + (!string.IsNullOrEmpty(middleName) ? middleName + " " : "") + lastName;
+        }
+        else if (!string.IsNullOrEmpty(name))
+        {
+            username = name;
+        }
+        else if (!string.IsNullOrEmpty(email))
+        {
+            username = email;
+        }
+        else
+        {
+            username = userName;
+        }
+        return username;
+    }
+
+    string getUserName(UserViewModel user)
+    {
+        return getUserNameFromParams(user.FirstName, user.MiddleName, user.LastName, user.Name, user.Email, user.UserName);
+    }
+
+    string getUserName(Dynamicweb.Security.UserManagement.User user)
+    {
+        return getUserNameFromParams(user.FirstName, user.MiddleName, user.LastName, user.Name, user.Email, user.UserName);
+    }
+}
+
+@{
+    bool isVisualEditor = !string.IsNullOrEmpty(HttpContext.Current.Request.QueryString.Get("VisualEdit")) ? Convert.ToBoolean(HttpContext.Current.Request.QueryString.Get("VisualEdit")) : false;
+
+    impersonationPageId = GetPageIdByNavigationTag("Impersonation");
+    impersonationLayout = Model.Item.GetList("Layout") != null ? Model.Item.GetList("Layout").SelectedValue : "bar";
+    impersonationFeed = GetPageIdByNavigationTag("UsersFeed");
+}
+
+@if (!isVisualEditor) {
+    var colorService = new ColorSwatchService();
+    string backgroundColor = Model.Item.GetString("BackgroundColor") != null ? Model.Item.GetString("BackgroundColor") : "";
+    backgroundColor = !backgroundColor.Contains("#") ? "background-color: " + colorService.GetHexColor(Pageview.AreaID, backgroundColor) : "background-color: " + backgroundColor;
+    string textColor = Model.Item.GetString("TextColor") != null ? Model.Item.GetString("TextColor") : "";
+    textColor = !textColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, textColor) : textColor;
+
+
+    if (Pageview.User != null)
+    {
+        <div class="u-full-width">
+            @if (!string.IsNullOrEmpty(textColor))
+            {
+                <style>
+                    #Impersonation@(Model.ID) p, #Impersonation@(Model.ID) h1, #Impersonation@(Model.ID) h2, #Impersonation@(Model.ID) h3, #Impersonation@(Model.ID) a {
+                            color: @textColor;
+                    }
+                </style>
+            } 
+            <input type="checkbox" class="impersonation-trigger js-remember-state" id="ImpersonationMinimizeTrigger" />
+            <div class="impersonation impersonation--@(impersonationLayout)-layout dw-mod" id="Impersonation@(Model.ID)" style="@backgroundColor">
+                @if (impersonationLayout == "right-lower-box")
+                {
+                    @RenderRightLowerBoxHeader()
+                } 
+                <div class="impersonation__container @(impersonationLayout != "bar" && impersonationLayout != "top-bar" ? "impersonation__container--box" : "u-padding") dw-mod"> 
+                        @if (Pageview.User.CurrentSecondaryUser != null)
+                        {
+                            if (Pageview.User.CurrentSecondaryUser.ID > 0)
+                            {
+                                @RenderStopImpersonationView();
+
+                                Modal stopImpersonation = new Modal
+                                {
+                                    Id = "StopImpersonation",
+                                    Heading = new Heading
+                                    {
+                                        Level = 2,
+                                        Title = Translate("Sign out"),
+                                        Icon = new Icon
+                                        {
+                                            Name = "fa-sign-out",
+                                            Prefix = "fas",
+                                            LabelPosition = IconLabelPosition.After
+                                        }
+                                    },
+                                    Width = ModalWidth.Sm,
+                                    BodyTemplate = RenderStopImpersonationForm()
+                                };
+
+                                @Render(stopImpersonation)
+                            }
+                        }
+                        else
+                        {
+                            //Render main view
+                            switch (impersonationLayout)
+                            {
+                                case "right-lower-box":
+                                    @RenderImpersonationControls()
+                                    break;
+                                case "right-lower-bar":
+                                    @RenderImpersonationControls()
+                                    break;
+                                case "bar":
+                                default:
+                                    @RenderViewListLink()
+                                    @RenderImpersonationSearch()
+                                    break;
+                            }
+                        }
+                </div>
+            </div>
+        </div> 
+    }
+} else {
+    <div class="u-full-width">
+        @Render(new NotificationMessage { 
+            Message = "\"" + Translate("Edit this column to configure the Impersonation paragraph"), 
+            MessageType = NotificationMessageType.Warning, 
+            MessageLayout = NotificationMessageLayout.Box,
+            Icon = new Icon {
+                Name = "fa-th",
+                Prefix = "fas",
+                LabelPosition = IconLabelPosition.After
+            }
+        })
+    </div>
+}
+
+@helper RenderRightLowerBoxHeader()
+{
+    <div class="impersonation__header dw-mod">
+        <div class="impersonation__title">@Translate("Impersonation")</div>
+        <label for="ImpersonationMinimizeTrigger" class="btn btn--impersonation impersonation__minimize-btn dw-mod" onclick="this.blur();">
+            @Render(new Icon
+            {
+                Prefix = "fas",
+                Name = "fa-window-minimize"
+            })
+        </label>
+    </div>
+}
+
+@helper RenderStopImpersonationView()
+{        
+    if (Pageview.User.CurrentSecondaryUser != null) {
+        string secondaryUserName = getUserName(Pageview.User.CurrentSecondaryUser);
+        string userName = getUserName(Pageview.User);
+        string impersonationText = "<span class=\"impersonation-light-text dw-mod\">" + Translate("Logged in as") + "</span> <b>" + secondaryUserName + "</b> <span class=\"impersonation-light-text dw-mod\">" + Translate("by") + "</span> <b>" + userName + "</b> ";
+        impersonationText = Dynamicweb.Security.UserManagement.User.ImpersonationMode == Dynamicweb.Security.UserManagement.UserImpersonation.Full ? "<span class=\"impersonation-light-text dw-mod\">" + Translate("Logged in as") + "</span> <b>" + userName + "</b> <span class=\"impersonation-light-text dw-mod\">" + Translate("by") + "</span> <b>" + secondaryUserName + "</b> " : impersonationText;
+
+        if (impersonationLayout == "right-lower-box")
+        {
+            <div class="u-margin-bottom--lg u-ta-center">
+                @impersonationText
+            </div>
+            <div class="u-margin-bottom--lg u-ta-center">
+                @RenderSwitchAccountButton()
+            </div>
+            @RenderStopImpersonationButton()
+        }
+        else
+        {
+            <div class="grid grid--align-center impersonation__stop-wrap">
+                <div class="impersonation-bar-item dw-mod">
+                    @impersonationText
+                </div>
+                <div class="impersonation-bar-item dw-mod">
+                    @RenderSwitchAccountButton()
+                </div>
+                <div class="impersonation-bar-item dw-mod">
+                    @RenderStopImpersonationButton()
+                </div>
+            </div>
+        }
+    }
+}
+
+@helper RenderSwitchAccountButton() { 
+    @Render(new Button
+    {
+        Href = "/Default.aspx?ID=" + impersonationPageId,
+        ButtonType = ButtonType.Button,
+        ButtonLayout = ButtonLayout.Clean,
+        Title = Translate("Switch account"),
+        Icon = new Icon {
+            Name = "fa-users",
+            Prefix = "fal",
+            LabelPosition = IconLabelPosition.After
+        },
+        CssClass = "u-no-margin u-color-inherit"
+    })     
+}
+
+@helper RenderStopImpersonationForm()
+{
+    if (Pageview.User.CurrentSecondaryUser != null) {
+        string secondaryUserName = getUserName(Pageview.User.CurrentSecondaryUser);
+        string userName = getUserName(Pageview.User);
+        int pageId = Pageview.Page.ID;
+
+        <form method="post" class="u-no-margin">
+            @Render(new Button
+            {
+                ButtonType = ButtonType.Submit,
+                ButtonLayout = ButtonLayout.Secondary,
+                Title = Translate("Sign out as") + " " + userName,
+                Href = "/Default.aspx?ID=" + impersonationPageId,
+                CssClass = "btn--full",
+                Name = "DwExtranetRemoveSecondaryUser"
+            })
+        </form> 
+
+        @Render(new Button
+        {
+            ButtonType = ButtonType.Button,
+            ButtonLayout = ButtonLayout.Secondary,
+            Title = Translate("Sign out as") + " " + secondaryUserName,
+            Href = "/Admin/Public/ExtranetLogoff.aspx?ID=" + pageId,
+            CssClass = "btn--full"    
+        })     
+    }
+}
+
+@helper RenderStopImpersonationButton() { 
+    @Render(new Button
+    {
+        ButtonType = ButtonType.Button,
+        ButtonLayout = ButtonLayout.Clean,
+        Title = Translate("Sign out"),
+        Icon = new Icon {
+            Name = "fa-sign-out",
+            Prefix = "fal",
+            LabelPosition = IconLabelPosition.After
+        },
+        OnClick = "document.getElementById('StopImpersonationModalTrigger').checked = true",
+        CssClass = "u-no-margin"
+    }) 
+}
+
+@helper RenderImpersonationControls()
+{
+    <div class="impersonation__controls">
+        @RenderViewListLink()
+        @RenderSearchBox()
+    </div>
+    @RenderResultsList()
+}
+
+@helper RenderViewListLink()
+{
+    string title = impersonationLayout == "right-lower-box" ? Translate("View the list") : Translate("View the list of users you can sign in as");
+    string buttonClasses = impersonationLayout == "right-lower-box" ? "impersonation__button btn btn--impersonation" : "impersonation__link impersonation__link";
+
+    @Render(new Link {
+        ButtonLayout = ButtonLayout.None,
+        Title = title,
+        Href = "/Default.aspx?ID=" + impersonationPageId,
+        CssClass = buttonClasses
+    })
+}
+
+@helper RenderSearchBox()
+{
+    <div class="impersonation__search-wrap">
+        <input placeholder="@Translate("Search users")" type="text" class="impersonation__search-field dw-mod" onkeyup="searchKeyUpHandler(event)" id="ImpersonationBoxSearchField">
+        <div id="ImpersonationBoxSearchFind" class="impersonation__search-icon dw-mod" onclick="updateResults(document.getElementById('ImpersonationBoxSearchField').value)">
+            <i class="fal fa-search"></i>
+        </div>
+        <div id="ImpersonationBoxSearchClear" class="impersonation__search-icon u-hidden dw-mod" onclick="clearResults();">
+            <i class="fal fa-times"></i>
+        </div>
+    </div>
+}
+
+@helper RenderImpersonationSearch()
+{
+    @Render(new Search {
+        Id = "ImpersonationSearchBar",
+        PageSize = 5,
+        Placeholder = Translate("Search users"),
+        CssClass = "u-ta-right impersonation__typeahead",
+        SearchParameter = "q",
+        SearchData = new SearchData
+        {
+            SearchFeedUrl = "Default.aspx?ID=" + impersonationFeed,
+            ResultsTemplateId = "ImpersonationSearchResult",
+            ResultsPageUrl = "/Default.aspx?ID=" + impersonationPageId
+        },
+        ResultsPageUrl = "/Default.aspx?ID=" + impersonationPageId
+    })
+}
+
+@helper RenderResultsList()
+{
+    <ul id="ImpersonationBoxSearchResults" class="impersonation__search-results js-handlebars-root dw-mod" data-template="ImpersonationSearchResult" data-json-feed="/Default.aspx?ID=@impersonationFeed" data-init-onload="false" data-preloader="minimal"></ul>
+}
+
+@if (Pageview.User != null)
+{
+    if (Pageview.User.SecondaryUsers.Count > 0)
+    {
+        <script id="ImpersonationSearchResult" type="text/x-template">
+            {{#.}}
+                {{#Users}}
+                    <li class="impersonation__search-results-item impersonation-user">
+                        <form method="post" class="impersonation-user__form" name="account{{id}}">
+                            <input type="hidden" id="DWExtranetSecondaryUserSelector" name="DWExtranetSecondaryUserSelector" value="{{id}}">
+                            <div class="impersonation-user__info">
+                                <div class="impersonation-user__name">{{userName}}</div>
+                                <div class="impersonation-user__number">{{customerNumber}}</div>
+                            </div>
+                            @Render(new Button
+                       {
+                           ButtonType = ButtonType.Submit,
+                           ButtonLayout = ButtonLayout.Secondary,
+                           Title = Translate("Sign in as"),
+                           CssClass = "impersonation-user__sign-in-btn" + (impersonationLayout != "bar" && impersonationLayout != "top-bar" ? " btn--impersonation" : "")
+                       })
+                        </form>
+                    </li>
+                {{/Users}}
+                {{#unless Users}}
+                    <li class="impersonation__search-results-item impersonation__search-results-item--not-found">
+                        @Translate("Your search gave 0 results")
+                    </li>
+                {{/unless}}
+            {{/.}}
+        </script>
+
+        if (impersonationLayout != "bar" && impersonationLayout != "top-bar")
+        {
+            <script>
+                let inputDelayTimer;
+                function searchKeyUpHandler(e) {
+                    clearTimeout(inputDelayTimer);
+                    let value = e.target.value;
+                    if (value != "") {
+                        inputDelayTimer = setTimeout(function () {
+                            updateResults(value);
+                        }, 500);
+                    } else {
+                        clearResults();
+                    }
+                };
+
+                function updateResults(value) {
+                    if (value == "") {
+                        return null;
+                    }
+                    HandlebarsBolt.UpdateContent("ImpersonationBoxSearchResults", "/Default.aspx?ID=@impersonationFeed&q=" + value);
+                    document.getElementById("ImpersonationBoxSearchFind").classList.add("u-hidden");
+                    document.getElementById("ImpersonationBoxSearchClear").classList.remove("u-hidden");
+                }
+
+                function clearResults() {
+                    document.getElementById("ImpersonationBoxSearchField").value = "";
+                    HandlebarsBolt.CleanContainer("ImpersonationBoxSearchResults");
+                    document.getElementById("ImpersonationBoxSearchFind").classList.remove("u-hidden");
+                    document.getElementById("ImpersonationBoxSearchClear").classList.add("u-hidden");
+                }
+            </script>
+        }
+    }
+}

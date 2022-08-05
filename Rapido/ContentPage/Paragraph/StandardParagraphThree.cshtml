@@ -1,0 +1,105 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.ParagraphViewModel>
+@using Dynamicweb.Frontend
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@Include("ParagraphBase.cshtml")
+
+@functions {
+    public string GenerateRgba(string color, string opacity)
+    {
+        color = color.Replace("#", "");
+        if (color.Length == 6) {
+            return "rgba(" + Convert.ToInt32(color.Substring(0, 2), 16) + ", " + Convert.ToInt32(color.Substring(2, 2), 16) + ", " + Convert.ToInt32(color.Substring(4, 2), 16) + ", " + opacity + ");";
+        } else {
+            return Convert.ToInt16(color).ToString();
+        }
+    }
+}
+
+@{ 
+    string link = !string.IsNullOrEmpty(Model.Item.GetString("Link")) ? Model.Item.GetString("Link") : "";
+    string linkTarget = link.Contains("http") ? "_blank" : "_self";
+}
+
+@if (!string.IsNullOrEmpty(link)) {
+    <a href="@link" target="@linkTarget" class="u-overlay">&nbsp;</a>
+    @RenderTheContent()
+} else {
+    @RenderTheContent()
+}
+
+
+@helper RenderTheContent() {
+    string innerPadding = Model.Item.GetList("Padding") != null ? " padding-size-" + Model.Item.GetList("Padding").SelectedValue.ToLower() : "";
+    innerPadding += Model.Item.GetList("PaddingPosition") != null ? " padding-position-" + Model.Item.GetList("PaddingPosition").SelectedValue.ToLower() : "";
+
+    if (!string.IsNullOrEmpty(Model.Item.GetString("Image"))) {
+        int width = Model.Item.GetString("ImageWidth") != null ? Model.Item.GetInt32("ImageWidth") : 100;
+        string styleSetting = Model.Item.GetString("ImageStyle") != null ? Model.Item.GetList("ImageStyle").SelectedValue : "";
+        ImageStyle style = ImageStyle.None;
+        style = styleSetting == "ball" ? style = ImageStyle.Ball : style;
+        style = styleSetting == "triangle" ? style = ImageStyle.Triangle : style;
+
+        Image image = new Image
+        {
+            Path = Model.Item.GetFile("Image") != null ? Model.Item.GetFile("Image").Path : "",
+            Style = style,
+            ImageDefault = new ImageSettings
+            {
+                Crop = 5,
+                Width = width
+            }
+        };
+
+        if (styleSetting == "square") {
+            image.ImageDefault.Crop = 0;
+            image.ImageDefault.Height = image.ImageDefault.Width; 
+        }
+
+        @Render(image) 
+    }
+        
+    <div class="u-full-width u-padding-top dw-mod">
+        @if (!string.IsNullOrEmpty(Model.Item.GetString("Title")) || !string.IsNullOrEmpty(Model.Item.GetString("Text"))) {
+            <div class="u-margin-bottom--lg">
+                @if (!Model.Item.GetBoolean("HideTitle")) { 
+                    @Render(new Heading { Title = Model.Item.GetString("Title"), Level = 2, CssClass = "u-no-margin" })
+                }
+                @Render(new Text { Content = Model.Item.GetString("Text") })
+            </div>
+        }
+    </div>
+
+    if (!string.IsNullOrEmpty(Model.Item.GetItem("ButtonOne").GetString("Title"))) {
+        <div class="buttons-collection u-block dw-mod">
+            @ParagraphButton(Model.Item.GetItem("ButtonOne")) 
+        </div>
+    }  
+}
+
+
+@helper ParagraphButton(ItemViewModel item) { 
+    if (item != null) {
+        if (!string.IsNullOrEmpty(item.GetString("Title"))) {
+            Button button = new Button {
+                Title = item.GetString("Title"),
+                Href = item.GetString("Link"),
+                ButtonLayout = (ButtonLayout)System.Enum.Parse(typeof(ButtonLayout), char.ToUpper(item.GetList("Layout").SelectedValue[0]) + item.GetList("Layout").SelectedValue.Substring(1))
+            };
+
+            if (!string.IsNullOrEmpty(item.GetString("Icon"))) {
+                button.Icon = new Icon { 
+                    CssClass = item.GetString("Icon")
+                };
+            }
+
+            @Render(button)
+        }    
+    }
+}
+
+
+
+
+

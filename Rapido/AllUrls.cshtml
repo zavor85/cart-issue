@@ -1,0 +1,100 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Web;
+@using Dynamicweb.Configuration;
+@using Dynamicweb.Core;
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Services
+
+
+
+
+@functions {
+    public class Product
+    {
+        public string Id { get; set; }
+        public string number { get; set; }
+		public string EAN { get; set; }
+        public string name { get; set; }
+//public string realLink { get; set; }
+        public string url { get; set; }
+    }
+}
+
+@{
+    List<Product> feedObject = new List<Product>();
+    
+    var productService = new Dynamicweb.Ecommerce.Products.ProductService();
+    var groupService = new Dynamicweb.Ecommerce.Products.GroupService();
+
+    //int productPageUrl = GetPageIdByNavigationTag("ProductsCategoryPage");
+    int productPageUrl2 = GetPageIdByNavigationTag("ProductsPage");
+
+
+ 	var allProducts = productService.GetProductsByShopId("SHOP14", "LANG2", false);
+    var distinctProductsList = new List<Dynamicweb.Ecommerce.Products.Product>();
+
+        foreach (var product in allProducts)
+        {
+            if (!distinctProductsList.Any(prod => prod.Id == product.Id))
+            {
+                distinctProductsList.Add(product);
+            }
+        }
+        foreach (Dynamicweb.Ecommerce.Products.Product product in distinctProductsList)
+        {
+            var productGroups = product.Groups;
+            foreach (var group in productGroups)
+            {
+                var relations = Dynamicweb.Ecommerce.Services.ProductGroups.GetProductGroupRelations(product.Id);
+                
+                if (group.ShopId == "SHOP14" && relations.Any(relation => relation.IsPrimary) && group.Id != "GROUP331" && group.Name != "Mærker" && group.PrimaryParentGroupId != "GROUP331")
+                {
+                    Product productObject = new Product();
+                    productObject.Id = product.Id;
+                    productObject.name = product.Name;
+                    productObject.EAN = product.EAN;
+                    productObject.number = product.Number;
+
+
+                    var rawLink = $"Default.aspx?ID={productPageUrl2}&GroupID={group.IdUrlEncoded}&ProductID={product.IdUrlEncoded}";
+                    productObject.url = "https://korsorhvidevare.flexmedia.dk" + Dynamicweb.Frontend.SearchEngineFriendlyURLs.GetFriendlyUrl(rawLink);
+
+                    feedObject.Add(productObject);
+                }
+
+            }
+
+		}
+
+
+ @*   //var GroupId = String.Empty;
+    var groups = groupService.GetGroups();
+	foreach (var group in groups)//.Take(10))
+    {
+      
+            var products = productService.GetProductsByGroupId(group.Id, false, "LANG2", false);
+
+			foreach (var product in products)//.Take(5))
+            {
+                Product productObject = new Product();
+
+                productObject.id = product.Id;
+                productObject.name = product.Name;
+				productObject.EAN = product.EAN;
+                productObject.number = product.Number;
+
+
+                var rawLink = $"Default.aspx?ID={productPageUrl2}&GroupID={group.IdUrlEncoded}&ProductID={product.IdUrlEncoded}";
+                productObject.url = Dynamicweb.Frontend.SearchEngineFriendlyURLs.GetFriendlyUrl(rawLink);
+
+                feedObject.Add(productObject);
+            }
+        
+    } *@
+    string jsonFeed = Newtonsoft.Json.JsonConvert.SerializeObject(feedObject);
+}
+
+@jsonFeed

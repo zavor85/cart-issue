@@ -1,0 +1,57 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System.Web;
+@using System.IO;
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks;
+
+@functions {
+    BlocksPage createAccountPage = BlocksPage.GetBlockPage("CreateAccount");
+}
+
+@{
+    Block createAccountContainer = new Block
+    {
+        Id = "CreateAccountContainer",
+        SortId = 10,
+        BlocksList = new List<Block> {
+            new Block {
+                Id = "CreateAccountForm",
+                Template = RenderCreateAccountForm(),
+                SortId = 20
+            }
+        }
+    };
+
+    createAccountPage.Add(createAccountContainer);
+}
+
+@helper RenderCreateAccountForm()
+{
+    string forgotPasswordPageId = GetPageIdByNavigationTag("SignInPage").ToString() + "&LoginAction=Recovery";
+    bool isEmailExist = GetString("UserManagement:User.Email.Input.Error") == "User with specified email exists.";
+
+    @GetString("UserManagement:User.FormStart")
+
+    @Render(new HiddenField { Name = "UserManagementForm", Value = "1" });
+    @Render(new TextField { Id = "UserManagement_Form_Email", Name = "UserManagement_Form_Email", Type = TextFieldType.Email, Label = Translate("Email"), Value = GetString("UserManagement:User.Email"), Required = true, ErrorMessage = isEmailExist ? "You already exist in our system click below to reset your password" : GetString("UserManagement:User.Email.Input.Error") });
+    @Render(new CheckboxField { Id = "UserManagement_Form_EmailAllowed", Name = "UserManagement_Form_EmailAllowed", Label = Translate("Email me about savings, great deals, and more"), HelpText = Translate("Cancel anytime. We respect yor privacy, your email is safe with us") });
+    @Render(new TextField { Id = "UserManagement_Form_Name", Name = "UserManagement_Form_Name", Type = TextFieldType.Text, Label = Translate("Name"), Value = GetString("UserManagement:User.Name"), Required = true, ErrorMessage = GetString("UserManagement:User.Name.Input.Error") });
+        
+    if (isEmailExist)
+    {
+        @Render(new Link { Href = "/default.aspx?ID=" + forgotPasswordPageId, Title = Translate("Reset password"), ButtonLayout = ButtonLayout.Secondary });
+    }
+        
+    @Render(new TextField { Id = "UserManagement_Form_NewPassword", Name = "UserManagement_Form_NewPassword", Type = TextFieldType.Password, Label = Translate("Password"), CssClass = "u-full-width", ErrorMessage = GetString("UserManagement:User.NewPassword.Input.Error") });
+    @Render(new TextField { Id = "UserManagement_Form_NewPasswordConfirm", Name = "UserManagement_Form_NewPasswordConfirm", Type = TextFieldType.Password, Label = Translate("Confirm Password"), CssClass = "u-full-width", ErrorMessage = GetString("UserManagement:User.NewPasswordConfirm.Input.Error") });
+    @Render(new Button { Id = "submitter", ButtonType = ButtonType.Submit, Title = Translate("Sign up now"), OnClick = "Buttons.LockButton(event)", CssClass = "u-full-width u-margin-top" });
+
+    @GetString("UserManagement:User.FormEnd")
+}
+
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("Blocks/CreateAccount/Custom__Blocks.cshtml")
+
+
+@RenderBlockList(createAccountPage.BlocksRoot.BlocksList)

@@ -1,0 +1,106 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Ecommerce.Prices
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage invoicesPage = BlocksPage.GetBlockPage("InvoiceList");
+}
+
+@if (string.IsNullOrWhiteSpace(GetString("Ecom:IntegrationCustomerCenter.Invoice.EmptyList")))
+{
+    var invoiceList = new Block
+    {
+        Id = "Invoices",
+        SortId = 10,
+        Template = RenderInvoices()
+    };
+
+    invoicesPage.Add(invoiceList);
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:IntegrationCustomerCenter.Invoice.Paging.Show")))
+    {
+        Block pager = new Block
+        {
+            Id = "Pager",
+            SortId = 40,
+            Design = new Design
+            {
+                RenderType = RenderType.Column,
+                Size = "12"
+            },
+            Component = new Pagination
+            {
+                CurrentPageNumber = GetInteger("Ecom:IntegrationCustomerCenter.Paging.CurrentPage"),
+                NumberOfPages = GetInteger("Ecom:IntegrationCustomerCenter.Paging.NumPages"),
+                PreviousPageUrl = GetString("Ecom:IntegrationCustomerCenter.Paging.Back.URL"),
+                NextPageUrl = GetString("Ecom:IntegrationCustomerCenter.Paging.Forward.URL"),
+                ShowNextAndPrevControls = true,
+                PaginationType = PaginationType.IntegrationCustomerCenterApp,
+                NavigationItemsLimit = 5
+            }
+        };
+
+        invoicesPage.Add(pager);
+    }
+}
+
+
+@helper RenderInvoices()
+{
+    if (GetLoop("Ecom:IntegrationCustomerCenter.InvoiceLoop").Count > 0) {
+        CustomerCenterList list = new CustomerCenterList { };
+
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "#" });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Date") });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Total price"), Align = CustomerCenterListInfoItemAlignment.Right });
+
+        foreach (LoopItem order in GetLoop("Ecom:IntegrationCustomerCenter.InvoiceLoop"))
+        {
+            string price = new PriceInfo(Dynamicweb.Ecommerce.Common.Context.Currency) { PriceWithoutVAT = order.GetDouble("totalAmountIncVat") }.PriceWithoutVATFormatted;
+            string orderDate = !string.IsNullOrEmpty(order.GetString("orderDate")) ? order.GetDate("orderDate").ToString(Pageview.Area.Dateformat + " HH:mm") : "";
+            string orderId = order.GetString("id");
+
+                CustomerCenterListItem listItem = new CustomerCenterListItem {
+                    Id = orderId,
+                    Title = orderId,
+                    OnClick = "orderModal.ShowOrderModal('" + orderId + "')"
+                };
+
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = orderDate });
+                listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = price, Align = CustomerCenterListInfoItemAlignment.Right  });
+
+                listItem.AddActions(
+                    new Link
+                    {
+                        Title = Translate("Download PDF"),
+                        Href = "/Admin/public/CustomerCenter/RequestExternalPdf.aspx?type=Invoice&id=" + orderId + "&forceDownload=true",
+                        Icon = new Icon {
+                            Prefix = "fal",
+                            Name = "fa-download",
+                            LabelPosition = IconLabelPosition.After
+                        }
+                    },
+                    new Button 
+                    {
+                        Title = Translate("View invoice"),
+                        OnClick = "orderModal.ShowOrderModal('" + orderId + "')",
+                        Icon = new Icon {
+                            Prefix = "fal",
+                            Name = "fa-search",
+                            LabelPosition = IconLabelPosition.After
+                        }
+                    }
+                );
+
+                list.AddListItem(listItem);
+            }
+
+        @Render(list);
+    } else {
+        @Render(new NotificationMessage { Message = Translate("No invoices found"), MessageType = NotificationMessageType.Warning, MessageLayout = NotificationMessageLayout.Box })
+    }
+}

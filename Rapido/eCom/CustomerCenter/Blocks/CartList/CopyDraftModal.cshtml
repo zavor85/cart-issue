@@ -1,0 +1,198 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage copyDraftModalPage = BlocksPage.GetBlockPage("CartList");
+}
+
+@{
+    if (string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.Carts.EmptyList")))
+    {
+        Modal copyModal = new Modal
+        {
+            Id = "CopyDraft",
+            Heading = new Heading { Title = Translate("Copy draft") },
+            Width = Pageview.User.GetUsersICanSetAsSecondary().Count == 0 ? ModalWidth.Md : ModalWidth.Lg,
+            BodyTemplate = RenderCopyModalBody()
+        };
+
+        copyModal.AddActions(
+            new Button
+            {
+                ButtonLayout = ButtonLayout.Secondary,
+                Title = Translate("Cancel"),
+                OnClick = "document.getElementById('CopyDraftModalTrigger').checked = false;"
+            },
+            new Button
+            {
+                ButtonLayout = ButtonLayout.Primary,
+                Title = Translate("OK"),
+                OnClick = "CopyDraft();"
+            }
+        );
+
+        copyDraftModalPage.Add("List", new Block
+        {
+            Id = "CopyModal",
+            SortId = 30,
+            Component = copyModal
+        });
+
+        copyDraftModalPage.Add("BottomSnippets", new Block
+        {
+            Id = "CopyModalScript",
+            SortId = 20,
+            Template = RenderCopyDraftModalScript()
+        });
+    }
+}
+
+@helper RenderCopyModalBody()
+{
+    var secondaryUsers = Pageview.User.GetUsersICanSetAsSecondary();
+
+    <p id="CopyDraftTitle">@Translate("Do you want to copy draft '<span>{cartName}</span>' and its content?")</p>
+
+    <form method="post" id="CopyDraftForm" action="/Default.aspx?ID=@Pageview.Page.ID&cartcmd=createnew&redirect=false" class="js-filter">
+        <div class="u-w380px">
+            @Render(new TextField
+            {
+                Id = "CopyDraftName",
+                Label = Translate("Draft name"),
+                Name = "name",
+                Required = true
+            })
+            @Render(new HiddenField
+            {
+                Id = "CopyDraftId",
+                Name = "CartId"
+            })
+        </div>
+
+        @if (secondaryUsers.Count > 0)
+        {
+            <label>@Translate("Customer")</label>
+
+            if (secondaryUsers.Count > 4)
+            {
+                <div class="u-w380px">
+                    @Render(new TextField { Placeholder = Translate("Type customer name or number"), OnKeyUp = "Filter.FilterItems(event)" })
+                </div>
+
+                @Render(new NotificationMessage { Message = Translate("No customers found"), MessageType = NotificationMessageType.Warning, MessageLayout = NotificationMessageLayout.Box, CssClass = "js-filter-not-found u-hidden" })
+            }
+
+            <div class="u-max-h500px u-overflow-auto">
+                @{ 
+                    CustomerCenterList table = new CustomerCenterList { };
+
+                    foreach (var user in secondaryUsers)
+                    {
+                        CustomerCenterListItem userRow = new CustomerCenterListItem();
+                        userRow.ExtraAttributes.Add("onmouseover", "mouseOverUserRow('" + user.ID + "')");
+                        userRow.ExtraAttributes.Add("onmouseout", "mouseOutUserRow('" + user.ID + "')");
+                        userRow.ExtraAttributes.Add("data-filter-value", user.Name + " " + user.CustomerNumber);
+
+                        Button signInButton = new Button
+                        {
+                            Title = Translate("Select"),
+                            OnClick = "selectUser('" + user.ID + "', this)",
+                            ButtonLayout = ButtonLayout.Primary,
+                            CssClass = "u-no-margin u-hidden",
+                            Id = "CopyDraftSecondaryUserSelect" + user.ID
+                        };
+
+                        Icon userSelectedIcon = new Icon { Name = "fa-check-circle", Prefix = "fal" };
+
+                        userRow.AddInfoItem(new CustomerCenterListInfoItem { Title = user.Name });
+                        userRow.AddInfoItem(new CustomerCenterListInfoItem { Title = user.CustomerNumber });
+                        userRow.AddInfoItem(new CustomerCenterListInfoItem { Title = user.Email });
+                        userRow.AddInfoItem(new CustomerCenterListInfoItem { Title = user.Address + ", " + user.Zip + " " + user.City + ", " + user.CountryCode });
+
+                        CustomerCenterListInfoItem selector = new CustomerCenterListInfoItem
+                        {
+                            Title = Render(signInButton).ToString() + " <div Id=\"CopyDraftSecondaryUserChecked" + user.ID + "\" class=\"u-hidden\">" + Render(userSelectedIcon).ToString() + "</div>",
+                            Align = CustomerCenterListInfoItemAlignment.Right
+                        };
+                        selector.ExtraAttributes.Add("height", "70");
+                        selector.ExtraAttributes.Add("width", "140");
+
+                        userRow.AddInfoItem(selector);
+
+                        table.AddListItem(userRow);
+                    }
+                }
+                @Render(table) 
+            </div>
+        } 
+
+        @Render(new HiddenField
+        {
+            Id = "CopyDraftCustomer",
+            Name = "CartUserId",
+            Value = Pageview.User.ID.ToString()
+        })
+    </form>
+}
+
+
+@helper RenderCopyDraftModalScript()
+{
+    var usersFeed = "Default.aspx?ID=" + GetPageIdByNavigationTag("UsersFeed");
+    string cartCmdUrl = "/Default.aspx?ID=" + Pageview.Page.ID;
+
+    <script>
+       function mouseOverUserRow(userId) {
+            var selectedUserId = document.getElementById('CopyDraftCustomer').value;
+             
+            if (userId != selectedUserId) {
+                document.getElementById("CopyDraftSecondaryUserSelect" + userId).classList.remove('u-hidden');
+            }
+        }
+
+        function mouseOutUserRow(userId) {
+            document.getElementById("CopyDraftSecondaryUserSelect" + userId).classList.add('u-hidden');
+        }
+
+        function selectUser(userId, clickedButton) {
+            var allSecondaryUserCheckedIcons = document.querySelectorAll('[id^="CopyDraftSecondaryUserChecked"]');
+
+            for (var icon of allSecondaryUserCheckedIcons) {
+                icon.classList.add("u-hidden");
+            }
+
+            clickedButton.classList.add("u-hidden");
+            document.getElementById("CopyDraftSecondaryUserChecked" + userId).classList.remove("u-hidden");
+
+            document.getElementById('CopyDraftCustomer').value = userId;
+        }
+
+        function openCopyDraftModal(cartName, cartId) {
+            document.querySelector("#CopyDraftTitle span").innerText = cartId;
+            document.getElementById("CopyDraftName").value = "";
+            document.getElementById("CopyDraftId").value = cartId;
+            document.getElementById("CopyDraftModalTrigger").checked = true;
+        }
+
+        function CopyDraft() {
+            if (document.getElementById("CopyDraftName").value == "") {
+                document.getElementById("CopyDraftName").value = document.querySelector("#CopyDraftTitle span").innerText + " copy";
+            }
+
+            var requestUrl = "@cartCmdUrl" + "&cartcmd=" + "Copy" + "&CartID=" + document.getElementById("CopyDraftId").value + "&CartName=" + document.getElementById("CopyDraftName").value + "&CartUserId=" + document.getElementById("CopyDraftCustomer").value;
+
+            Request.Fetch().get(
+                requestUrl,
+                function () {
+                location.reload();
+            },
+                null,
+                false
+            );
+        }
+    </script>
+}

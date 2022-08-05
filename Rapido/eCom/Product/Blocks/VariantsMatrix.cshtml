@@ -1,0 +1,64 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+
+@functions { 
+    BlocksPage productVariantsMatrixPage = BlocksPage.GetBlockPage("Product");
+}
+
+
+@{ 
+    var matrixLayoutSetting = Pageview.AreaSettings.GetItem("ProductPage").GetList("VariantsMatrixLayout");
+    string variantsMatrixLayout = matrixLayoutSetting != null && !string.IsNullOrEmpty(matrixLayoutSetting.SelectedValue) ? matrixLayoutSetting.SelectedValue : "Section";
+    variantsMatrixLayout = variantsMatrixLayout == "Ribbon" ? "Section" : variantsMatrixLayout;
+    bool renderVariantsAsMatrix = GetInteger("Ecom:Product.VariantCount") > 1 && variantsMatrixLayout.ToLower() != "hide" && Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("EnableVariantMatrix");
+
+    if (renderVariantsAsMatrix)
+    {
+        Block variantsMatrix = new Block()
+        {
+            Name = Translate("Variants"),
+            Id = "VariantsMatrix",
+            SortId = 15,
+            Template = RenderVariantsMatrixSection(variantsMatrixLayout),
+            Design = new Design
+            {
+                Size = "12",
+                RenderType = RenderType.Column,
+                HidePadding = true
+            }
+        };
+
+        if (variantsMatrixLayout == "Section") {
+            productVariantsMatrixPage.Add(variantsMatrix);
+        } else {
+            productVariantsMatrixPage.Add(variantsMatrixLayout, variantsMatrix);
+        }   
+    }
+}
+
+@helper RenderVariantsMatrixSection(string layout)
+{
+    string cartIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon").SelectedValue : "fas fa-shopping-cart";
+    string ribbonClasses = Pageview.AreaSettings.GetItem("ProductPage").GetList("VariantsListLayout").SelectedValue == "Ribbon" ? "product__section--ribbon paragraph-container paragraph-container--full-width" : "";
+    ribbonClasses = layout == "Tabs" ? "" : ribbonClasses;
+    string ribbonSubClasses = Pageview.AreaSettings.GetItem("ProductPage").GetList("VariantsListLayout").SelectedValue == "Ribbon" ? "center-container--ribbon" : "";
+
+    List<LoopItem> variantInfos = GetLoop("VariantInfos");
+    string productId = GetString("Ecom:Product.ID");
+    string pageId = Pageview.Page.ID.ToString();
+
+
+    <div class="product__section u-no-padding @ribbonClasses dw-mod">
+        <div class="center-container @ribbonSubClasses dw-mod">
+            @RenderVariantInfoMatrix(variantInfos, productId, pageId, 0, "add")
+        </div>
+    </div>
+}
+
+@Include("../../../Helpers/VariantInfoMatrix.cshtml")

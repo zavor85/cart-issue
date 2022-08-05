@@ -1,0 +1,106 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Ecommerce.Prices
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage creditsPage = BlocksPage.GetBlockPage("CreditList");
+}
+
+@if (string.IsNullOrWhiteSpace(GetString("Ecom:IntegrationCustomerCenter.Credit.EmptyList")))
+{
+    var creditList = new Block
+    {
+        Id = "Credits",
+        SortId = 10,
+        Template = RenderCredits()
+    };
+
+    creditsPage.Add(creditList);
+
+    if (!string.IsNullOrWhiteSpace(GetString("Ecom:IntegrationCustomerCenter.Credit.Paging.Show")))
+    {
+        Block pager = new Block
+        {
+            Id = "Pager",
+            SortId = 40,
+            Design = new Design
+            {
+                RenderType = RenderType.Column,
+                Size = "12"
+            },
+            Component = new Pagination
+            {
+                CurrentPageNumber = GetInteger("Ecom:IntegrationCustomerCenter.Paging.CurrentPage"),
+                NumberOfPages = GetInteger("Ecom:IntegrationCustomerCenter.Paging.NumPages"),
+                PreviousPageUrl = GetString("Ecom:IntegrationCustomerCenter.Paging.Back.URL"),
+                NextPageUrl = GetString("Ecom:IntegrationCustomerCenter.Paging.Forward.URL"),
+                ShowNextAndPrevControls = true,
+                PaginationType = PaginationType.IntegrationCustomerCenterApp,
+                NavigationItemsLimit = 5
+            }
+        };
+
+        creditsPage.Add(pager);
+    }
+}
+
+
+@helper RenderCredits()
+{
+    if (GetLoop("Ecom:IntegrationCustomerCenter.CreditLoop").Count > 0) {
+        CustomerCenterList list = new CustomerCenterList { };
+
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "#" });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Date") });
+        list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Total price"), Align = CustomerCenterListInfoItemAlignment.Right });
+
+    foreach (LoopItem order in GetLoop("Ecom:IntegrationCustomerCenter.CreditLoop"))
+    {
+        string price = new PriceInfo(Dynamicweb.Ecommerce.Common.Context.Currency) { PriceWithoutVAT = order.GetDouble("totalAmountIncVat") }.PriceWithoutVATFormatted;
+        string orderDate = !string.IsNullOrEmpty(order.GetString("orderDate")) ? order.GetDate("orderDate").ToString(Pageview.Area.Dateformat + " HH:mm") : "";
+        string orderId = order.GetString("id");
+
+            CustomerCenterListItem listItem = new CustomerCenterListItem {
+                Id = orderId,
+                Title = orderId,
+                OnClick = "orderModal.ShowOrderModal('" + orderId + "')"
+            };
+
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = orderDate });
+            listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = price, Align = CustomerCenterListInfoItemAlignment.Right  });
+
+            listItem.AddActions(
+                new Link
+                {
+                    Title = Translate("Download PDF"),
+                    Href = "/Admin/public/CustomerCenter/RequestExternalPdf.aspx?type=Credit&id=" + orderId + "&forceDownload=true",
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-download",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                },
+                new Button 
+                {
+                    Title = Translate("View credit memo"),
+                    OnClick = "orderModal.ShowOrderModal('" + orderId + "')",
+                    Icon = new Icon {
+                        Prefix = "fal",
+                        Name = "fa-search",
+                        LabelPosition = IconLabelPosition.After
+                    }
+                }
+            );
+
+            list.AddListItem(listItem);
+        }
+
+        @Render(list);
+    } else {
+        @Render(new NotificationMessage { Message = Translate("No credit notes found"), MessageType = NotificationMessageType.Warning, MessageLayout = NotificationMessageLayout.Box })
+    }   
+}

@@ -1,0 +1,155 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Ecommerce.Orders
+
+@functions {
+    BlocksPage orderLinesPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    orderLinesPage.Add("Order", new Block
+    {
+        Id = "OrderLines",
+        SortId = 10,
+        Template = RenderOrderLines()
+    });
+}
+
+@helper RenderOrderLines()
+{
+    int productCatalog = GetPageIdByNavigationTag("ProductsPage");
+    bool isPdf = !string.IsNullOrEmpty(HttpContext.Current.Request.QueryString.Get("pdf")) ? true : false;
+
+    foreach (LoopItem orderline in GetLoop("OrderLines").Where(o => o.GetInteger("Ecom:Order:OrderLine.Type") != (int)OrderLineType.Tax).ToList())
+    {
+        string productLink = "/" + Regex.Replace(orderline.GetString("Ecom:Product.LinkGroup.Clean"), @"\?ID=\d*\&", "?ID=" + productCatalog + "&");
+        productLink += !string.IsNullOrEmpty(orderline.GetString("Ecom:Order:OrderLine.ProductVariantID")) ? "&VariantID=" + orderline.GetString("Ecom:Order:OrderLine.ProductVariantID") : "";
+
+        double pointsTotal = orderline.GetDouble("Ecom:Order:OrderLine.Points");
+        <tr>
+            <td width="60">
+                @if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                {
+                    Image image = new Image
+                    {
+                        Path = GetProductImage(orderline),
+                        ImageDefault = new ImageSettings { Width = 60, Height = 60, Crop = 5 },
+                        DisableLazyLoad = true,
+                        Title = orderline.GetString("Ecom:Order:OrderLine.ProductName")
+                    };
+
+                    if (!isPdf) {
+                        image.Link = productLink;
+                    }
+
+                    @Render(image)
+                }
+            </td>
+            <td>
+                <div>
+                    @if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                    {
+                        if (!isPdf)
+                        {
+                            <a href="@productLink" title="@orderline.GetString("Ecom:Order:OrderLine.ProductName")" class="u-color-inherit">
+                                @orderline.GetString("Ecom:Order:OrderLine.ProductName")
+                            </a>
+                        } else {
+                            @orderline.GetString("Ecom:Order:OrderLine.ProductName")
+                        }
+                    }
+                    else
+                    {
+                        @orderline.GetString("Ecom:Order:OrderLine.ProductName")
+                    }
+                </div>
+                @if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                {
+                    <div>#@orderline.GetString("Ecom:Order:OrderLine.ProductNumber")</div>
+                }
+                <div>@orderline.GetString("Ecom:Order:OrderLine.UnitName")</div>
+                <div>@orderline.GetString("Ecom:Order:OrderLine.ProductVariantText")</div>
+            </td>
+            <td class="u-ta-right">
+                @if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                {
+                    @orderline.GetString("Ecom:Order:OrderLine.Quantity")
+                }
+            </td>
+            <td class="u-ta-right">
+                @if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                {
+                    if (pointsTotal != 0)
+                    {
+                        <span class="u-color--loyalty-points">@orderline.GetDouble("Ecom:Product.PointPrice")</span> @Translate("points")
+                    }
+                    else
+                    {
+                        @orderline.GetString("Ecom:Order:OrderLine.UnitPrice.PriceFormatted").Replace(" ", "&nbsp;")
+                    }
+                }
+            </td>
+            <td class="u-ta-right">
+                @if (pointsTotal != 0)
+                {
+                    <span class="u-color--loyalty-points">@pointsTotal</span> @Translate("points")
+                }
+                else
+                {
+                    @orderline.GetString("Ecom:Order:OrderLine.Price.PriceFormatted").Replace(" ", "&nbsp;")
+                }
+            </td>
+        </tr>
+
+        foreach (LoopItem bomitem in orderline.GetLoop("BOMItems"))
+        {
+            string bomItemLink = "/" + Regex.Replace(bomitem.GetString("Ecom:Product.LinkGroup.Clean"), @"\?ID=\d*\&", "?ID=" + productCatalog + "&");
+
+            <tr class="active u-color-light-gray--bg">
+                <td width="60">
+                    @{ 
+                        Image image = new Image
+                        {
+                            Path = GetProductImage(bomitem),
+                            ImageDefault = new ImageSettings { Width = 60, Height = 60, Crop = 5 },
+                            DisableLazyLoad = true,
+                            Title = bomitem.GetString("Ecom:Order:OrderLine.ProductName")
+                        };
+
+                        if (!isPdf) {
+                            image.Link = bomItemLink;
+                        }
+
+                        @Render(image)
+                    }
+                    }
+                </td>
+                <td>
+                    @if (!isPdf)
+                    {
+                        <a href="@bomItemLink" title="@bomitem.GetString("Ecom:Order:OrderLine.ProductName")" class="u-color-inherit">
+                            @bomitem.GetString("Ecom:Order:OrderLine.ProductName")
+                        </a>
+                    } else {
+                        @bomitem.GetString("Ecom:Order:OrderLine.ProductName")
+                    }
+                </td>
+                <td class="u-ta-right">
+                    @if (bomitem.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                    {
+                        @bomitem.GetString("Ecom:Order:OrderLine.Quantity")
+                    }
+                </td>
+                <td class="u-ta-right">
+                    @if (bomitem.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+                    {
+                        @bomitem.GetString("Ecom:Order:OrderLine.UnitPrice.PriceFormatted").Replace(" ", "&nbsp;")
+                    }
+                </td>
+                <td class="u-ta-right">@bomitem.GetString("Ecom:Order:OrderLine.Price.PriceFormatted").Replace(" ", "&nbsp;")</td>
+            </tr>
+        }
+    }
+}

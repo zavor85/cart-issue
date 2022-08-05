@@ -1,0 +1,115 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+@using System.Linq;
+@using Dynamicweb.Ecommerce;
+
+@functions {
+    BlocksPage cartsPage = BlocksPage.GetBlockPage("CartList");
+}
+
+@{
+    if (string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.Carts.EmptyList")))
+    {
+        cartsPage.Add("List", new Block
+        {
+            Id = "Carts",
+            SortId = 20,
+            Template = RenderCarts()
+        });
+    }
+}
+
+@helper RenderCarts()
+{
+    string currentCartId = Dynamicweb.Ecommerce.Common.Context.Cart != null ? Dynamicweb.Ecommerce.Common.Context.Cart.Id : "";
+
+    CustomerCenterList list = new CustomerCenterList { };
+
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Customer"), CssClass = "u-w200px" });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Title") });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Date") });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Qty"), Align = CustomerCenterListInfoItemAlignment.Right });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "" });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Discount"), Align = CustomerCenterListInfoItemAlignment.Right });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Total price"), Align = CustomerCenterListInfoItemAlignment.Right });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "&nbsp;", CssClass = "u-w32px" });
+
+    foreach (LoopItem cart in GetLoop("Carts"))
+    {
+        var id = cart.GetString("Ecom:Order.ID");
+        var cartObject = Services.Orders.GetById(id);
+        string title = cart.GetString("Ecom:Order.ID");
+        bool isCartActive = id == currentCartId;
+        string name = cart.GetString("Ecom:Order.Customer.Name");
+        string description = !string.IsNullOrEmpty(cart.GetString("Ecom:Order.Customer.Company")) ? "<div class=\"data-list-small-info dw-mod\">" + cart.GetString("Ecom:Order.Customer.Company") + "</div>" : "";
+        description += !string.IsNullOrEmpty(cart.GetString("Ecom:Order.Customer.Number")) ? "<div class=\"data-list-small-info dw-mod\"># " + cart.GetString("Ecom:Order.Customer.Number") + "</div>" : "";
+        description += !string.IsNullOrEmpty(cart.GetString("Ecom:Order.Customer.Email")) ? "<div class=\"data-list-small-info dw-mod\">" + cart.GetString("Ecom:Order.Customer.Email") + "</div>"  : "";
+
+        if (cartObject != null)
+        {
+            title = !string.IsNullOrEmpty(cartObject.DisplayName) ? cartObject.DisplayName : title;
+        }
+
+        CustomerCenterListItem listItem = new CustomerCenterListItem {
+            Id = id,
+            Title = name,
+            OnClick = "window.location='/Default.aspx?ID=" + GetPageIdByNavigationTag("DraftDetails") + "&CartID=" + id + "&cartcmd=setcart&redirect=false'",
+            Description = description
+        };
+
+        Button deleteButton = new Button
+        {
+            OnClick = "event.preventDefault(); deleteDraft('" + id + "')",
+            Icon = new Icon { Name = "fa-trash-alt", Prefix = "far", CssClass = "u-color-gray" },
+            ConfirmTitle = "Delete draft",
+            ConfirmText = Translate("Are you sure you want to delete draft '{cartName}' and its content? You cannot undo this action.").Replace("{cartName}", title),
+            ButtonLayout = ButtonLayout.LinkClean,
+            CssClass = "data-list__remove-btn"
+        };
+
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = title });
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = cart.GetString("Ecom:Order.Date") });
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = cart.GetString("Ecom:Order.OrderLines.TotalProductQuantity"), Align = CustomerCenterListInfoItemAlignment.Right});
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = "&nbsp;" });
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = cart.GetString("Ecom:Order.OrderLines.TotalDiscount"), Align = CustomerCenterListInfoItemAlignment.Right});
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = cart.GetString("Ecom:Order.OrderLines.Total.Price"), Align = CustomerCenterListInfoItemAlignment.Right});
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = Render(deleteButton).ToString(), CssClass = "u-w32px" });
+
+        listItem.AddActions(
+            new Button
+            {
+                OnClick = "openCopyDraftModal('" + title + "', '" + id + "')",
+                Title = Translate("Copy"),
+                ButtonLayout = ButtonLayout.LinkClean,
+                CssClass = "link",
+                Icon = new Icon
+                {
+                    Prefix = "fal",
+                    Name = "fa-copy",
+                    LabelPosition = IconLabelPosition.After
+                }
+            },
+            new Button
+            {
+                OnClick = "openRenameDraftModal('" + title + "', '" + id + "')",
+                Title = Translate("Rename"),
+                ButtonLayout = ButtonLayout.LinkClean,
+                CssClass = "link",
+                Icon = new Icon
+                {
+                    Prefix = "fal",
+                    Name = "fa-pen",
+                    LabelPosition = IconLabelPosition.After
+                }
+            }
+        );
+
+        list.AddListItem(listItem);
+    }
+
+    @Render(list);
+}

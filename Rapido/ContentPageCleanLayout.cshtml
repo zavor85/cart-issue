@@ -1,0 +1,6 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+
+@MasterPageFile("ContentMasterCleanLayout.cshtml")
+
+@* Render the grid *@
+@Model.Grid("Grid", "Grid", "default:true;sort:1", "Pages")

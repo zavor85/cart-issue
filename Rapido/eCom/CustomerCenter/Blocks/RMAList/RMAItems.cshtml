@@ -1,0 +1,81 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage rmaItemsPage = BlocksPage.GetBlockPage("RMAList");
+}
+
+@{
+    if (string.IsNullOrWhiteSpace(GetString("Ecom:CustomerCenter.RMA.EmptyList")))
+    {
+        Block rmaItems = new Block
+        {
+            Id = "RmaItems",
+            SortId = 50,
+            Template = RenderRMAItems(),
+            Design = new Design {
+                RenderType = RenderType.Column,
+                Size = "12"
+            }
+        };
+
+        rmaItemsPage.Add("PageContainer", rmaItems);
+    }
+}
+
+@helper RenderRMAItems() {
+    CustomerCenterList list = new CustomerCenterList { };
+
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = "#" });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("RMA ID") });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("Date") });
+    list.AddHeaderItem(new CustomerCenterListHeaderItem { Title = Translate("State") });
+
+    foreach (LoopItem rma in GetLoop("RMAs"))
+    {
+        CustomerCenterListItem listItem = new CustomerCenterListItem {
+            Id = rma.GetString("Ecom:RMA.ID"),
+            Title = rma.GetString("Ecom:RMA.OrderID"),
+            OnClick = "window.location=" + rma.GetString("Ecom:RMA.DetailsURL")
+        };
+
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = rma.GetString("Ecom:RMA.ID") });
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = rma.GetDate("Ecom:RMA.Date").ToString() });
+        listItem.AddInfoItem(new CustomerCenterListInfoItem { Title = rma.GetString("Ecom:RMA.Status") });
+
+        listItem.AddAction(new Link
+        {
+            Href = rma.GetString("Ecom:RMA.DetailsURL"),
+            Title = Translate("View"),
+            AltText = Translate("View RMA"),
+            Icon = new Icon {
+                Prefix = "fal",
+                Name = "fa-search",
+                LabelPosition = IconLabelPosition.After
+            }
+        });
+
+        if (!string.IsNullOrWhiteSpace(rma.GetString("Ecom:RMA.HasCancel")))
+        {
+            listItem.AddAction(new Link
+            {
+                Href = rma.GetString("Ecom:RMA.CancelURL"),
+                Title = Translate("Cancel"),
+                AltText = Translate("Cancel RMA"),
+                Icon = new Icon {
+                    Prefix = "fal",
+                    Name = "fa-trash-alt",
+                    LabelPosition = IconLabelPosition.After
+                }
+            });
+        }
+
+        list.AddListItem(listItem);
+    }
+
+    @Render(list);
+}

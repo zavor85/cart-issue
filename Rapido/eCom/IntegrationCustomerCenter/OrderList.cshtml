@@ -1,0 +1,42 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb
+@using Dynamicweb.Core
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using System
+@using System.Web
+@using System.Globalization
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage orderListPage = BlocksPage.GetBlockPage("OrderList");
+}
+
+@if (!string.IsNullOrWhiteSpace(GetString("Ecom:IntegrationCustomerCenter.OpenOrder.EmptyList")))
+{
+    orderListPage.Add(
+        new Block
+        {
+            Id = "EmptyListMessage",
+            SortId = 10,
+            Component = new Text { Content = Translate("No orders found") }
+        }
+    );
+}
+
+@Include("Blocks/OrderList/Orders.cshtml")
+@Include("Blocks/OrderList/ViewOrderModal.cshtml")
+@Include("Blocks/OrderList/Custom__Blocks.cshtml")
+
+@* Include the Rendering helpers *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+@Include("../../Components/EcommerceComponents.cshtml")
+
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(orderListPage.BlocksRoot.BlocksList)
+
+

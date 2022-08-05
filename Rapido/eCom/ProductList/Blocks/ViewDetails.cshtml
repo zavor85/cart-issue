@@ -1,0 +1,507 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Collections.Generic
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+@using Dynamicweb.Rapido.Services
+
+@functions {
+    BlocksPage detailsViewPage = BlocksPage.GetBlockPage("ProductList");
+    Dynamicweb.Frontend.ItemViewModel detailsViewSettings = null;
+
+    /* this function need because in details view we have specipfic situation 
+     * when price need to be placed between unit selector and quantity selector
+     */
+    
+    UnitSelector getUnitsSelector()
+    {
+        return new UnitSelector
+        {
+            OptionsContent = "{{#unitOptions}}{{>UnitOption}}{{/unitOptions}}",
+            Id = "UnitOptions_{{id}}",
+            SelectedOption = "{{unitName}}",
+            CssClass = "product-list__details-units-selector {{#if hasOnlyOneUnit}}unit-selector--readonly{{/if}} {{hasUnits}}"
+        };
+    }
+}
+
+@if (Pageview.AreaSettings.GetItem("ProductList").GetBoolean("EnableDetailsView"))
+{
+    detailsViewSettings = Pageview.AreaSettings.GetItem("ProductList").GetItem("DetailsView");
+
+    detailsViewPage.Add("Views", new Block
+    {
+        Id = "ProductDetailsItemContainer",
+        Name = "list",
+        SortId = 30
+    });
+
+    Block detailsViewScripts = new Block
+    {
+        Id = "DetailsViewScripts",
+        SortId = 30,
+        Template = DetailsView(),
+        BlocksList = new List<Block>
+        {
+            new Block
+            {
+                Id = "DetailsViewItem",
+                SortId = 10,
+                Template = RenderDetailsViewItem(),
+                SkipRenderBlocksList = true,
+                BlocksList = new List<Block> {
+                    new Block
+                    {
+                        Id = "DetailsViewItemHiddenProperties",
+                        SortId = 10,
+                        Template = RenderDetailsViewItemHiddenProperties()
+                    },
+                    new Block
+                    {
+                        Id = "DetailsViewItemLeft",
+                        SortId = 10,
+                        Design = new Design
+                        {
+                            CssClass = "product-list__details-item__left grid__cell dw-mod"
+                        },
+                        BlocksList = new List<Block> {
+                            new Block
+                            {
+                                Id = "DetailsViewItemInfoContainer",
+                                SortId = 20,
+                                Design = new Design
+                                {
+                                    CssClass = "product-list__details-info dw-mod"
+                                },
+                                BlocksList = new List<Block> {
+                                    new Block
+                                    {
+                                        Id = "DetailsViewItemTitle",
+                                        SortId = 10,
+                                        Template = RenderDetailsViewItemTitle()
+                                    },
+                                    new Block
+                                    {
+                                        Id = "DetailsViewItemStickers",
+                                        SortId = 50,
+                                        Template = RenderDetailsViewItemStickers()
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    new Block
+                    {
+                        Id = "DetailsViewItemRight",
+                        SortId = 20,
+                        Design = new Design
+                        {
+                            CssClass = "product-list__details-item__right grid__cell dw-mod"
+                        },
+                        BlocksList = new List<Block> {
+                            new Block {
+                                Id = "DetailsViewItemRightBottom",
+                                SortId = 20,
+                                Design = new Design
+                                {
+                                    CssClass = "u-flex product-list__details-right-bottom-section dw-mod"
+                                },
+                                BlocksList = new List<Block> {
+                                    new Block
+                                    {
+                                        Id = "DetailsViewItemActions",
+                                        SortId = 30,
+                                        Template = RenderDetailsViewItemActions()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    detailsViewPage.Add("BottomSnippets", detailsViewScripts);
+
+    //image
+    bool detailsViewShowImage = detailsViewSettings.GetBoolean("ShowImage");
+
+    if (detailsViewShowImage)
+    {
+        detailsViewPage.Add("DetailsViewItemLeft", new Block
+        {
+            Id = "DetailsViewItemImage",
+            SortId = 10,
+            Template = RenderDetailsViewItemImage()
+        });
+    }
+
+    //number
+    bool detailsViewShowNumber = detailsViewSettings.GetBoolean("ShowProductNumber");
+
+    if (detailsViewShowNumber)
+    {
+        detailsViewPage.Add("DetailsViewItemInfoContainer", new Block
+        {
+            Id = "ProductDetailsItemNumber",
+            SortId = 30,
+            Template = RenderDetailsViewItemNumber()
+        });
+    }
+
+    //static variants
+    bool detailsViewShowStaticVariants = detailsViewSettings.GetBoolean("ShowStaticVariants");
+
+    if (detailsViewShowStaticVariants)
+    {
+        detailsViewPage.Add("DetailsViewItemInfoContainer", new Block
+        {
+            Id = "DetailsViewItemStaticVariants",
+            SortId = 30,
+            Template = RenderDetailsViewItemStaticVariants()
+        });
+    }
+
+    //stock
+    bool detailsViewShowStock = detailsViewSettings.GetBoolean("ShowStockAndShipping");
+
+    if (User.IsStockInfoAllowed() && detailsViewShowStock)
+    {
+        detailsViewPage.Add("DetailsViewItemInfoContainer", new Block
+        {
+            Id = "DetailsViewItemStock",
+            SortId = 40,
+            Template = RenderDetailsViewItemStock()
+        });
+    }
+
+    //price
+    bool detailsViewShowPrice = !Pageview.AreaSettings.GetItem("ProductList").GetBoolean("HidePrice");
+    if (detailsViewShowPrice && Dynamicweb.Rapido.Services.User.IsPricesAllowed())
+    {
+        var separatedUnitSelector = getUnitsSelector();
+        separatedUnitSelector.CssClass += " product-list__details-units-selector--separated";
+
+        detailsViewPage.Add("DetailsViewItemRightBottom", new Block {
+            Id = "DetailsViewUnitSelector",
+            SortId = 10,
+            Component = separatedUnitSelector
+        });
+
+        detailsViewPage.Add("DetailsViewItemRightBottom", new Block
+        {
+            Id = "ProductDetailsItemPrice",
+            SortId = 20,
+            Template = RenderDetailsViewItemPrice()
+        });
+    }
+
+    //favorites
+    bool detailsViewShowFavoriteButton = !detailsViewSettings.GetBoolean("HideFavoriteButton");
+
+    if (detailsViewShowFavoriteButton && Pageview.User != null)
+    {
+        detailsViewPage.Add("DetailsViewItemRightBottom", new Block
+        {
+            Id = "DetailsViewItemFavorites",
+            SortId = 40,
+            Template = RenderDetailsViewItemFavorites()
+        });
+    }
+
+    //download button
+    bool detailsViewShowAddToDownloadButton = detailsViewSettings.GetBoolean("ShowAddToDownloadButton");
+
+    if (detailsViewShowAddToDownloadButton && Pageview.User != null)
+    {
+        detailsViewPage.Add("DetailsViewItemRightBottom", new Block
+        {
+            Id = "DetailsViewItemDownloadButton",
+            SortId = 20,
+            Template = RenderDetailsViewItemDownloadButton()
+        });
+    }
+}
+
+@helper DetailsView()
+{
+    <script id="ProductDetailsItemContainer" type="text/x-template">
+        {{#.}}
+            <div id="Product{{id}}" data-template="DetailsViewItem" data-preloader="overlay" class="grid__col-12 u-no-padding-y js-product dw-mod" style="z-index: {{zIndex}}">
+                {{#Product}}
+                    {{>DetailsViewItem}}
+                {{/Product}}
+            </div>
+        {{/.}}
+    </script>
+}
+
+@helper RenderDetailsViewItem()
+{ 
+    List<Block> subBlocks = detailsViewPage.GetBlockListById("DetailsViewItem");
+
+    <script id="DetailsViewItem" type="text/x-template">
+        {{#.}}
+            <div class="product-list__details-item grid__col-12 dw-mod js-product-scroll-trigger" data-params="{{googleImpression}}">
+                @RenderBlockList(subBlocks)
+            </div>
+        {{/.}}
+    </script>
+}
+
+@helper RenderDetailsViewItemHiddenProperties()
+{ 
+    <input type="hidden" name="ProductLoopCounter{{id}}" value="{{id}}" />
+    <input type="hidden" name="ProductID{{id}}" value="{{productId}}" />
+    <input type="hidden" name="VariantID{{id}}" value="{{variantid}}" id="Variant_{{id}}" />
+    <input type="hidden" name="UnitID{{id}}" value="{{unitId}}" id="Unit_{{id}}" />
+    <input type="hidden" name="Quantity{{id}}" value="1" id="Quantity_{{id}}" />
+}
+
+@helper RenderDetailsViewItemImage()
+{
+    <div class="lightbox">
+        <a href="{{link}}" onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" title="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}">
+            <img class="lightbox__image {{noImage}}" src="/Admin/Public/GetImage.ashx?width=220&amp;height=220&amp;crop=5&amp;Compression=75&amp;image={{image}}" alt="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}" />
+            <div class="u-margin-right {{noImage}}">
+                <img class="b-lazy product-list__details-image" src="/Files/Images/placeholder.gif"
+                        data-src="/Admin/Public/GetImage.ashx?width=75&amp;height=55&amp;crop=5&FillCanvas=true&amp;Compression=75&amp;image={{image}}"
+                        alt="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}" />
+            </div>
+        </a>
+    </div>
+}
+
+@helper RenderDetailsViewItemTitle()
+{ 
+    <a href="{{link}}" onclick="{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}" title="{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}" class="product-list__details-title u-color-inherit dw-mod">
+        <h6 class="u-no-margin u-bold">{{{name}}}{{#if variantName}}, {{variantName}}{{/if}}</h6>
+    </a>
+}
+
+@helper RenderDetailsViewItemNumber()
+{ 
+    <div class="item-number item-number--compressed dw-mod">
+        <div class="item-number dw-mod">{{number}}</div>
+    </div>
+}
+
+@helper RenderDetailsViewItemStaticVariants()
+{ 
+    string variantsSize = detailsViewSettings.GetList("StaticVariantsDisplay") != null ? detailsViewSettings.GetList("StaticVariantsDisplay").SelectedValue : "sm";
+    
+    <text>
+        <span>
+        {{#Variants}}
+            @if ( variantsSize == "lg" ) {
+                <text>
+                    {{>StaticVariantsLgTemplate}}
+                </text>
+            } else {
+                <text>
+                    {{>StaticVariantsTemplate}}
+                </text>
+            }
+        {{/Variants}}
+        </span>
+
+        {{#ifCond variantGroupsCount '>' 1}}
+            <div class="static-variant">
+                @Translate("More options available")
+            </div>
+        {{/ifCond}}
+    </text>
+}
+
+@helper RenderDetailsViewItemStock()
+{     
+    <text>{{#if stockText}}</text>
+        <div class="item-number item-number--compressed dw-mod">
+            <span>
+                <span class="stock-icon {{stockState}} u-no-margin dw-mod" title="{{stockText}}"></span>
+                <span class="u-margin-right--lg"> {{stockText}}</span>
+                {{deliveryText}}
+            </span>
+        </div>
+    <text>{{/if}}</text>
+}
+
+@helper RenderDetailsViewItemStickers()
+{ 
+    <div class="grid__cell-footer stickers-container stickers-container--row u-margin-top dw-mod">
+        {{#StickersContainers}}
+            {{#Stickers}}
+                {{>MiniSticker}}
+            {{/Stickers}}
+        {{/StickersContainers}}
+    </div>    
+}
+
+@helper RenderDetailsViewItemPrice()
+{
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool showCartButton = Pageview.AreaSettings.GetItem("ProductList").GetItem("DetailsView").GetBoolean("ShowAddToCartButton");
+    bool showVATPrice = Pageview.AreaSettings.GetItem("ProductList").GetBoolean("ShowBothPricesWithWithoutVAT");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+    
+    <div class="product-list__details-price">
+        @if (pointShopOnly)
+        {
+            <text>
+                {{#if havePointPrice}}
+                    <div class="price price--product-list price--micro dw-mod">{{points}} @Translate("points")</div>
+                    @if (showCartButton)
+                    {
+                        <text>
+                            {{#unless canBePurchasedWithPoints}}
+                                <small class="help-text u-no-margin">@Translate("Not enough points to buy this")</small>
+                            {{/unless}}
+                        </text>
+                    }
+                {{else}}
+                    @Translate("Not available")
+                {{/if}}
+            </text>
+        
+        }
+        else
+        {
+            <div class="price price--product-list price--micro dw-mod">{{price}}</div>
+            <div class="before-price {{onSale}} before-price--micro dw-mod">{{discount}}</div>
+            if (showVATPrice)
+            {
+                <div class="vat-price vat-price--product-list u-margin-top dw-mod">
+                    @if (isPricesWithVATEnabled)
+                    {
+                        <span>@Translate("excl. VAT")</span><span> ({{priceWithoutVAT}})</span>
+                    }
+                    else
+                    {
+                        <span>@Translate("incl. VAT")</span><span> ({{priceWithVAT}})</span>
+                    }
+                </div>
+            }
+            <text>
+                {{#if priceRRP}}
+                    <div><small>@Translate("RRP") {{priceRRP}}</small></div>
+                {{/if}}
+            </text>
+        }
+    </div>
+}
+
+@helper RenderDetailsViewItemFavorites()
+{
+    <div class="favorites product-list__details-favorites {{hasVariants}} dw-mod" {{hasVariants}}>
+        {{#Favorite}}
+            {{>FavoriteTemplate}}
+        {{/Favorite}}
+    </div>
+}
+
+@helper RenderDetailsViewItemViewButton()
+{
+    string viewMoreText = detailsViewSettings.GetString("ViewMoreText");
+    viewMoreText = !string.IsNullOrEmpty(viewMoreText) ? viewMoreText : "View";
+
+    <div class="product-list__details-actions">
+        @Render(new Link
+        {
+            Href = "{{link}}",
+            Id = "CartButton_{{id}}",
+            Title = Translate(viewMoreText),
+            OnClick = "{{#if googleImpression}}googleEnchantImpressionClick({{googleImpression}}, event){{/if}}",
+            ButtonLayout = ButtonLayout.Secondary,
+            CssClass = "u-no-margin"
+        })
+    </div>
+}
+
+@helper RenderDetailsViewItemAddToCart()
+{
+    bool pointShopOnly = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");   
+    bool showPrice = !Pageview.AreaSettings.GetItem("ProductList").GetBoolean("HidePrice");
+
+    var addToCartBtn = new AddToCart
+    {
+        AddButton = new AddToCartButton
+        {
+            HideTitle = true,
+            ProductId = "{{productId}}",
+            VariantId = "{{variantid}}",
+            UnitId = "{{unitId}}",
+            ProductInfo = "{{productInfo}}",
+            BuyForPoints = pointShopOnly,
+            Id = "AddToCartButton_{{id}}",
+            OnClick = "{{facebookPixelAction}}",
+            ExtraAttributes = new Dictionary<string, string>
+            {
+                { "{{disabledBuyButton}}", "" }
+            }
+        }
+    };
+
+    if (!pointShopOnly) 
+    {
+        addToCartBtn.QuantitySelector = new QuantitySelector
+        {
+            Id = "Quantity{{id}}",
+			OnKeyUp = "document.getElementById('AddToCartButton_{{id}}').disabled=!this.validity.valid", // ----------- Disables the add to cart button if outsid the limites
+			Max = "{{stockCurrentLocationsQuantityMax5}}" // ---------------------------------------------------------- this limites to the max amount that there are in current stock-location            
+        };
+    }
+
+    if (!showPrice) 
+    {
+        addToCartBtn.UnitSelector = getUnitsSelector();
+    }
+
+    <div class="product-list__details-actions">
+        @Render(addToCartBtn)
+    </div>
+}
+
+@helper RenderDetailsViewItemActions()
+{
+    bool showCartButton = detailsViewSettings.GetBoolean("ShowAddToCartButton");
+    bool showViewButton = detailsViewSettings.GetBoolean("ShowViewButton");
+    
+    if (Dynamicweb.Rapido.Services.User.IsBuyingAllowed())
+    {
+        if (showCartButton)
+        {
+            if (!showViewButton)
+            {
+                @RenderDetailsViewItemAddToCart()
+            }
+            else
+            {
+                <text>{{#if hideAddToCartButton}}</text>
+                    @RenderDetailsViewItemViewButton()
+                <text>{{else}}</text>
+                    @RenderDetailsViewItemAddToCart()
+                <text>{{/if}}</text>
+            }
+        }
+        else if (showViewButton)
+        {
+            @RenderDetailsViewItemViewButton()
+        }
+    }
+    else if (showViewButton)
+    {
+        @RenderDetailsViewItemViewButton()
+    }
+}
+
+@helper RenderDetailsViewItemDownloadButton()
+{
+    <button type="button" class="btn btn--primary u-no-margin u-margin-left btn--condensed dw-mod js-add-to-downloads" title="@Translate("Add")" data-product-id="{{productId}}">
+        @Render(new Icon { Prefix = "fas", Name = "fa-plus", CssClass = "js-button-icon" })
+    </button>
+}
+

@@ -1,0 +1,69 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage footerPage = BlocksPage.GetBlockPage("CartDetails");
+}
+
+@if (GetLoop("OrderLines").Count > 0) {
+    footerPage.Add("CartBody", new Block
+    {
+        Id = "Footer",
+        SortId = 30,
+        Template = RenderCartFooter()
+    });
+}
+
+@helper RenderCartFooter()
+{
+    string activateUrl = "Default.aspx?ID=" + Pageview.Page.ID + "&cartcmd=setcart";
+    string emptyCartUrl = "Default.aspx?ID=" + Pageview.Page.ID + "&cartcmd=deleteAllOrderlines";
+    string cartUrl = "Default.aspx?ID=" + Converter.ToString(GetPageIdByNavigationTag("CartPage"));
+    string cartId = GetString("Ecom:Order.ID");
+
+    <div class="card-footer u-color-light--bg u-border-top dw-mod">
+        @Render(new Button
+        {
+            ButtonLayout = ButtonLayout.Secondary,
+            Title = Translate("Empty draft"),
+            CssClass = "u-no-margin",
+            OnClick = "emptyCart(event)"
+        })
+        
+        @Render(new Button
+        {
+            ButtonLayout = ButtonLayout.Primary,
+            Title = Translate("Place order"),
+            CssClass = "u-no-margin u-pull--right",
+            Name = GetString("CartV2.NextStepButtonName"),
+            ButtonType = ButtonType.Submit,
+            OnClick = "Buttons.LockButton(event, false, false)"
+        })
+    </div>
+
+    <script>
+        function emptyCart(e) {
+            var clickedButton = e.currentTarget;
+            var clickedButtonWidth = clickedButton.offsetWidth;
+
+            clickedButton.classList.add("disabled");
+            clickedButton.disabled = true;
+            clickedButton.innerHTML = "<i class=\"fas fa-circle-notch fa-spin\"></i>";
+            clickedButton.style.width = clickedButtonWidth + "px";
+
+            Request.Fetch().post(
+                "@emptyCartUrl",
+                { CartId: "@cartId" },
+                function () {
+                    location.reload();
+                },
+                null,
+                false
+            );
+        }
+    </script>
+}

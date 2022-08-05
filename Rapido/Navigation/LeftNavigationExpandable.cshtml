@@ -1,0 +1,31 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.Navigation.NavigationTreeViewModel>
+
+@RenderNodes(Model.Nodes)
+
+@helper RenderNodes(IEnumerable<Dynamicweb.Frontend.Navigation.NavigationTreeNodeViewModel> nodes, int level = 0)
+{
+    <ul class="@(level > 0 ? "menu-left menu-left--submenu" : "") dw-mod">
+        @foreach (var node in nodes)
+        {
+            var id = Guid.NewGuid().ToString("N");
+
+            <li class="menu-left__item dw-mod">
+                @if (node.IsClickable)
+                {
+                    <a class="menu-left__link @(node.IsActive ? "active" : "")  dw-mod" href="@node.Link" title="@node.Name">@node.Name</a>
+                } 
+                else
+                {
+                    <span class="menu-left__link menu-left__link--disabled dw-mod">@node.Name</span>
+                }
+
+                @if (node.Nodes.Count() > 0)
+                {
+                    <input type="checkbox" class="expand-trigger menu-left__trigger" id="LeftMenuExpandableCheck_@id" @(node.InPath ? "checked" : "")>
+                    <label class="menu-left__arrow" for="LeftMenuExpandableCheck_@id"></label>
+                    @RenderNodes(node.Nodes, level + 1)
+                }
+            </li>
+        }
+    </ul>
+}

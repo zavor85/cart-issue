@@ -1,0 +1,43 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Rapido.Blocks
+
+@functions {
+    BlocksPage receiptPage = BlocksPage.GetBlockPage("Order");
+}
+
+@{
+    var orderContainer = new Block
+    {
+        Id = "OrderContainer",
+        SortId = 10,
+        Design = new Design
+        {
+            CssClass = "paragraph-container u-full-width"
+        }
+    };
+
+    receiptPage.Add(orderContainer);
+}
+
+@Include("../../../GetProductImage.cshtml")
+@Include("Blocks/Receipt/Header.cshtml")
+@Include("Blocks/Receipt/Logo.cshtml")
+@Include("Blocks/ReceiptQuote/HeaderInfo.cshtml")
+@Include("Blocks/Receipt/Order.cshtml")
+@Include("Blocks/Receipt/OrderLines.cshtml")
+@Include("Blocks/ReceiptQuote/OrderInfo.cshtml")
+@Include("Blocks/Receipt/OrderInfoBlocks.cshtml")
+@Include("Blocks/Receipt/Comment.cshtml")
+@Include("Blocks/Receipt/UsedGiftCards.cshtml")
+@Include("Blocks/Receipt/GiftCardsFromOrder.cshtml")
+@Include("Blocks/Receipt/Footer.cshtml")
+@Include("Blocks/Receipt/BillingAddress.cshtml")
+@Include("Blocks/ReceiptQuote/Custom__Blocks.cshtml")
+
+@* Include the Rendering helpers *@
+@Include("../../../Components/GridBuilder.cshtml")
+@Include("../../../Components/GeneralComponents.cshtml")
+
+
+@* The @RenderBlockList base helper is included in Components/GridBuilder.cshtml *@
+@RenderBlockList(receiptPage.BlocksRoot.BlocksList)

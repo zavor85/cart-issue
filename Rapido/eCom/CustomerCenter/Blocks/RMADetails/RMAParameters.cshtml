@@ -1,0 +1,92 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+
+@functions {
+    BlocksPage parametersPage = BlocksPage.GetBlockPage("RMADetails");  
+}
+
+@{
+    if (GetBoolean("Ecom:CustomerCenter.RMA.HasAddContent"))
+    {
+        //Select type
+        SelectField rmaTypes = new SelectField
+        {
+            Id = "RMATypeID",
+            Name = GetString("ParagraphID") + "RMATypeID",
+            Label = Translate("Request type"),
+            OnChange = "changeRMAParameters()"
+        };
+
+        foreach (var type in GetLoop("RMATypes"))
+        {
+            rmaTypes.Options.Add(new SelectFieldOption
+            {
+                Label = Translate(type.GetString("Ecom:RMA.Type.Name")),
+                Value = type.GetString("Ecom:RMA.Type.ID"),
+                Checked = !string.IsNullOrEmpty(type.GetString("Ecom:RMA.Type.Selected"))
+            });
+        }
+
+        Block selectOrderContainer = new Block
+        {
+            Id = "SelectOrderContainer",
+            SortId = 10,
+            BlocksList = new List<Block> {
+                new Block {
+                    Id = "SelectOrderType",
+                    SortId = 10,
+                    Component = rmaTypes
+                }
+            }
+        };
+
+        //select orderID
+        if (!GetBoolean("Ecom:RMA.OrderID.IsSetFromRequest"))
+        {
+            SelectField orderField = new SelectField
+            {
+                Id = "RMAOrderID",
+                Name = GetString("ParagraphID") + "RMAOrderID",
+                Label = Translate("Select order"),
+                OnChange = "changeRMAParameters()"
+            };
+
+            orderField.Options.Add(new SelectFieldOption
+            {
+                Label = Translate("Nothing selected"),
+                Value = "",
+                Disabled = true,
+                Checked = true
+            });
+
+            foreach (var order in GetLoop("Orders"))
+            {
+                orderField.Options.Add(new SelectFieldOption
+                {
+                    Label = order.GetString("Ecom:Order.Date") + ", #" + order.GetString("Ecom:Order.ID") + ", Price: " + order.GetString("Ecom:Order.OrderLines.Total.Price"),
+                    Value = order.GetString("Ecom:Order.ID"),
+                    Checked = !string.IsNullOrEmpty(order.GetString("Ecom:Order.Selected"))
+                });
+            }
+
+            selectOrderContainer.Add(new Block
+            {
+                Id = "SelectOrder",
+                SortId = 20,
+                Component = orderField
+            });
+
+            selectOrderContainer.Add(new Block
+            {
+                Id = "SelectOrderError",
+                SortId = 30,
+                Component = new NotificationMessage { MessageType = NotificationMessageType.Error, Message = Translate("Order is not selected"), CssClass = "u-margin-bottom--lg u-hidden", Id = "orderSelectError" }
+            });
+        }
+
+        parametersPage.Add("RmaDetailsForm", selectOrderContainer);
+    }
+}

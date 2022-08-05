@@ -1,0 +1,116 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+
+@using Dynamicweb.Core
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+
+@functions {
+    BlocksPage changeDeliveryAddressPage = BlocksPage.GetBlockPage("CartDetails");
+}
+
+@{
+    var changeDeliveryAddressModal = new Modal {
+        Id = "ChangeDeliveryAddress",
+        Heading = new Heading { Title = Translate("Delivery address") },
+        Width = ModalWidth.Lg,
+        BodyTemplate = RenderChangeDeliveryAddressModalBody(),
+    };
+
+    changeDeliveryAddressModal.AddActions(
+        new Button {
+            ButtonLayout = ButtonLayout.Secondary,
+            Title = Translate("Cancel"),
+            OnClick = "document.getElementById('ChangeDeliveryAddressModalTrigger').checked = false;"
+        },
+        new Button {
+            ButtonLayout = ButtonLayout.Primary,
+            Title = Translate("Save"),
+            OnClick = "document.getElementById('ChangeDeliveryAddressForm').submit()"
+        }
+    );
+
+    changeDeliveryAddressPage.Add("PageContainer", new Block {
+        Id = "ChangeDeliveryAddressModal",
+        SortId = 30,
+        Component = changeDeliveryAddressModal
+    });
+
+    changeDeliveryAddressPage.Add("BottomSnippets", new Block {
+        Id = "ChangeDeliveryAddressScript",
+        SortId = 30,
+        Template = RenderChangeDeliveryAddressModalScript()
+    });
+}
+
+
+@helper RenderChangeDeliveryAddressModalBody() {
+    var userAddresses = GetLoop("UserManagement:User.UserAddresses");
+    string selectedID = "";
+    
+    // Find currently selected address, to show correct selection when opening modal
+    if ( userAddresses != null ) {
+        var match = userAddresses.FirstOrDefault(x => x.GetString("UserManagement:User.UserAddress.City") == GetString("Ecom:Order.Customer.City"));
+        
+        if ( match != null ) {
+            selectedID = match.GetString("UserManagement:User.UserAddress.ID");
+        }
+    }
+
+    <form id="ChangeDeliveryAddressForm" method="post" action="Default.aspx?ID=@Pageview.Page.ID" data-request="@GetPageIdByNavigationTag("CartAjax")">
+
+        @Render(new HiddenField {
+            Name = "UserManagementUserUserAddressSelectedAddressID",
+            Id = "HiddenUserManagementUserUserAddressSelectedAddressID",
+            Value = selectedID
+        })
+
+        <h5 class="u-margin-bottom">@Translate("Select delivery address")</h5>
+
+        <div class="js-form-inner js-filter">
+            @RenderReadOnlyShippingAddress()
+
+            <script>
+                function FillCustomerAddressFields(name, address, zipCode, city, country, email, phone) {
+                    document.querySelector("#EcomOrderCustomerName").value = name;
+                    document.querySelector("#EcomOrderCustomerZip").value = zipCode;
+                    document.querySelector("#EcomOrderCustomerCity").value = city;
+                    document.querySelector("#EcomOrderCustomerCountry").value = country;
+                    document.querySelector("#EcomOrderCustomerAddress").value = address;
+                    document.querySelector("#EcomOrderCustomerEmail").value = email;
+                    document.querySelector("#EcomOrderCustomerPhone").value = phone;
+                }
+            </script>
+        </div>
+    </form>
+}
+
+
+@helper RenderChangeDeliveryAddressModalScript() {
+    <script>
+        function changeDeliveryAddressModal() {
+            document.getElementById("ChangeDeliveryAddressModalTrigger").checked = true;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            let form = document.getElementById('ChangeDeliveryAddressForm');
+            let ajaxDeliveryAddress = new rapidoAjax("#ChangeDeliveryAddressForm");
+
+            form.addEventListener('input', function (e) {
+                let data = new FormData(this);
+
+                // Prevent new request on searchinput filtering
+                if ( e.target.onkeyup != null ) return;
+
+                ajaxDeliveryAddress.request(data, 'DeliveryAddressModal', function(response) {
+                    ajaxDeliveryAddress.form.querySelector('.js-form-inner').innerHTML = response;
+                });
+            });
+        })
+
+
+    </script>
+}
+
+
+@Include("../../OnepageItems/BillingAndShipping.cshtml")

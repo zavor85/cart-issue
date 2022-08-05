@@ -1,0 +1,319 @@
+// -----------------------------------------------------------------------------
+// Contains all styles related to the clean css grid
+// -----------------------------------------------------------------------------
+
+//Basics
+
+.content-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content-row {
+    max-width: @container-width;
+    position: relative;
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto;
+    justify-content: stretch;
+    grid-column-gap: 1em;
+    grid-template-columns: 1fr;
+    box-sizing: border-box;
+}
+
+.content-row__item {
+    grid-column: auto;
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.content-row__item__body {
+    position: relative;
+    width: 100%;
+        
+    > p {
+        margin: 0;
+    }
+}
+
+//Row size definitions
+.content-row--full {
+    grid-template-columns: 1fr;
+}
+
+.content-row--2col {
+    grid-template-columns: 1fr 1fr;
+}
+
+.content-row--3col {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.content-row--4col {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.content-row--6col {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+
+.content-row--1-2split {
+    grid-template-columns: 1fr 2fr;
+}
+
+.content-row--2-1split {
+    grid-template-columns: 2fr 1fr;
+}
+
+.content-row--1-2-1split {
+    grid-template-columns: 1fr 2fr 1fr;
+}
+
+@media (max-width: @reflex-xs) {
+    .content-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+//Row modifiers
+.content-row--stretch {
+    max-width: 100%;
+}
+
+//Row modifiers - Spacing
+.content-row--spacing-none {
+    margin: 0;
+}
+
+.content-row--spacing-sm {
+    margin: 0.25em 0;
+}
+
+.content-row--spacing-md {
+    margin: 0.5em 0;
+}
+
+.content-row--spacing-lg {
+    margin: 1em 0;
+}
+
+.content-row--spacing-xl {
+    margin: 2em 0;
+}
+
+.content-row--spacing-position-top {
+    margin-bottom: 0;
+}
+
+.content-row--spacing-position-bottom {
+    margin-top: 0;
+}
+
+//Row modifiers - Column gaps
+.content-row--column-gap-none {
+    grid-column-gap: 0;
+}
+
+.content-row--column-gap-sm {
+    grid-column-gap: 1em;
+}
+
+.content-row--column-gap-md {
+    grid-column-gap: 1.5em;
+}
+
+.content-row--column-gap-lg {
+    grid-column-gap: 2em;
+}
+
+.content-row--column-gap-xl {
+    grid-column-gap: 3em;
+}
+
+//Row modifiers - Row gaps
+.content-row--row-gap-none {
+    grid-row-gap: 0;
+}
+
+.content-row--row-gap-sm {
+    grid-row-gap: 1em;
+}
+
+.content-row--row-gap-md {
+    grid-row-gap: 1.5em;
+}
+
+.content-row--row-gap-lg {
+    grid-row-gap: 2em;
+}
+
+.content-row--row-gap-xl {
+    grid-row-gap: 3em;
+}
+
+//Row modifiers - Height
+.content-row--height-xs > * {
+    min-height: 60px;
+}
+
+.content-row--height-sm > * {
+    min-height: 150px;
+}
+
+.content-row--height-md > * {
+    min-height: 220px;
+}
+
+.content-row--height-lg > * {
+    min-height: 350px;
+}
+
+.content-row--height-xl > * {
+    min-height: 550px;
+}
+
+.content-row--height-xxl > * {
+    min-height: 680px;
+}
+
+.content-row--height-auto > * {
+    min-height: auto;
+}
+
+.content-row--height-screen > * {
+    height: 100vh;
+}
+
+
+//Margin
+
+.margin-none {
+    margin: 0;
+}
+
+.margin-xs {
+    margin: 0.5em;
+}
+
+.margin-sm {
+    margin: 1em;
+}
+
+.margin-md {
+    margin: 2em;
+}
+
+.margin-lg {
+    margin: 4em;
+}
+
+.margin-xl {
+    margin: 6em;
+}
+
+.margin-position-tb {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.margin-position-lr {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.margin-position-left {
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-right: 0;
+}
+
+.margin-position-right {
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+}
+
+.margin-position-top {
+    margin-left: 0;
+    margin-bottom: 0;
+    margin-right: 0;
+}
+
+.margin-position-bottom {
+    margin-top: 0;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+
+
+
+
+//Padding settings
+
+.padding-none {
+    padding: 0;
+}
+
+.padding-size-xs {
+    padding: 0.25em;
+}
+
+.padding-size-sm {
+    padding: 1em;
+}
+
+.padding-size-md {
+    padding: 2em;
+}
+
+.padding-size-lg {
+    padding: 4em;
+}
+
+.padding-size-xl {
+    padding: 6em;
+}
+
+.padding-position-tb {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.padding-position-lr {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.padding-position-left {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-right: 0;
+}
+
+.padding-position-right {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+}
+
+.padding-position-top {
+    padding-left: 0;
+    padding-bottom: 0;
+    padding-right: 0;
+}
+
+.padding-position-bottom {
+    padding-left: 0;
+    padding-top: 0;
+    padding-right: 0;
+}

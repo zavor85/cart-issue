@@ -1,0 +1,122 @@
+﻿@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Ecommerce.International;
+
+@functions {
+    BlocksPage mainProfileInfoPage = BlocksPage.GetBlockPage("EditProfilePage");
+}
+
+@{
+    Block mainProfileInfo = new Block
+    {
+        Id = "MainProfileInfo",
+        SortId = 10,
+        Template = RenderMainProfileInfo(),
+        Design = new Design
+        {
+            RenderType = RenderType.Column,
+            Size = "auto",
+            CssClass = "u-no-padding u-full-width"
+        }
+    };
+
+    mainProfileInfoPage.Add("MainInfoProfileView", mainProfileInfo);
+}
+
+@helper RenderMainProfileInfo()
+{
+    string company = GetString("UserManagement:User.Company");
+    string email = GetString("UserManagement:User.Email");
+    string phone = GetString("UserManagement:User.Phone");
+    string address = GetString("UserManagement:User.Address");
+    string zip = GetString("UserManagement:User.Zip");
+    string city = GetString("UserManagement:User.City");
+    string state = GetString("UserManagement:User.State");
+    string countryCode = GetString("UserManagement:User.CountryCode");
+    string country = "";
+    var countryList = GlobalISO.GetGlobalISOs().Cast<GlobalISO>().GroupBy(x => x.Code2).Select(x => x.FirstOrDefault()).ToDictionary(x => x.Code2, y => y.CountryUK);
+    if (countryList.ContainsKey(countryCode))
+    {
+        country = countryList[countryCode];
+    }
+
+    var region = Dynamicweb.Ecommerce.Services.Countries.GetRegion(countryCode, state);
+    if (region != null)
+    {
+        state = region.Name;
+    }
+
+    var profileItem = new MediaListItem
+    {
+        Title = GetString("UserManagement:User.Name"),
+        CssClass = "u-no-padding media-list-item--no-border"
+    };
+
+    if (!string.IsNullOrEmpty(company))
+    {
+        profileItem.AddInfoRow(Translate("Company"), company);
+    }
+
+    if (!string.IsNullOrEmpty(email))
+    {
+        profileItem.AddInfoRow(Translate("Email"), email);
+    }
+
+    if (!string.IsNullOrEmpty(phone))
+    {
+        profileItem.AddInfoRow(Translate("Phone"), phone);
+    }
+
+    if (Dynamicweb.Security.Licensing.LicenseManager.LicenseHasFeature("LoyaltyPoints") && GetDouble("UserManagement:User.PointBalance") > 0)
+    {
+        profileItem.AddInfoRow(Translate("Point balance"), "<span class='u-color--loyalty-points'>" + GetInteger("UserManagement:User.PointBalance") + "</span> " + Translate("points"));
+    }
+    @Render(profileItem)
+
+    <br />
+
+    @Render(new Heading { Title = Translate("Billing address"), Level = 2, Icon = new Icon { Prefix = "fas", Name = "fa-id-card", LabelPosition = IconLabelPosition.After }, CssClass = "u-no-margin" })
+
+    var billingItem = new MediaListItem { CssClass = "u-no-padding media-list-item--no-border" };
+
+    if (!string.IsNullOrEmpty(address))
+    {
+        billingItem.AddInfoRow(Translate("Address"), address);
+    }
+
+    if (!string.IsNullOrEmpty(zip))
+    {
+        billingItem.AddInfoRow(Translate("Zip"), zip);
+    }
+
+    if (!string.IsNullOrEmpty(city))
+    {
+        billingItem.AddInfoRow(Translate("City"), city);
+    }
+
+    if (!string.IsNullOrEmpty(state))
+    {
+        string regionLabel;
+
+        switch (countryCode)
+        {
+            case "CA":
+                regionLabel = "Province";
+                break;
+            case "US":
+                regionLabel = "State";
+                break;
+            default:
+                regionLabel = "State/Region";
+                break;
+        }
+        billingItem.AddInfoRow(Translate(regionLabel), state);
+    }
+
+    if (!string.IsNullOrEmpty(country))
+    {
+        billingItem.AddInfoRow(Translate("Country"), country);
+    }
+    @Render(billingItem)
+}
+

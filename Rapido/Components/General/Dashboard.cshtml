@@ -1,0 +1,39 @@
+﻿@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Core
+
+@helper RenderDashboard(Dashboard settings)
+{
+    var widgets = settings.GetWidgets();
+
+    if (!string.IsNullOrEmpty(settings.WidgetsBaseBackgroundColor))
+    {
+        //set bg color for them
+
+        System.Drawing.Color color = System.Drawing.ColorTranslator.FromHtml(settings.WidgetsBaseBackgroundColor);
+        int r = Convert.ToInt16(color.R);
+        int g = Convert.ToInt16(color.G);
+        int b = Convert.ToInt16(color.B);
+
+        var count = widgets.Length;
+        var max = Math.Max(r, Math.Max(g, b));
+        double step = 255.0 / (max * count);
+        var i = 0;
+        foreach (var widget in widgets)
+        {
+            i++;
+
+            var shade = "rgb(" + Converter.ToString(r * step * i).Replace(",", ".") + ", " + Converter.ToString(g * step * i).Replace(",", ".") + ", " + Converter.ToString(b * step * i).Replace(",", ".") + ")";
+            widget.BackgroundColor = shade;
+        }
+    }
+
+    <div class="dashboard @settings.CssClass dw-mod" @ComponentMethods.AddAttributes(settings.ExtraAttributes)>
+        @foreach (var widget in widgets)
+        {
+            <div class="dashboard__widget">
+                @Render(widget)
+            </div>
+        }
+    </div>
+}

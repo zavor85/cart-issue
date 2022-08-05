@@ -1,0 +1,158 @@
+﻿@using System
+@using System.Web
+@using Dynamicweb.Content.Items
+
+
+
+@helper RenderPaperHeader() { 
+    string pageMargin = GetParentSettingsItem("Margin") != null ? GetParentSettingsItem("Margin") : "10";
+
+    var colorService = new ColorSwatchService();
+    var headerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetHeader", GetParentSettingsItem("Header"));
+
+    string headerBackgroundColor = headerSettings["BackgroundColor"] != null ? headerSettings["BackgroundColor"].ToString() : "";
+    headerBackgroundColor = !headerBackgroundColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, headerBackgroundColor) : headerBackgroundColor;
+    
+    string headerFontColor = headerSettings["FontColor"] != null ? headerSettings["FontColor"].ToString() : "";
+    headerFontColor = !headerFontColor.Contains("#") ? colorService.GetHexColor(Pageview.AreaID, headerFontColor) : headerFontColor;
+
+    string headerLayout = headerSettings["Layout"] != null ? headerSettings["Layout"].ToString() : "1";
+
+    <div class="sheet-container__header sheet-container__header--padding-@(pageMargin)mm" style="background-color: @(headerBackgroundColor); color: @(headerFontColor)">
+        @switch (headerLayout) {
+            case "1":
+                @RenderHeaderLayout1();
+                break;
+            case "2":
+                @RenderHeaderLayout2();
+                break;
+            case "3":
+                @RenderHeaderLayout3();
+                break;
+        }
+    </div>    
+}
+
+@helper RenderHeaderLayout1() { 
+    DateTime serverTime = DateTime.Now;
+    string date = serverTime.Date.ToString(Pageview.Area.Dateformat);
+    var headerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetHeader", GetParentSettingsItem("Header"));
+
+    <div class="sheet-header-left">
+        @if (headerSettings["Logo"] != null)
+        {
+            if (!String.IsNullOrEmpty(headerSettings["Logo"].ToString()))
+            {
+                <div class="sheet-footer-logo">
+                    <img src="@headerSettings["Logo"].ToString()" />
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+       } else {
+            <text>&nbsp;</text>
+        }
+    </div>
+    <div class="sheet-header-center">
+        @if (!String.IsNullOrEmpty(Pageview.CurrentParagraph.Item["Title"].ToString()))
+        {
+            <div class="sheet-header-title">@Pageview.CurrentParagraph.Item["Title"]</div>
+        } else {
+            <text>&nbsp;</text>
+        }       
+    </div>
+    <div class="sheet-header-right">
+        @if (Convert.ToBoolean(headerSettings["ShowDate"]))
+        {
+            <div class="sheet-header-date">@date</div>
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>    
+}
+
+@helper RenderHeaderLayout2() { 
+    DateTime serverTime = DateTime.Now;
+    string date = serverTime.Date.ToString(Pageview.Area.Dateformat);
+    var headerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetHeader", GetParentSettingsItem("Header"));
+
+    <div class="sheet-header-left">
+        @if (Convert.ToBoolean(headerSettings["ShowDate"]))
+        {
+            <div class="sheet-header-date">@date</div>
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>
+    <div class="sheet-header-center">
+        @if (headerSettings["Logo"] != null)
+        {
+            if (!String.IsNullOrEmpty(headerSettings["Logo"].ToString()))
+            {
+                string logo = headerSettings["Logo"].ToString();
+                if (Path.GetExtension(logo).ToLower() != ".svg")
+                {
+                    logo = "/Admin/Public/GetImage.ashx?height=20&amp;crop=5&amp;Compression=75&amp;image=" + logo;
+                }
+                else
+                {
+                    logo = HttpUtility.UrlDecode(logo);
+                }
+
+                <div class="sheet-footer-logo">
+                    <img src="@logo" />
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+       } else {
+            <text>&nbsp;</text>
+        }       
+    </div>
+    <div class="sheet-header-right">
+        @if (!String.IsNullOrEmpty(Pageview.CurrentParagraph.Item["Title"].ToString()))
+        {
+            <div class="sheet-header-title">@Pageview.CurrentParagraph.Item["Title"]</div>
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>  
+}
+
+@helper RenderHeaderLayout3() { 
+    DateTime serverTime = DateTime.Now;
+    string date = serverTime.Date.ToString(Pageview.Area.Dateformat);
+    var headerSettings = Dynamicweb.Content.Items.Item.GetItemById("SheetHeader", GetParentSettingsItem("Header"));
+
+    <div class="sheet-header-left">
+        @if (Convert.ToBoolean(headerSettings["ShowDate"]))
+        {
+            <div class="sheet-header-date">@date</div>
+        } else {
+            <text>&nbsp;</text>
+        }
+    </div>
+    <div class="sheet-header-center">
+        @if (!String.IsNullOrEmpty(Pageview.CurrentParagraph.Item["Title"].ToString()))
+        {
+            <div class="sheet-header-title">@Pageview.CurrentParagraph.Item["Title"]</div>
+        } else {
+            <text>&nbsp;</text>
+        }      
+    </div>
+    <div class="sheet-header-right">
+        @if (headerSettings["Logo"] != null)
+        {
+            if (!String.IsNullOrEmpty(headerSettings["Logo"].ToString()))
+            {
+                <div class="sheet-footer-logo">
+                    <img src="@headerSettings["Logo"].ToString()" />
+                </div>
+            } else {
+                <text>&nbsp;</text>
+            }
+        } else {
+            <text>&nbsp;</text>
+        }   
+    </div>  
+}

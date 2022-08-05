@@ -1,0 +1,903 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Core
+@using System
+@using System.Web
+@using System.Globalization;
+@using System.Collections.Generic
+@using System.IO
+@using System.Linq
+@using System.Net
+@using System.Xml
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components.General
+@using Dynamicweb.Configuration
+
+@functions {
+    BlocksPage productFieldsPage = BlocksPage.GetBlockPage("Product");
+    List<LoopItem> tabCustomFields = new List<LoopItem>();
+
+    static string ConvertBytes(long bytes)
+    {
+        double size = bytes / 1024; //KB
+        if (size > 1024)
+        {
+            size = (bytes / 1024f) / 1024f; //MB
+            return string.Format("{0:n1} MB", size);
+        }
+        else
+        {
+            return string.Format("{0:n0} KB", size);
+        }
+    }
+
+    static bool isImage(string path)
+    {
+        return new List<string> { ".jpg", ".jpeg", ".gif", ".png", ".svg" }.Contains(Path.GetExtension(path).ToLower());
+    }
+
+    string getIconForFile(string fileName)
+    {
+        string ext = Path.GetExtension(fileName);
+        string icon = "";
+        switch (ext.ToLower())
+        {
+            case ".xls":
+            case ".xlsx":
+                icon = "fa-file-excel";
+                break;
+            case ".ppt":
+            case ".pptx":
+                icon = "fa-file-powerpoint";
+                break;
+            case ".doc":
+            case ".docx":
+                icon = "fa-file-word";
+                break;
+            case ".jpg":
+            case ".jpeg":
+            case ".png":
+            case ".gif":
+            case ".pdf":
+                return "<img class='product__document-img' alt='" + fileName + "' src='/Admin/Public/GetImage.ashx?crop=5&height=70&width=120&Compression=75&DoNotUpscale=true&image=" + fileName + "' />";
+            default:
+                icon = "fa-file";
+                break;
+        }
+        return "<i class='product__document-icon far " + icon + "'></i> ";
+    }
+}
+
+@*downloadDocuments variable, declared in Product.cshtml - this variable also will be used in ProductAssets.cshtml*@
+
+
+
+@{
+    var selectedDownloadCategories = Pageview.AreaSettings.GetItem("ProductPage").GetList("DownloadAssets").SelectedValues;
+    var downloadsFromAssets = GetLoop("ImageCategories").Where(x => selectedDownloadCategories.Contains(x.GetString("Category.Id")));
+
+    if (string.IsNullOrEmpty(selectedDownloadCategories.ToString()))
+    {
+        foreach (LoopItem customField in GetLoop("CustomFieldValues"))
+        {
+            if (!string.IsNullOrEmpty(customField.GetString("Product.CustomField.Name")) && !string.IsNullOrEmpty(customField.GetString("Product.CustomField.Value.Clean")) && customField.GetString("Product.CustomField.Name") != "Custom sticker" && customField.GetString("Product.CustomField.Name") != "RRP")
+            {
+                if (!string.IsNullOrEmpty(customField.GetString("Document.FullPath")))
+                {
+                    downloadDocuments.Add(customField);
+                }
+            }
+        }
+
+        foreach (LoopItem customField in GetLoop("ProductCategories"))
+        {
+            foreach (LoopItem field in customField.GetLoop("ProductCategoryFields"))
+            {
+                if (!string.IsNullOrEmpty(field.GetString("Ecom:Product.CategoryField.Label")) && !string.IsNullOrEmpty(field.GetString("Ecom:Product.CategoryField.Value")))
+                {
+                    if (field.GetString("Ecom:Product.CategoryField.TypeID") == "9")
+                    {
+                        downloadDocuments.Add(field);
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        foreach (LoopItem category in downloadsFromAssets)
+        {
+            foreach (LoopItem asset in category.GetLoop("Category.Images"))
+            {
+                downloadDocuments.Add(asset);
+            }
+        }
+    }
+
+    bool collectAllDownloads = Pageview.AreaSettings.GetItem("ProductPage").GetString("CollectAllDownloads") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetBoolean("CollectAllDownloads") : true;
+    string detailFieldsLayout = Pageview.AreaSettings.GetItem("ProductPage").GetList("DetailFieldsLayout") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("DetailFieldsLayout").SelectedValue : "Section";
+    detailFieldsLayout = detailFieldsLayout == "Ribbon" || string.IsNullOrEmpty(detailFieldsLayout) ? "Section" : detailFieldsLayout;
+    string categoryFieldsLayout = Pageview.AreaSettings.GetItem("ProductPage").GetList("CategoryFieldsLayout") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("CategoryFieldsLayout").SelectedValue : "Section";
+    categoryFieldsLayout = categoryFieldsLayout == "Ribbon" || string.IsNullOrEmpty(categoryFieldsLayout) ? "Section" : categoryFieldsLayout;
+    string displayGroupsLayout = Pageview.AreaSettings.GetItem("ProductPage").GetList("DisplayGroupsLayout") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("DisplayGroupsLayout").SelectedValue : "Section";
+    displayGroupsLayout = displayGroupsLayout == "Ribbon" || string.IsNullOrEmpty(displayGroupsLayout) ? "Section" : displayGroupsLayout;
+    string downloadsFieldsLayout = Pageview.AreaSettings.GetItem("ProductPage").GetList("DownloadsLayout") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("DownloadsLayout").SelectedValue : "Section";
+    downloadsFieldsLayout = downloadsFieldsLayout == "Ribbon" || string.IsNullOrEmpty(downloadsFieldsLayout) ? "Section" : downloadsFieldsLayout;
+
+    string detailFieldsView = Pageview.AreaSettings.GetItem("ProductPage").GetList("DetailFieldsView") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("DetailFieldsView").SelectedValue : "grid";
+    string categoryFieldsView = Pageview.AreaSettings.GetItem("ProductPage").GetList("CategoryFieldsView") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("CategoryFieldsView").SelectedValue : "grid";
+    string downloadsFieldsView = Pageview.AreaSettings.GetItem("ProductPage").GetList("DownloadsFieldsView") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetList("DownloadsFieldsView").SelectedValue : "grid";
+
+    if (GetLoop("CustomFieldValues").Count > 0 && detailFieldsLayout != "hide")
+    {
+        var customFieldValues = GetLoop("CustomFieldValues");
+
+
+        if (customFieldValues.Any(field => !string.IsNullOrEmpty(field.GetString("Product.CustomField.Value.Clean"))))
+        {
+            if (string.IsNullOrEmpty(Pageview.AreaSettings.GetItem("ProductPage").GetString("ProductDetailFields")))
+            {
+                Block detailsCustom = new Block()
+                {
+                    Name = detailFieldsLayout != "MainInformation" ? Translate("Details") : "",
+                    Id = "CustomFields",
+                    SortId = 30,
+                    Design = new Design
+                    {
+                        Size = "12",
+                        RenderType = RenderType.Column,
+                        HidePadding = true
+                    }
+                };
+
+                detailsCustom.Template = RenderProductSection(detailFieldsLayout, detailFieldsView, Translate("Information"), RenderCustomFields(GetLoop("CustomFieldValues"), detailFieldsView));
+                productFieldsPage.Add(detailFieldsLayout, detailsCustom);
+            }
+            else
+            {
+                var detailFieldsDisplayGroups = Pageview.AreaSettings.GetItem("ProductPage").GetList("ProductDetailFields").SelectedValues;
+                var displayGroups = GetLoop("FieldDisplayGroups").Where(x => detailFieldsDisplayGroups.Contains(x.GetString("Ecom:FieldDisplayGroup.ID")));
+
+                foreach (var group in displayGroups)
+                {
+                    Block detailsCustom = new Block()
+                    {
+                        Name = detailFieldsLayout != "MainInformation" ? group.GetString("Ecom:FieldDisplayGroup.Name") : "",
+                        Id = "DetailFields_" + group.GetString("Ecom:FieldDisplayGroup.ID"),
+                        SortId = 30,
+                        Design = new Design
+                        {
+                            Size = "12",
+                            RenderType = RenderType.Column,
+                            HidePadding = true
+                        }
+                    };
+
+                    detailsCustom.Template = RenderProductSection(detailFieldsLayout, detailFieldsView, Translate("Information"), RenderDetailsFields(group.GetLoop("Fields"), detailFieldsView));
+                    productFieldsPage.Add(detailFieldsLayout, detailsCustom);
+
+                }
+            }
+        }
+    }
+
+    if (categoryFieldsLayout != "hide")
+    {
+        foreach (LoopItem categoryGroup in GetLoop("ProductCategories"))
+        {
+            bool hasFields = categoryGroup.GetLoop("ProductCategoryFields").FirstOrDefault(cf => !string.IsNullOrEmpty(cf.GetString("Ecom:Product.CategoryField.Value"))) != null;
+
+            if (collectAllDownloads)
+            {
+                int downloadableCount = 0;
+                foreach (LoopItem field in categoryGroup.GetLoop("ProductCategoryFields"))
+                {
+                    if (field.GetString("Ecom:Product.CategoryField.TypeID") == "9")
+                    {
+                        downloadableCount++;
+                    }
+                }
+
+                if (downloadableCount == categoryGroup.GetLoop("ProductCategoryFields").Count)
+                {
+                    hasFields = false;
+                }
+            }
+
+            if (hasFields)
+            {
+                Block detailsCategoryFields = new Block()
+                {
+                    Name = categoryFieldsLayout != "MainInformation" ? categoryGroup.GetString("Ecom:Product.Category.Name") : "",
+                    Id = ToPascalCase(categoryGroup.GetString("Ecom:Product.Category.Name")),
+                    SortId = 40,
+                    Template = RenderProductSection(categoryFieldsLayout, categoryFieldsView, categoryGroup.GetString("Ecom:Product.Category.Name"), RenderProductCategoryFields(categoryGroup.GetLoop("ProductCategoryFields"), categoryFieldsView)),
+                    Design = new Design
+                    {
+                        Size = "12",
+                        RenderType = RenderType.Column,
+                        HidePadding = true
+                    }
+                };
+
+                productFieldsPage.Add(categoryFieldsLayout, detailsCategoryFields);
+                tabCustomFields.Add(categoryGroup);
+
+
+            }
+        }
+    }
+
+
+    // code to get all specifications for product
+
+    bool isAllSpecification = false;
+
+    var login = Dynamicweb.Configuration.SystemConfiguration.Instance.GetValue("/Globalsettings/System/IceCat/Login");
+    var password = Dynamicweb.Configuration.SystemConfiguration.Instance.GetValue("/Globalsettings/System/IceCat/Password");
+
+    string productEAN = GetString("Ecom:Product.EAN");
+    WebClient client = new WebClient();
+    client.Credentials = new NetworkCredential(login, password);
+    var response = client.OpenRead($"https://data.icecat.biz/xml_s3/xml_server3.cgi?ean_upc={productEAN};lang=dk;output=productxml");
+
+    XmlDocument document = new XmlDocument();
+
+    document.Load(response);
+
+    XmlNode code = document.SelectSingleNode("ICECAT-interface/Product/@Code");
+
+    XmlNodeList nodeList = document.SelectNodes("ICECAT-interface/Product/ProductFeature");
+
+    if (code.InnerText == "1")
+    {
+        isAllSpecification = true;
+    }
+
+    response.Close();
+
+
+
+    Block SpecifikationerTab = new Block()
+    {
+        Name = "Specifikationer",
+        Id = "Specifikationer",
+        SortId = 70,
+        Template = isAllSpecification ? RenderAllSpecifikationerTab(nodeList) : RenderSpecifikationerTab(tabCustomFields),
+
+        Design = new Design
+        {
+            Size = "12",
+            RenderType = RenderType.Column,
+            HidePadding = true
+        }
+    };
+
+    productFieldsPage.Add("Tabs", SpecifikationerTab);
+
+    @helper RenderSpecifikationerTab(List<LoopItem> fieldsLoop)
+    {
+
+        foreach (LoopItem customGroup in fieldsLoop)
+        {
+            <div class="grid grid--bleed">
+                @RenderProductCategoryFieldsAll(customGroup.GetLoop("ProductCategoryFields"), "list")
+            </div>
+
+        }
+    }
+
+
+    @helper RenderAllSpecifikationerTab(XmlNodeList nodeList)
+    {
+
+
+        <div class="grid grid--bleed">
+            @foreach (XmlNode node in nodeList)
+            {
+                var feature = node.SelectSingleNode("Feature/Name/@Value");
+                var value = node.SelectSingleNode("LocalValue/@Value");
+                var measure = node.SelectSingleNode("LocalValue/Measure/Signs/Sign");
+
+                @RenderFieldItem(feature.InnerText, value.InnerText + " " + (measure != null ? measure.InnerText : ""), "columns");
+            }
+        </div>
+    }
+
+
+
+    if (displayGroupsLayout != "hide")
+    {
+        var detailFieldsDisplayGroups = Pageview.AreaSettings.GetItem("ProductPage").GetList("ProductDetailFields").SelectedValues;
+        var displayGroups = GetLoop("FieldDisplayGroups").Where(x => !detailFieldsDisplayGroups.Contains(x.GetString("Ecom:FieldDisplayGroup.ID")));
+
+        foreach (LoopItem group in displayGroups)
+        {
+            Block displayGroup = new Block()
+            {
+                Name = displayGroupsLayout != "MainInformation" ? group.GetString("Ecom:FieldDisplayGroup.Name") : "",
+                Id = "DisplayGroup_" + group.GetString("Ecom:FieldDisplayGroup.ID"),
+                SortId = 40,
+                Template = RenderProductSection(displayGroupsLayout, categoryFieldsView, group.GetString("Ecom:FieldDisplayGroup.Name"), RenderDetailsFields(group.GetLoop("Fields"), categoryFieldsView)),
+                Design = new Design
+                {
+                    Size = "12",
+                    RenderType = RenderType.Column,
+                    HidePadding = true
+                }
+            };
+
+            productFieldsPage.Add(displayGroupsLayout, displayGroup);
+        }
+    }
+
+    if (downloadDocuments.Count > 0 && downloadsFieldsLayout != "hide" && collectAllDownloads == true)
+    {
+        Block detailsDownloads = new Block()
+        {
+            Name = downloadsFieldsLayout != "MainInformation" ? Translate("Downloads") : "",
+            Id = "StandardDownloads",
+            SortId = 50,
+            Template = RenderProductSection(downloadsFieldsLayout, downloadsFieldsView, Translate("Downloads"), RenderProductDownloadsFields(downloadDocuments, downloadsFieldsView)),
+            Design = new Design
+            {
+                Size = "12",
+                RenderType = RenderType.Column,
+                HidePadding = true
+            }
+        };
+
+        productFieldsPage.Add(downloadsFieldsLayout, detailsDownloads);
+    }
+}
+
+@helper RenderCustomFields(List<LoopItem> fieldsLoop, string viewType)
+{
+    bool collectAllDownloads = Pageview.AreaSettings.GetItem("ProductPage").GetString("CollectAllDownloads") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetBoolean("CollectAllDownloads") : true;
+    var imagesFromAssets = GetLoop("ImageCategories").Where(category => category.GetInteger("Category.Id") == 5);
+
+
+    foreach (LoopItem category in imagesFromAssets)
+    {
+        foreach (LoopItem asset in category.GetLoop("Category.Images"))
+        {
+            var name = string.Empty;
+            switch (asset.GetString("Ecom:Product:Detail.Name"))
+            {
+                case "product data sheet":
+                    name = "Product data sheet";
+                    break;
+                case "product data sheet da-DK":
+                    name = "Product data sheet DK";
+                    break;
+                case "eu product fiche":
+                    name = "Productdatablad";
+                    break;
+                case "eu product fiche da-DK":
+                    name = "Productdatablad DK";
+                    break;
+                case "user manual":
+                    name = "Brugere Manual";
+                    break;
+                case "user manual da-DK":
+                    name = "Brugere Manual DK";
+                    break;
+                case "installation diagram":
+                    name = "Installation diagram";
+                    break;
+                case "installation diagram da-DK":
+                    name = "Installation diagram da-DK";
+                    break;
+                default:
+                    continue;
+                    break;
+            }
+            @RenderFieldItem(name, asset.GetString("Ecom:Product:Detail.Image.Clean"), viewType, "download")
+        }
+    }
+
+
+    foreach (LoopItem customField in fieldsLoop)
+    {
+        string fieldValue = customField.GetString("Product.CustomField.Value.Clean");
+        fieldValue = fieldValue == "False" ? Translate("No") : fieldValue;
+        fieldValue = fieldValue == "True" ? Translate("Yes") : fieldValue;
+
+        if (customField.GetLoop("Product.CustomField.Options").Count > 0)
+        {
+            List<string> accumulatedValues = new List<string>();
+
+            foreach (var option in customField.GetLoop("Product.CustomField.Options"))
+            {
+                if (option.GetBoolean("Product.CustomField.Option.IsSelected"))
+                {
+                    accumulatedValues.Add(option.GetString("Product.CustomField.Option.Name"));
+                }
+            }
+            fieldValue = string.Join(", ", accumulatedValues);
+        }
+
+
+        if (!string.IsNullOrEmpty(customField.GetString("Product.CustomField.Name")) && !string.IsNullOrEmpty(fieldValue) && customField.GetString("Product.CustomField.Name") != "Custom sticker" && customField.GetString("Product.CustomField.Name") != "RRP")
+        {
+            if (string.IsNullOrEmpty(customField.GetString("Document.FullPath")))
+            {
+                @RenderFieldItem(customField.GetString("Product.CustomField.Name"), fieldValue, viewType)
+                ;
+            }
+            else if (customField.GetString("Product.CustomField.SystemName") == "DataSheet" || customField.GetString("Product.CustomField.SystemName") == "ManualPDF" || customField.GetString("Product.CustomField.SystemName") == "EnergyLabel")
+            {
+                @RenderFieldItem(customField.GetString("Product.CustomField.SystemName"), fieldValue, viewType)
+                ;
+            }
+            else if (collectAllDownloads == false)
+            {
+                @RenderFieldItem(customField.GetString("Product.CustomField.Name"), fieldValue, viewType, "download")
+                ;
+            }
+        }
+        else if (customField.GetString("Product.CustomField.Name") == "Datablad" && string.IsNullOrEmpty(fieldValue))
+        {
+            @RenderFieldItem(customField.GetString("Product.CustomField.Name"), fieldValue, viewType)
+            ;
+        }
+
+    }
+}
+
+
+@helper RenderProductSection(string layout, string viewType, string name, RazorEngine.Templating.TemplateWriter writer)
+{
+    string ribbonClasses = layout == "Ribbon" ? "product__section--ribbon paragraph-container paragraph-container--full-width" : "u-no-padding";
+    ribbonClasses = layout == "Tabs" ? "" : ribbonClasses;
+    string ribbonSubClasses = layout == "Ribbon" ? "center-container--ribbon" : "";
+    string productNumber = GetString("Ecom:Product.Number") + "(0)";
+    bool energyClassImage = false;
+    string energyClassImageLink = "";
+
+
+    <div class="product__section @ribbonClasses dw-mod">
+        <div class="center-container @ribbonSubClasses dw-mod">
+            @if (layout == "Section")
+            {
+                @Render(new Heading { Title = name, Level = 2 })
+            }
+
+            @if (viewType != "table")
+            {
+                <div class="grid grid--bleed">
+                    @writer
+                </div>
+            }
+            else
+            {
+                string tableWidth = layout != "MainInformation" ? "grid__col-md-6" : "grid__col-md-12";
+
+                <div class="grid grid--external-bleed-x">
+                    <div class="@tableWidth grid__col-sm-12 grid__col-xs-12">
+                        <table class="table--no-top-border">
+                            @writer
+                        </table>
+                    </div>
+
+
+                    <div class="@tableWidth grid__col-sm-12 grid__col-xs-12">
+
+
+                        @foreach (LoopItem detail in GetLoop("Details"))
+                        {
+                            string detail_image = detail.GetString("Ecom:Product:Detail.Image.Clean");
+
+
+
+                            if (!string.IsNullOrEmpty(detail_image))
+                            {
+                                string ext = Path.GetExtension(detail_image).ToLower();
+                                if (ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".png")
+                                {
+                                    if (detail_image.Contains(productNumber))
+                                    {
+                                        energyClassImage = true;
+                                        energyClassImageLink = detail_image;
+                                    }
+                                }
+                            }
+                        }
+
+                        @if (energyClassImage)
+                        {
+                            <img id="EnergyClassImage" src="/Admin/Public/GetImage.ashx?Width=300&Crop=5&DoNotUpscale=True&Image=@energyClassImageLink&AlternativeImage=%2fFiles%2fImages%2fmissing_image.jpg" alt="Energy class">
+                        }
+                        else if (GetString("Ecom:Product:Field.EnergyLabel").ToLower().Contains(".jpg") || GetString("Ecom:Product:Field.EnergyLabel").ToLower().Contains(".png"))
+                        {
+                            if (GetString("Ecom:Product:Field.EnergyLabel").ToLower().Contains("/files/"))
+                            {
+                                <img id="EnergyClassImage" src="/Admin/Public/GetImage.ashx?Width=300&Crop=5&DoNotUpscale=True&Image=@GetString("Ecom:Product:Field.EnergyLabel")&AlternativeImage=%2fFiles%2fImages%2fmissing_image.jpg" alt="Energy class">
+
+                            }
+                            else
+                            {
+                                <img id="EnergyClassImage" src="@GetString("Ecom:Product:Field.EnergyLabel")" alt="Energy class">
+
+                            }
+
+
+                        }
+                        else if (GetString("Ecom:Product:Field.EnergyLabel").ToLower().Contains(".pdf"))
+                        {
+                            if (GetString("Ecom:Product:Field.EnergyLabel").ToLower().Contains("/files/"))
+                            {
+
+
+                                <img id="EnergyClassImage" src="/Admin/Public/GetImage.ashx?Width=300&Crop=5&DoNotUpscale=True&Image=@GetString("Ecom:Product:Field.EnergyLabel")&AlternativeImage=%2fFiles%2fImages%2fmissing_image.jpg" alt="Energy class">
+
+                            }
+                            else
+                            {
+
+                                <embed width="390" height="800" src="@GetString("Ecom:Product:Field.EnergyLabel")" />
+
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@helper RenderProductCategoryFields(List<LoopItem> fieldsLoop, string viewType)
+{
+    bool collectAllDownloads = Pageview.AreaSettings.GetItem("ProductPage").GetString("CollectAllDownloads") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetBoolean("CollectAllDownloads") : true;
+    bool energyclass = false;
+
+    string energyClassText = "";
+
+    string energyClassType = "";
+
+    string mainSpecificationsList = GetString("Ecom:Group:Field.MainSpecificationsList");
+
+    foreach (LoopItem temp in GetLoop("AssociatedGroups"))
+
+    {
+        if (temp.GetString("Ecom:Group.ID") == "GROUP926")
+        {
+            energyClassType = "2";
+        }
+
+        if (temp.GetString("Ecom:Group.ID") == "GROUP927")
+        {
+            energyClassType = "1";
+        }
+    }
+
+    // 1 = A - G
+    // 2 = A - D
+
+
+
+    foreach (LoopItem categoryField in fieldsLoop)
+    {
+        string fieldValue = categoryField.GetString("Ecom:Product.CategoryField.Value");
+        fieldValue = fieldValue == "False" ? Translate("No") : fieldValue;
+        fieldValue = fieldValue == "True" ? Translate("Yes") : fieldValue;
+
+
+
+        if (mainSpecificationsList.Contains(categoryField.GetString("Ecom:Product.CategoryField.ID")))
+        {
+
+
+
+            if (categoryField.GetString("Ecom:Product.CategoryField.Label") == "Energiklasse 2017" && !string.IsNullOrEmpty(fieldValue))
+            {
+                energyclass = true;
+                energyClassText = categoryField.GetString("Ecom:Product.CategoryField.Value");
+                fieldValue = "";
+
+            }
+
+            if (categoryField.GetString("Ecom:Product.CategoryField.Label") == "Energiklasse 2010" && !string.IsNullOrEmpty(fieldValue))
+            {
+                if (!energyclass)
+                {
+                    energyClassText = categoryField.GetString("Ecom:Product.CategoryField.Value");
+
+                }
+                fieldValue = "";
+            }
+
+
+            if (!string.IsNullOrEmpty(categoryField.GetString("Ecom:Product.CategoryField.Label")) && !string.IsNullOrEmpty(fieldValue))
+            {
+
+                if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") != "9" || collectAllDownloads == false)
+                {
+                    if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") == "15")
+                    {
+                        @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), categoryField.GetString("Ecom:Product.CategoryField.OptionLabel"), viewType);
+                    }
+                    else if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") == "8")
+                    {
+                        @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), fieldValue, viewType, "link");
+                    }
+                    else if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") == "9")
+                    {
+                        @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), fieldValue, viewType, "download");
+                    }
+                    else
+                    {
+                        @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), fieldValue, viewType);
+                    }
+                }
+            }
+
+        }
+
+    }
+
+
+}
+
+@helper RenderProductCategoryFieldsAll(List<LoopItem> fieldsLoop, string viewType)
+{
+    bool collectAllDownloads = Pageview.AreaSettings.GetItem("ProductPage").GetString("CollectAllDownloads") != null ? Pageview.AreaSettings.GetItem("ProductPage").GetBoolean("CollectAllDownloads") : true;
+    bool energyclass = false;
+
+    string url = HttpContext.Current.Request.Url.AbsoluteUri;
+
+    string energyClassText = "";
+
+    string energyClassType = "";
+
+
+
+    foreach (LoopItem temp in GetLoop("AssociatedGroups"))
+
+    {
+        if (temp.GetString("Ecom:Group.ID") == "GROUP926")
+        {
+            energyClassType = "2";
+        }
+
+        if (temp.GetString("Ecom:Group.ID") == "GROUP927")
+        {
+            energyClassType = "1";
+        }
+    }
+
+
+    foreach (LoopItem categoryField in fieldsLoop)
+    {
+        string fieldValue = categoryField.GetString("Ecom:Product.CategoryField.Value");
+        fieldValue = fieldValue == "False" ? Translate("No") : fieldValue;
+        fieldValue = fieldValue == "True" ? Translate("Yes") : fieldValue;
+
+        if (categoryField.GetString("Ecom:Product.CategoryField.Label") == "Energiklasse 2017" && !string.IsNullOrEmpty(fieldValue))
+        {
+            energyclass = true;
+            energyClassText = categoryField.GetString("Ecom:Product.CategoryField.Value");
+            fieldValue = "";
+
+        }
+
+        if (categoryField.GetString("Ecom:Product.CategoryField.Label") == "Energiklasse 2010" && !string.IsNullOrEmpty(fieldValue))
+        {
+            if (!energyclass)
+            {
+                energyClassText = categoryField.GetString("Ecom:Product.CategoryField.Value");
+
+            }
+            fieldValue = "";
+        }
+
+
+        if (!string.IsNullOrEmpty(categoryField.GetString("Ecom:Product.CategoryField.Label")) && !string.IsNullOrEmpty(fieldValue))
+        {
+
+            if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") != "9" || collectAllDownloads == false)
+            {
+                if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") == "15")
+                {
+                    @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), categoryField.GetString("Ecom:Product.CategoryField.OptionLabel"), viewType);
+                }
+                else if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") == "8")
+                {
+                    @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), fieldValue, viewType, "link");
+                }
+                else if (categoryField.GetString("Ecom:Product.CategoryField.TypeID") == "9")
+                {
+                    @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), fieldValue, viewType, "download");
+                }
+                else
+                {
+                    @RenderFieldItem(categoryField.GetString("Ecom:Product.CategoryField.Label"), fieldValue, viewType);
+                }
+            }
+        }
+
+    }
+}
+
+
+@helper RenderDetailsFields(IEnumerable<LoopItem> fields, string viewType)
+{
+    foreach (LoopItem field in fields)
+    {
+        string fieldValue = field.GetString("Ecom:FieldDisplayGroup.Field.Value");
+        fieldValue = fieldValue == "False" ? Translate("No") : fieldValue;
+        fieldValue = fieldValue == "True" ? Translate("Yes") : fieldValue;
+
+
+        if (!string.IsNullOrEmpty(field.GetString("Ecom:FieldDisplayGroup.Field.Name")) && !string.IsNullOrEmpty(fieldValue))
+        {
+            if (field.GetString("Ecom:FieldDisplayGroup.Field.TypeId") == "15")
+            {
+                @RenderFieldItem(field.GetString("Ecom:FieldDisplayGroup.Field.Name"), field.GetString("Ecom:FieldDisplayGroup.Field.OptionLabel"), viewType);
+            }
+            else if (field.GetString("Ecom:FieldDisplayGroup.Field.TypeId") == "8")
+            {
+                @RenderFieldItem(field.GetString("Ecom:Product.CategoryField.Label"), fieldValue, viewType, "link");
+            }
+            else if (field.GetString("Ecom:FieldDisplayGroup.Field.TypeId") == "9")
+            {
+                @RenderFieldItem(field.GetString("Ecom:FieldDisplayGroup.Field.Name"), fieldValue, viewType, "download");
+            }
+            else
+            {
+                @RenderFieldItem(field.GetString("Ecom:FieldDisplayGroup.Field.Name"), fieldValue, viewType);
+            }
+        }
+    }
+}
+
+@helper RenderProductDownloadsFields(List<LoopItem> fieldsLoop, string viewType)
+{
+    foreach (LoopItem document in fieldsLoop)
+    {
+        string fieldValue;
+        if (!string.IsNullOrEmpty(document.GetString("Document.FullPath")))
+        {
+            fieldValue = document.GetString("Product.CustomField.Value.Clean");
+            @RenderFieldItem(fieldValue, document.GetString("Document.FullPath"), viewType, "download")
+        }
+
+        if (document.GetString("Ecom:Product.CategoryField.TypeID") == "9")
+        {
+            fieldValue = document.GetString("Ecom:Product.CategoryField.Value");
+            @RenderFieldItem(fieldValue, fieldValue, viewType, "download")
+        }
+        if (!string.IsNullOrEmpty(document.GetString("Ecom:Product:Detail.Image.Clean")))
+        {
+            fieldValue = document.GetString("Ecom:Product:Detail.Image.Clean");
+            @RenderFieldItem("", fieldValue, viewType, "download")
+        }
+    }
+}
+
+<script>
+    function checkSpecifications() {
+        var checkbox = document.getElementById('Specifikationer');
+        if (checkbox.checked != true) {
+            checkbox.checked = true;
+        }
+    }
+</script>
+
+@helper RenderFieldItem(string name, string value, string viewType, string fieldType = "clean")
+{
+    if (viewType != "table")
+    {
+        string fieldColumns = viewType == "list" ? "12" : "4";
+        <div class="grid__col-md-@fieldColumns grid__col-sm-12 u-margin-bottom">
+            <div class="u-bold">
+                @name
+            </div>
+            <div>
+                @RenderFieldItemContent(name, value, fieldType)
+            </div>
+        </div>
+    }
+    else if (value.ToLower().Contains(".pdf"))
+    {
+        <tr>
+            <th>@name</th>
+            <td>
+                <div class="grid grid--no-wrap">
+                    <a href="@value" target="_blank" title="@Translate("Download")" class="product__document dw-mod">
+                        <i class='product__document-icon far fa-file-pdf'></i>
+                    </a>
+                </div>
+            </td>
+        </tr>
+    }
+    else if (name == "Datablad" && string.IsNullOrEmpty(value))
+    {
+        <tr>
+            <th>@name</th>
+            <td>
+                <div class="grid grid--no-wrap" id="no-pdf">
+                    <a href=javascript:void(0); onclick=checkSpecifications() title="@Translate("Redirect")" class="product__document dw-mod">
+                        <i class='product__document-icon far fa-file-pdf'></i>
+                    </a>
+                </div>
+            </td>
+        </tr>
+    }
+    else
+    {
+        if (name == "Datablad" || name == "Manual" || name == "Energimærkat")
+        {
+            <tr>
+                <th>@name</th>
+                <td>
+                    @* @RenderFieldItemContent(name, value, fieldType) *@
+                    <div class="grid grid--no-wrap">
+                        <a href="@value" target="_blank" title="@Translate("Download")" class="product__document dw-mod">
+                            <i class='product__document-icon far fa-file-pdf'></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    }
+}
+
+@helper RenderFieldItemContent(string name, string value, string fieldType = "clean")
+{
+    if (fieldType == "link")
+    {
+        <a target="_blank" rel="noopener" href="@value">
+            @if (isImage(value))
+            {
+                @getIconForFile(value)
+            }
+            else
+            {
+                @value
+            }
+        </a>
+    }
+    else if (fieldType == "download")
+    {
+        FileInfo info = new FileInfo(Dynamicweb.Core.SystemInformation.MapPath(value));
+
+        if (info.Exists)
+        {
+            <div class="grid grid--no-wrap">
+                <a href="@value" download title="@Translate("Download")" class="product__document dw-mod">@getIconForFile(value)</a>
+                <div class="product__document-info dw-mod">
+                    <a href="@value" download title="@Translate("Download")" class="product__document dw-mod">@Path.GetFileName(value)</a>
+                    <small class="u-block u-margin-top">@ConvertBytes(info.Length)</small>
+                </div>
+            </div>
+        }
+    }
+    else if (name == "Energimærkat" || name == "Datablad" || name == "Manual")
+    {
+
+        <div class="grid grid--no-wrap">
+            <a href="@value" target="_blank" title="@Translate("Download")" class="product__document dw-mod">
+                <i class='product__document-icon far fa-file-pdf'></i>
+            </a>
+            @* <div class="product__document-info dw-mod"> *@
+            @*     <a href="@value" download title="@Translate("Download")" class="product__document dw-mod"></a> *@
+            @* </div> *@
+        </div>
+
+    }
+    else
+    {
+
+        if (value.ToLower().Contains("http"))
+        {
+            <a target="_blank" href="@value">@value</a>
+        }
+        else
+        {
+            @value
+
+        }
+    }
+}
+
+

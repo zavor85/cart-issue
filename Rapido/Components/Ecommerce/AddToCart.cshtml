@@ -1,0 +1,55 @@
+﻿@using Dynamicweb.Rapido.Blocks.Components.Ecommerce
+
+@* Component *@
+
+@helper RenderAddToCart(AddToCart settings)
+{
+    //set Id for quantity selector to get it's value from button
+    if (settings.QuantitySelector != null) 
+    {
+        if (string.IsNullOrEmpty(settings.QuantitySelector.Id)) 
+        {
+            settings.QuantitySelector.Id = Guid.NewGuid().ToString("N");
+        }
+
+        settings.AddButton.QuantitySelectorId = settings.QuantitySelector.Id;
+        
+        if (settings.Disabled) 
+        {
+            settings.QuantitySelector.Disabled = true;
+        }
+
+        if (string.IsNullOrEmpty(settings.QuantitySelector.Name)) 
+        {
+            settings.QuantitySelector.Name = settings.QuantitySelector.Id;
+        }
+    }
+
+    if (settings.Disabled) 
+    {
+        settings.AddButton.Disabled = true;
+    }
+    
+    settings.AddButton.CssClass += " btn--condensed";
+
+    //unitsSelector
+    if (settings.UnitSelector != null)
+    {
+        if (settings.Disabled) 
+        {
+            settings.QuantitySelector.Disabled = true;
+        }
+    }
+
+    <div class="buttons-collection @settings.WrapperCssClass" @ComponentMethods.AddAttributes(settings.ExtraAttributes)>        
+        @if (settings.UnitSelector != null)
+        {
+            @Render(settings.UnitSelector)
+        }
+        @if (settings.QuantitySelector != null)
+        {
+            @Render(settings.QuantitySelector)
+        }
+        @Render(settings.AddButton)
+    </div>
+}

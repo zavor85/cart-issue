@@ -1,0 +1,82 @@
+﻿@inherits Dynamicweb.Rendering.ViewModelTemplate<Dynamicweb.Frontend.PageViewModel>
+@using System;
+@using System.Collections.Generic;
+@using System.IO;
+@using System.Linq;
+@using System.Text;
+@using System.Threading.Tasks;
+@using System.Web;
+@using Newtonsoft.Json;
+@using System.Net;
+@using System.Runtime.CompilerServices;
+@using System.Web.UI.HtmlControls;
+@using Dynamicweb;
+@using Dynamicweb.Content;
+
+
+@functions{
+
+    public class Callback
+    {
+        public string url { get; set; }
+    }
+
+}
+@{
+
+    
+        
+    if (HttpContext.Current.Request.HttpMethod.ToUpper() == "POST")
+    {
+        //HttpContext.Current.Response.Clear();
+        Stream stream = HttpContext.Current.Request.InputStream;
+        StreamReader sr = new StreamReader(stream);
+        JsonSerializer serializer = new JsonSerializer();
+        Callback callback = (Callback)serializer.Deserialize(sr, typeof(Callback));
+
+        HttpContext.Current.Response.Write(Newtonsoft.Json.JsonConvert.SerializeObject(callback));
+        HttpContext.Current.Response.ContentType = "text/html; charset=UTF-8";
+        HttpContext.Current.Response.End();
+        <p xmlns="http://www.w3.org/1999/html">@Newtonsoft.Json.JsonConvert.SerializeObject(callback)</p>
+
+    
+                                                                 
+    }
+}
+        <button type="button" onclick="TestAjax('GET')">Test GET</button>
+        <button type="button" onclick="TestAjax('POST')">Test POST</button>
+
+<script>
+            if (type == 'GET') {
+                Request.Fetch().get(
+                    "/dansk/bambora-callback",
+                    function (result) {
+                        document.getElementById("result").innerHTML = JSON.stringify(result);
+                    }
+                );
+            }
+            if (type == 'POST') {
+                Request.Fetch().post(
+                    "/dansk/bambora-callback",
+                    data,
+                    function (result) {
+                        document.getElementById("test").innerHTML = JSON.stringify(result);
+                    }
+                   );
+                }
+</script>
+
+<!DOCTYPE html>
+
+<html>
+<head runat="server">
+    <title></title>
+</head>
+<body>
+<form id="TestApplication" runat="server">
+    <div>
+    <p id="test"></p>
+    </div>
+</form>
+</body>
+</html>

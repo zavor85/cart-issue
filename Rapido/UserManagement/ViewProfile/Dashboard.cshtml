@@ -1,0 +1,66 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using Dynamicweb.Extensibility
+@using Dynamicweb.Content
+@using System
+@using System.Linq
+@using System.Web
+@using System.IO
+@using Dynamicweb.Rapido.Blocks
+@using Dynamicweb.Rapido.Blocks.Components
+@using Dynamicweb.Rapido.Blocks.Components.General
+
+@functions {
+    BlocksPage dashboardPage = BlocksPage.GetBlockPage("Dashboard");
+}
+
+@{ 
+    string favoriteIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon") != null ? "fas fa-" + Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("FavoriteIcon").SelectedValue : "fas fa-star";
+    string cartIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("CartIcon").SelectedValue : "fas fa-shopping-cart";
+    string userIcon = Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("SignInProfileIcon") != null ? Pageview.AreaSettings.GetItem("Layout").GetItem("Icons").GetList("SignInProfileIcon").SelectedValue : "fas fa-user";
+    var brandColor = Dynamicweb.Services.Colors.GetHexColor(Dynamicweb.Core.Converter.ToInt32(Pageview.Area.ID), "BrandColor2");
+
+    var dashboard = new Dashboard
+    {
+        WidgetsBaseBackgroundColor = brandColor
+    };
+
+    var widgetsList = new Block
+    {
+        Id = "Widgets",
+        SortId = 10,
+        Component = dashboard
+    };
+
+    var widgets = new List<DashboardWidgetLink>
+    {
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("CustomerProfile").ToString(), Icon = new Icon { Name = userIcon }, Title = Translate("My profile") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("CustomerFavorites").ToString(), Icon = new Icon { Name = favoriteIcon }, Title = Translate("My favorites") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("QuotesPage").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-quote-right" }, Title = Translate("My quotes") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("RMAPage").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-undo" }, Title = Translate("My RMA") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("CartPage").ToString(), Icon = new Icon { Name = cartIcon }, Title = Translate("Shopping cart") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("CustomerOrders").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-list" }, Title = Translate("My orders") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("SavedCards").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-credit-card" }, Title = Translate("My saved cards") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("RecurringOrders").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-calendar" }, Title = Translate("My recurring orders") },
+        new DashboardWidgetLink() { Link = GetPageIdByNavigationTag("OrderDraft").ToString(), Icon = new Icon { Prefix = "fas", Name = "fa-clipboard-list" }, Title = Translate("My order drafts") },
+    };
+
+    foreach (DashboardWidgetLink widget in widgets)
+    {
+        if (widget.Link != "0")
+        {
+            widget.Link = "Default.aspx?ID=" + widget.Link;
+            dashboard.AddWidget(widget);
+        }
+    }
+
+    dashboardPage.Add(widgetsList);
+}
+
+@Include("Blocks/Dashboard/Custom__Blocks.cshtml")
+
+@* Include the required Grid builder (Contains the methods @RenderBlockList and @RenderBlock) *@
+@Include("../../Components/GridBuilder.cshtml")
+@Include("../../Components/GeneralComponents.cshtml")
+
+
+@RenderBlockList(dashboardPage.BlocksRoot.BlocksList)

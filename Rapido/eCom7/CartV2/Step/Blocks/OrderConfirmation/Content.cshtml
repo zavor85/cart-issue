@@ -1,0 +1,287 @@
+﻿@inherits Dynamicweb.Rendering.RazorTemplateBase<Dynamicweb.Rendering.RazorTemplateModel<Dynamicweb.Rendering.Template>>
+@using System.Text.RegularExpressions
+@using Dynamicweb.Rapido.Blocks;
+@using Dynamicweb.Rapido.Blocks.Components.General;
+@using Dynamicweb.Rapido.Blocks.Components;
+@using Dynamicweb.Ecommerce.Prices;
+@using Dynamicweb.Core;
+
+@Include("../../../../../GetProductImage.cshtml")
+
+@functions {
+    BlocksPage confirmationContentPage = BlocksPage.GetBlockPage("OrderConfirmation");
+}
+
+@{
+    var orderlineLoop = GetLoop("OrderLines");
+
+    confirmationContentPage.Add("CartBody", new Block
+    {
+        Id = "Orderlines",
+        SortId = 30,
+        Design = new Design {
+            RenderType = RenderType.Table
+        },
+        BlocksList = new List<Block>
+        {
+            new Block
+            {
+                Id = "Information",
+                SortId = 10,
+                Template = RenderInformation()
+            },
+            new Block
+            {
+                Id = "Products",
+                SortId = 20,
+                Template = RenderProducts(orderlineLoop)
+            },
+            new Block
+            {
+                Id = "Total",
+                SortId = 40,
+                Template = RenderOrderSummary()
+            }
+        }
+    });
+}
+
+@helper RenderInformation() { 
+    <tbody>
+        <tr>
+            <td class="u-padding-top--lg u-padding-bottom--lg">
+                @Render(new Heading { Title = Translate("Delivery address"), Level = 6 })
+                @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Company"))) { <div>@GetString("Ecom:Order.Customer.Company")</div> }
+                @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Address"))) { <div>@GetString("Ecom:Order.Customer.Address")</div> }
+                @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.City"))) { <div>@GetString("Ecom:Order.Customer.Zip") @GetString("Ecom:Order.Customer.City")</div> }
+                @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Country"))) { <div>@GetString("Ecom:Order.Customer.Country")</div> }
+            </td>
+            <td class="u-padding-top--lg u-padding-bottom--lg">
+                @if (!string.IsNullOrEmpty(GetString("Ecom:Order.Customer.Email"))) {
+                    @Render(new Heading { Title = Translate("Email"), Level = 6 })
+                    <div>@GetString("Ecom:Order.Customer.Email")</div> 
+                }
+            </td>
+            <td class="u-padding-top--lg u-padding-bottom--lg">
+                @if (!string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethod"))) {
+                    @Render(new Heading { Title = Translate("Delivery method"), Level = 6 })
+                    @GetString("Ecom:Order.ShippingMethod")
+                }
+            </td>
+            <td class="u-padding-top--lg u-padding-bottom--lg">
+                @if (!string.IsNullOrEmpty(GetString("Ecom:Order.PaymentMethod"))) {
+                    @Render(new Heading { Title = Translate("Payment method"), Level = 6 })
+                    @GetString("Ecom:Order.PaymentMethod")
+                }
+            </td>
+        </tr>
+    </tbody> 
+}
+
+@helper RenderProducts(IEnumerable<LoopItem> orderlineLoop)
+{
+    string cartId = HttpContext.Current.Request["CartId"];
+    string cartCmdUrl = "/Default.aspx?ID=" + Pageview.Page.ID + "&CartID=" + cartId;
+
+    if (GetLoop("OrderLines").Count == 0)
+    {
+        <p>@Translate("There is no products added on the list")</p>
+    }
+
+    <tbody>
+        @{
+            var currency = Dynamicweb.Ecommerce.Common.Context.Currency;
+            var country = Dynamicweb.Ecommerce.Common.Context.Country;
+            var orderlineService = Dynamicweb.Ecommerce.Services.OrderLines;
+            var userId = Dynamicweb.Security.UserManagement.User.GetCurrentExtranetUserId();
+            var shopId = GetString("Ecom:Order.ShopID");
+            bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+        }
+        @foreach (var orderline in orderlineLoop)
+        {
+            if (orderline.GetBoolean("Ecom:Order:OrderLine.IsProduct"))
+            {
+                var orderlineId = orderline.GetString("Ecom:Order:OrderLine.Id");
+                var orderlineObject = orderlineService.GetById(orderlineId, currency);
+
+                var productName = orderline.GetString("Ecom:Order:OrderLine.ProductName");
+                string unitName = orderline.GetString("Ecom:Order:OrderLine.UnitName");
+                string productLink = "/" + Regex.Replace(orderline.GetString("Ecom:Product.LinkGroup.Clean"), @"\?ID=\d*\&", "?ID=" + GetPageIdByNavigationTag("ProductsPage") + "&");
+                productLink += !string.IsNullOrEmpty(orderline.GetString("Ecom:Order:OrderLine.ProductVariantID")) ? "&VariantID=" + orderline.GetString("Ecom:Order:OrderLine.ProductVariantID") : "";
+
+                var productNumber = orderline.GetString("Ecom:Order:OrderLine.ProductNumber");
+                var quantity = orderline.GetInteger("Ecom:Order:OrderLine.Quantity");
+                var costPrice = orderline.GetString("Ecom:Product.Cost");
+                var currencySymbol = orderline.GetString("Ecom:Order:OrderLine.Price.Currency.Symbol");
+                var product = orderlineObject.Product;
+                var unitId = orderlineObject.UnitId;
+                var unitPrice = orderline.GetString("Ecom:Order:OrderLine.UnitPrice");
+                var productPrice = PriceManager.GetPrice(product, currency.Code, country.Code2, unitId, userId, shopId);
+                string altUnitPrice = "";
+
+                if (!string.IsNullOrEmpty(orderline.GetString("Ecom:Order:OrderLine.UnitPriceBeforeDiscount.Price"))) {
+                    unitPrice = orderline.GetString("Ecom:Order:OrderLine.UnitPriceBeforeDiscount");
+                    altUnitPrice = orderline.GetString("Ecom:Order:OrderLine.UnitPrice.Price");
+                }
+
+                if (orderline.GetString("Ecom:Order:OrderLine.UnitPriceBeforeDiscount.Price") == orderline.GetString("Ecom:Order:OrderLine.UnitPrice.Price")) {
+                    altUnitPrice = "";
+                }
+
+                string altUnitPercentage = orderlineObject.DiscountPercentage != 0 ? orderlineObject.DiscountPercentage.ToString() : "";
+                string totalPrice = orderline.GetString("Ecom:Order:OrderLine.TotalPriceWithProductDiscounts.PriceFormatted");
+
+                <tr>
+                    <td data-column="product" colspan="2">
+                        <div class="u-flex">
+                            @Render(new Image
+                            {
+                                Path = GetProductImage(orderline),
+                                CssClass = "cart-orderline__image dw-mod u-margin-right",
+                                Title = productName,
+                                ImageDefault = new ImageSettings { Width = 100, Height = 100, Crop = 5 },
+                                Link = productLink
+                            })
+                            <a href="@productLink" class="u-color-inherit">
+                                <strong>@orderline.GetString("Ecom:Product.Name")</strong>
+                                @foreach ( LoopItem variant in orderline.GetLoop("VariantGroups") ) {
+                                    string variantName = variant.GetString("Ecom:VariantGroup.Name");
+                        
+                                    foreach ( LoopItem options in variant.GetLoop("VariantOptions").Where(x => x.GetBoolean("Ecom:VariantOption.Selected")) ) {
+                                        string optionName = options.GetString("Ecom:VariantOption.Name");
+                        
+                                        <div><small>@variantName: <span>@optionName</span></small></div>
+                                    }
+
+                                }
+                                <div><small>@Translate("Qty"): @quantity</small></div>
+                            </a>
+                        </div>
+                    </td>
+                    <td data-column="quantity">
+                        <div class="u-flex">
+                            @if (Pageview.User.CurrentSecondaryUser != null) {
+                                @Render(new NumberField
+                                { 
+                                    Value = quantity,
+                                    WrapperCssClass = "u-no-margin u-width--auto u-margin-right",
+                                    CssClass = "u-w80px",
+                                    OnChange = "orderlineUpdateQuantity(this, '" + orderlineId + "')"
+                                });
+                            } 
+                        </div>
+                    </td>
+                    <td align="right" data-column="totalPrice">
+                        @totalPrice
+                    </td>
+                </tr>
+            } else if (orderline.GetBoolean("Ecom:Order:OrderLine.IsDiscount")) {
+                var discountId = Dynamicweb.Ecommerce.Services.OrderLines.GetById(orderline.GetString("Ecom:Order:OrderLine.Id"), Dynamicweb.Ecommerce.Common.Context.Currency).DiscountId;
+                var discountType = Dynamicweb.Ecommerce.Services.Discounts.GetDiscount(Convert.ToInt32(discountId)).DiscountType;
+
+                if (discountType != Dynamicweb.Ecommerce.Orders.Discounts.DiscountTypes.CustomPercentage) {
+                    <tr>
+                        <td colspan="4" align="right" class="u-no-border">
+                            @orderline.GetString("Ecom:Order:OrderLine.ProductName") 
+                        </td>
+                    </tr>
+                }
+            }
+        }
+    </tbody>
+}
+
+@helper RenderOrderSummary()
+{
+    bool hasTaxSettings = Dynamicweb.Rapido.Services.Countries.HasTaxSettings(GetString("Ecom:Order.ID"));
+    bool pointShop = Pageview.AreaSettings.GetItem("Ecommerce").GetBoolean("PointShopOnly");
+    bool isPricesWithVATEnabled = Dynamicweb.Ecommerce.Common.Context.DisplayPricesWithVat;
+    var settings = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout");
+    var hideVoucher = settings.GetBoolean("HideVoucher");
+    bool hidePaymentFee = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") && GetInteger("Ecom:Order.PaymentFee.Price") == 0;
+    string paymentMethod = !string.IsNullOrEmpty(GetString("Ecom:Order.PaymentMethod")) ? GetString("Ecom:Order.PaymentMethod") : Translate("Payment");
+    bool hideShippingFee = Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideFreeServices") && GetInteger("Ecom:Order.ShippingFee.Price") == 0;
+    string shippingMethod = !string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethod")) ? GetString("Ecom:Order.ShippingMethod") : Translate("Delivery");
+
+    <tr>
+        <td colspan="3"></td>
+        <td width="400">
+            <table class="table--condensed table--no-top-border">
+                <tbody>
+                    <tr>
+                        <td>@Translate("Total qty"):</td>
+                        <td>@GetString("Ecom:Order.OrderLines.TotalProductQuantity")</td>
+                    </tr>
+                    @if (!Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("HideSubtotal"))
+                    {
+                        <tr>
+                            <td>@Translate("Subtotal"):</td>
+                            <td>@GetString("Ecom:Order.PriceWithoutFees.PriceFormatted")</td>
+                        </tr>
+                    }
+                    @if (!hidePaymentFee)
+                    {
+                        <tr>
+                            <td>@paymentMethod:</td>
+                            <td>@GetString("Ecom:Order.PaymentFee")</td>
+                        </tr>
+                    }
+                    @if (!hideShippingFee)
+                    {
+                        <tr>
+                            <td>@shippingMethod:</td>
+                            <td>@GetString("Ecom:Order.ShippingFee")</td>
+                        </tr>
+                    }
+                    @if (hasTaxSettings)
+                    {
+                        string totalTaxes = GetDouble("Ecom:Order.Taxes.Total.Price") != 0 ? GetString("Ecom:Order.Taxes.Total") : "-";
+
+                        <tr>
+                            <td >@Translate("Sales Tax"):</td>
+                            <td class="u-ta-right">@totalTaxes</td>
+                        </tr>
+                    }
+                    <tr class="u-bold">
+                        <td>@Translate("Total"):</td>
+                        <td width="150">@GetString("Ecom:Order.OrderLines.Total.Price")</td>
+                    </tr>
+                    @if (!pointShop && !hasTaxSettings)
+                    {
+                        <tr class="u-ta-right">
+                            <td class="u-no-border" colspan="2">
+                                <div>
+                                    <small>@Translate("VAT") (@GetString("Ecom:Order.PriceWithoutFees.VATPercentFormatted")):</small>
+                                    <small>@GetString("Ecom:Order.OrderLines.Total.PriceVAT")</small>
+                                </div>
+
+                                @if (isPricesWithVATEnabled)
+                                {    
+                                    <div>
+                                        <small>@Translate("Total price without VAT"):</small>
+                                        <small>@GetString("Ecom:Order.OrderLines.Total.PriceWithoutVAT")</small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div>
+                                        <small>@Translate("Total price with VAT"):</small>
+                                        <small>@GetString("Ecom:Order.OrderLines.Total.PriceWithVAT")</small>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (hasTaxSettings && Pageview.AreaSettings.GetItem("Ecommerce").GetItem("Checkout").GetBoolean("ShowCheckoutDisclaimer") && (GetDouble("Ecom:Order.Taxes.Total.Price") == 0 || string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethodID"))))
+                    {
+                        <tr>
+                            <td class="u-no-border" colspan="2">
+                                <small class="u-full-width">@string.Format("{0}", GetDouble("Ecom:Order.Taxes.Total.Price") == 0 && string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethodID")) ? Translate("*Sales Tax and Shipping calculated at Checkout") : string.IsNullOrEmpty(GetString("Ecom:Order.ShippingMethodID")) ? Translate("* Shipping calculated at Checkout") : Translate("* Sales Tax Calculated at Checkout"))</small>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </td>
+    </tr>
+}

@@ -1,0 +1,29 @@
+﻿@using System
+
+
+@functions{ 
+    public string GetParentSettingsItem(string systemName)
+    {
+        string item = null;
+
+        Dynamicweb.Content.Page current = Dynamicweb.Services.Pages.GetPage(Pageview.Page.ID);
+        while (current != null && current.Parent != current)
+        {
+            var temp = current.Item != null ? current.Item[systemName] : "";
+
+            if (temp != null)
+            {
+                item = temp.ToString();
+
+                if (!String.IsNullOrEmpty(item) && !String.Equals("default", item, StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+            }
+
+            current = current.Parent;
+        }
+
+        return item;
+    }
+}
